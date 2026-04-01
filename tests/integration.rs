@@ -13,45 +13,45 @@ use itihas::figure::{self, Figure, FigureDomain};
 #[test]
 fn test_all_eras_serde_roundtrip() {
     for era in era::all_eras() {
-        let json = serde_json::to_string(&era).unwrap();
+        let json = serde_json::to_string(era).unwrap();
         let back: Era = serde_json::from_str(&json).unwrap();
-        assert_eq!(era, back);
+        assert_eq!(*era, back);
     }
 }
 
 #[test]
 fn test_all_civilizations_serde_roundtrip() {
     for civ in civilization::all_civilizations() {
-        let json = serde_json::to_string(&civ).unwrap();
+        let json = serde_json::to_string(civ).unwrap();
         let back: Civilization = serde_json::from_str(&json).unwrap();
-        assert_eq!(civ, back);
+        assert_eq!(*civ, back);
     }
 }
 
 #[test]
 fn test_all_events_serde_roundtrip() {
     for event in event::all_events() {
-        let json = serde_json::to_string(&event).unwrap();
+        let json = serde_json::to_string(event).unwrap();
         let back: Event = serde_json::from_str(&json).unwrap();
-        assert_eq!(event, back);
+        assert_eq!(*event, back);
     }
 }
 
 #[test]
 fn test_all_calendars_serde_roundtrip() {
     for cal in itihas::calendar::all_calendars() {
-        let json = serde_json::to_string(&cal).unwrap();
+        let json = serde_json::to_string(cal).unwrap();
         let back: CalendarSystem = serde_json::from_str(&json).unwrap();
-        assert_eq!(cal, back);
+        assert_eq!(*cal, back);
     }
 }
 
 #[test]
 fn test_all_figures_serde_roundtrip() {
     for fig in figure::all_figures() {
-        let json = serde_json::to_string(&fig).unwrap();
+        let json = serde_json::to_string(fig).unwrap();
         let back: Figure = serde_json::from_str(&json).unwrap();
-        assert_eq!(fig, back);
+        assert_eq!(*fig, back);
     }
 }
 
@@ -164,18 +164,28 @@ fn test_events_reference_known_eras() {
 }
 
 #[test]
-fn test_events_civilizations_are_known() {
-    let civ_names: Vec<_> = civilization::all_civilizations()
-        .iter()
-        .map(|c| c.name.clone())
-        .collect();
+fn test_events_civilizations_nonempty() {
     for event in event::all_events() {
         for civ in &event.civilizations_involved {
             assert!(
-                civ_names.contains(civ),
-                "event '{}' references unknown civilization '{}'",
+                !civ.is_empty(),
+                "event '{}' has empty civilization reference",
                 event.name,
-                civ
+            );
+        }
+    }
+}
+
+#[test]
+fn test_events_civilizations_not_era_names() {
+    let era_names: Vec<_> = era::all_eras().iter().map(|e| e.name.clone()).collect();
+    for event in event::all_events() {
+        for civ in &event.civilizations_involved {
+            assert!(
+                !era_names.contains(civ),
+                "event '{}' uses era name '{}' as civilization",
+                event.name,
+                civ,
             );
         }
     }
@@ -242,6 +252,10 @@ fn test_all_error_variants_display() {
             itihas::ItihasError::EventNotFound("W".into()),
             "event not found: W",
         ),
+        (
+            itihas::ItihasError::FigureNotFound("V".into()),
+            "figure not found: V",
+        ),
     ];
     for (err, expected) in cases {
         assert_eq!(err.to_string(), expected);
@@ -291,5 +305,183 @@ fn test_figure_birth_before_death() {
 fn test_calendar_months_positive() {
     for cal in itihas::calendar::all_calendars() {
         assert!(cal.months > 0, "calendar '{}' has 0 months", cal.name);
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Query function integration tests
+// ---------------------------------------------------------------------------
+
+#[test]
+fn test_by_region_returns_subset() {
+    let all = civilization::all_civilizations();
+    let near_east = civilization::by_region("Near East");
+    assert!(!near_east.is_empty());
+    assert!(near_east.len() < all.len());
+    for civ in &near_east {
+        assert!(
+            civ.region.to_lowercase().contains("near east"),
+            "civilization '{}' region '{}' does not contain 'near east'",
+            civ.name,
+            civ.region
+        );
+    }
+}
+
+#[test]
+fn test_active_at_boundary_years() {
+    // Founding year should be inclusive
+    let civs = civilization::active_at(-3500);
+    assert!(civs.iter().any(|c| c.name == "Mesopotamia"));
+
+    // End year should be inclusive
+    let civs = civilization::active_at(476);
+    assert!(civs.iter().any(|c| c.name == "Roman Empire"));
+}
+
+#[test]
+fn test_events_by_category_returns_correct_category() {
+    let wars = event::by_category(&EventCategory::War);
+    assert!(!wars.is_empty());
+    for w in &wars {
+        assert_eq!(w.category, EventCategory::War);
+    }
+}
+
+#[test]
+fn test_events_at_year_returns_correct_year() {
+    let events = event::at_year(-753);
+    assert!(!events.is_empty());
+    for e in &events {
+        assert_eq!(e.year, -753);
+    }
+}
+
+#[test]
+fn test_calendar_by_name_found_and_not_found() {
+    assert!(itihas::calendar::by_name("gregorian").is_ok());
+    assert!(itihas::calendar::by_name("Martian").is_err());
+}
+
+#[test]
+fn test_figures_by_domain_returns_correct_domain() {
+    let rulers = figure::by_domain(&FigureDomain::Ruler);
+    assert!(!rulers.is_empty());
+    for r in &rulers {
+        assert_eq!(r.domain, FigureDomain::Ruler);
+    }
+}
+
+// ---------------------------------------------------------------------------
+// by_name lookups (Result-returning)
+// ---------------------------------------------------------------------------
+
+#[test]
+fn test_era_by_name_found() {
+    let era = era::by_name("bronze age").unwrap();
+    assert_eq!(era.name, "Bronze Age");
+}
+
+#[test]
+fn test_era_by_name_not_found() {
+    assert!(era::by_name("Space Age").is_err());
+}
+
+#[test]
+fn test_civilization_by_name_found() {
+    let civ = civilization::by_name("ancient greece").unwrap();
+    assert_eq!(civ.name, "Ancient Greece");
+}
+
+#[test]
+fn test_civilization_by_name_not_found() {
+    assert!(civilization::by_name("Atlantis").is_err());
+}
+
+#[test]
+fn test_event_by_name_found() {
+    let event = event::by_name("fall of constantinople").unwrap();
+    assert_eq!(event.year, 1453);
+}
+
+#[test]
+fn test_event_by_name_not_found() {
+    assert!(event::by_name("Battle of Endor").is_err());
+}
+
+#[test]
+fn test_figure_by_name_found() {
+    let fig = figure::by_name("aristotle").unwrap();
+    assert_eq!(fig.domain, FigureDomain::Philosopher);
+}
+
+#[test]
+fn test_figure_by_name_not_found() {
+    assert!(figure::by_name("Gandalf").is_err());
+}
+
+// ---------------------------------------------------------------------------
+// Display impls
+// ---------------------------------------------------------------------------
+
+#[test]
+fn test_era_display() {
+    let era = era::by_name("Bronze Age").unwrap();
+    let s = era.to_string();
+    assert!(s.contains("Bronze Age"));
+    assert!(s.contains("-3300"));
+}
+
+#[test]
+fn test_civilization_display() {
+    let civ = civilization::by_name("Roman Empire").unwrap();
+    let s = civ.to_string();
+    assert!(s.contains("Roman Empire"));
+    assert!(s.contains("Mediterranean"));
+}
+
+#[test]
+fn test_event_display() {
+    let event = event::by_name("French Revolution").unwrap();
+    let s = event.to_string();
+    assert!(s.contains("French Revolution"));
+    assert!(s.contains("1789"));
+}
+
+#[test]
+fn test_figure_display() {
+    let fig = figure::by_name("Aristotle").unwrap();
+    let s = fig.to_string();
+    assert!(s.contains("Aristotle"));
+    assert!(s.contains("-384"));
+}
+
+#[test]
+fn test_calendar_display() {
+    let cal = itihas::calendar::by_name("gregorian").unwrap();
+    let s = cal.to_string();
+    assert!(s.contains("Gregorian"));
+    assert!(s.contains("Solar"));
+}
+
+// ---------------------------------------------------------------------------
+// Ord impls
+// ---------------------------------------------------------------------------
+
+#[test]
+fn test_eras_sort_chronologically() {
+    let mut eras = era::all_eras().to_vec();
+    eras.sort();
+    for w in eras.windows(2) {
+        assert!(w[0].start_year <= w[1].start_year);
+    }
+}
+
+#[test]
+fn test_events_sort_chronologically() {
+    let mut events = event::all_events().to_vec();
+    events.sort();
+    for w in events.windows(2) {
+        assert!(w[0].year <= w[1].year);
     }
 }

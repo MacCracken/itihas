@@ -1,5 +1,7 @@
 //! Error types for itihas.
 
+use alloc::string::String;
+
 use thiserror::Error;
 
 /// Errors that can occur in historical data processing.
@@ -25,4 +27,8 @@ pub enum ItihasError {
     /// Event not found by name.
     #[error("event not found: {0}")]
     EventNotFound(String),
+
+    /// Figure not found by name.
+    #[error("figure not found: {0}")]
+    FigureNotFound(String),
 }

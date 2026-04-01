@@ -32,6 +32,38 @@ fn bench_all_events(c: &mut Criterion) {
     c.bench_function("all_events", |b| b.iter(itihas::event::all_events));
 }
 
+fn bench_events_by_category(c: &mut Criterion) {
+    c.bench_function("events_by_category_war", |b| {
+        b.iter(|| itihas::event::by_category(black_box(&itihas::event::EventCategory::War)))
+    });
+}
+
+fn bench_events_at_year(c: &mut Criterion) {
+    c.bench_function("events_at_year_476", |b| {
+        b.iter(|| itihas::event::at_year(black_box(476)))
+    });
+}
+
+fn bench_all_calendars(c: &mut Criterion) {
+    c.bench_function("all_calendars", |b| b.iter(itihas::calendar::all_calendars));
+}
+
+fn bench_calendar_by_name(c: &mut Criterion) {
+    c.bench_function("calendar_by_name_gregorian", |b| {
+        b.iter(|| itihas::calendar::by_name(black_box("gregorian")))
+    });
+}
+
+fn bench_all_figures(c: &mut Criterion) {
+    c.bench_function("all_figures", |b| b.iter(itihas::figure::all_figures));
+}
+
+fn bench_figures_by_domain(c: &mut Criterion) {
+    c.bench_function("figures_by_domain_scientist", |b| {
+        b.iter(|| itihas::figure::by_domain(black_box(&itihas::figure::FigureDomain::Scientist)))
+    });
+}
+
 criterion_group!(
     benches,
     bench_all_eras,
@@ -40,5 +72,11 @@ criterion_group!(
     bench_active_at,
     bench_by_region,
     bench_all_events,
+    bench_events_by_category,
+    bench_events_at_year,
+    bench_all_calendars,
+    bench_calendar_by_name,
+    bench_all_figures,
+    bench_figures_by_domain,
 );
 criterion_main!(benches);

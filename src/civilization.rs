@@ -3,14 +3,21 @@
 //! Provides [`Civilization`] structs, pre-built data for 10 major world
 //! civilizations, and lookup functions by region and active year.
 
-use std::borrow::Cow;
+use alloc::borrow::Cow;
+use alloc::string::String;
+use alloc::vec;
+use alloc::vec::Vec;
+use core::fmt;
 
 use serde::{Deserialize, Serialize};
+
+use crate::error::ItihasError;
 
 /// A historical civilization.
 ///
 /// Years use astronomical year numbering: negative = BCE, positive = CE.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[non_exhaustive]
 pub struct Civilization {
     /// Name of the civilization.
     pub name: Cow<'static, str>,
@@ -30,10 +37,17 @@ pub struct Civilization {
     pub language_codes: Vec<Cow<'static, str>>,
 }
 
-/// Returns all pre-built civilizations.
-#[must_use]
-#[inline]
-pub fn all_civilizations() -> Vec<Civilization> {
+impl fmt::Display for Civilization {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "{} ({}, {} – {})",
+            self.name, self.region, self.founding_year, self.end_year
+        )
+    }
+}
+
+fn build_civilizations() -> Vec<Civilization> {
     vec![
         Civilization {
             name: Cow::Borrowed("Mesopotamia"),
@@ -188,6 +202,26 @@ pub fn all_civilizations() -> Vec<Civilization> {
     ]
 }
 
+/// Returns all pre-built civilizations.
+///
+/// Data is computed once and cached for the lifetime of the process.
+#[cfg(feature = "std")]
+#[must_use]
+#[inline]
+pub fn all_civilizations() -> &'static [Civilization] {
+    static DATA: std::sync::LazyLock<Vec<Civilization>> =
+        std::sync::LazyLock::new(build_civilizations);
+    &DATA
+}
+
+/// Returns all pre-built civilizations.
+#[cfg(not(feature = "std"))]
+#[must_use]
+#[inline]
+pub fn all_civilizations() -> Vec<Civilization> {
+    build_civilizations()
+}
+
 /// Returns civilizations whose region contains the given substring (case-insensitive).
 #[must_use]
 #[inline]
@@ -195,8 +229,9 @@ pub fn by_region(region: &str) -> Vec<Civilization> {
     tracing::debug!(region, "looking up civilizations by region");
     let lower = region.to_lowercase();
     all_civilizations()
-        .into_iter()
+        .iter()
         .filter(|c| c.region.to_lowercase().contains(&lower))
+        .cloned()
         .collect()
 }
 
@@ -208,9 +243,24 @@ pub fn by_region(region: &str) -> Vec<Civilization> {
 pub fn active_at(year: i32) -> Vec<Civilization> {
     tracing::debug!(year, "looking up civilizations active at year");
     all_civilizations()
-        .into_iter()
+        .iter()
         .filter(|c| year >= c.founding_year && year <= c.end_year)
+        .cloned()
         .collect()
+}
+
+/// Look up a civilization by exact name (case-insensitive).
+///
+/// Returns `Err(ItihasError::UnknownCivilization)` if no civilization matches.
+#[inline]
+pub fn by_name(name: &str) -> Result<Civilization, ItihasError> {
+    tracing::debug!(name, "looking up civilization by name");
+    let lower = name.to_lowercase();
+    all_civilizations()
+        .iter()
+        .find(|c| c.name.to_lowercase() == lower)
+        .cloned()
+        .ok_or_else(|| ItihasError::UnknownCivilization(String::from(name)))
 }
 
 #[cfg(test)]
@@ -270,9 +320,9 @@ mod tests {
     #[test]
     fn test_civilization_serde_roundtrip() {
         for civ in all_civilizations() {
-            let json = serde_json::to_string(&civ).unwrap();
+            let json = serde_json::to_string(civ).unwrap();
             let back: Civilization = serde_json::from_str(&json).unwrap();
-            assert_eq!(civ, back);
+            assert_eq!(*civ, back);
         }
     }
 }

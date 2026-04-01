@@ -4,9 +4,15 @@
 //! modern calendar systems. This module provides descriptive metadata only —
 //! actual calendar computation belongs in **sankhya**.
 
-use std::borrow::Cow;
+use alloc::borrow::Cow;
+use alloc::string::String;
+use alloc::vec;
+use alloc::vec::Vec;
+use core::fmt;
 
 use serde::{Deserialize, Serialize};
+
+use crate::error::ItihasError;
 
 /// Classification of calendar systems by astronomical basis.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -27,6 +33,7 @@ pub enum CalendarType {
 /// Describes the structure and rules of a calendar without performing
 /// any date computation.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[non_exhaustive]
 pub struct CalendarSystem {
     /// Name of the calendar system.
     pub name: Cow<'static, str>,
@@ -40,10 +47,17 @@ pub struct CalendarSystem {
     pub leap_rule_description: Cow<'static, str>,
 }
 
-/// Returns all pre-built calendar systems.
-#[must_use]
-#[inline]
-pub fn all_calendars() -> Vec<CalendarSystem> {
+impl fmt::Display for CalendarSystem {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "{} ({:?}, epoch {})",
+            self.name, self.calendar_type, self.epoch_year
+        )
+    }
+}
+
+fn build_calendars() -> Vec<CalendarSystem> {
     vec![
         CalendarSystem {
             name: Cow::Borrowed("Gregorian"),
@@ -118,15 +132,38 @@ pub fn all_calendars() -> Vec<CalendarSystem> {
     ]
 }
 
-/// Look up a calendar system by name (case-insensitive substring match).
+/// Returns all pre-built calendar systems.
+///
+/// Data is computed once and cached for the lifetime of the process.
+#[cfg(feature = "std")]
 #[must_use]
 #[inline]
-pub fn by_name(name: &str) -> Option<CalendarSystem> {
+pub fn all_calendars() -> &'static [CalendarSystem] {
+    static DATA: std::sync::LazyLock<Vec<CalendarSystem>> =
+        std::sync::LazyLock::new(build_calendars);
+    &DATA
+}
+
+/// Returns all pre-built calendar systems.
+#[cfg(not(feature = "std"))]
+#[must_use]
+#[inline]
+pub fn all_calendars() -> Vec<CalendarSystem> {
+    build_calendars()
+}
+
+/// Look up a calendar system by name (case-insensitive substring match).
+///
+/// Returns `Err(ItihasError::UnknownCalendar)` if no calendar matches.
+#[inline]
+pub fn by_name(name: &str) -> Result<CalendarSystem, ItihasError> {
     tracing::debug!(name, "looking up calendar by name");
     let lower = name.to_lowercase();
     all_calendars()
-        .into_iter()
+        .iter()
         .find(|c| c.name.to_lowercase().contains(&lower))
+        .cloned()
+        .ok_or_else(|| ItihasError::UnknownCalendar(String::from(name)))
 }
 
 #[cfg(test)]
@@ -161,15 +198,15 @@ mod tests {
 
     #[test]
     fn test_by_name_not_found() {
-        assert!(by_name("Martian").is_none());
+        assert!(by_name("Martian").is_err());
     }
 
     #[test]
     fn test_calendar_serde_roundtrip() {
         for cal in all_calendars() {
-            let json = serde_json::to_string(&cal).unwrap();
+            let json = serde_json::to_string(cal).unwrap();
             let back: CalendarSystem = serde_json::from_str(&json).unwrap();
-            assert_eq!(cal, back);
+            assert_eq!(*cal, back);
         }
     }
 

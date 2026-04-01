@@ -4,9 +4,16 @@
 //! [`EventCategory`] classification enum, and 15 pre-built events spanning
 //! from the invention of writing to the digital revolution.
 
-use std::borrow::Cow;
+use alloc::borrow::Cow;
+use alloc::string::String;
+use alloc::vec;
+use alloc::vec::Vec;
+use core::cmp::Ordering;
+use core::fmt;
 
 use serde::{Deserialize, Serialize};
+
+use crate::error::ItihasError;
 
 /// Classification of historical events.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -34,6 +41,7 @@ pub enum EventCategory {
 ///
 /// Years use astronomical year numbering: negative = BCE, positive = CE.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[non_exhaustive]
 pub struct Event {
     /// Name of the event.
     pub name: Cow<'static, str>,
@@ -49,10 +57,27 @@ pub struct Event {
     pub civilizations_involved: Vec<Cow<'static, str>>,
 }
 
-/// Returns all pre-built historical events.
-#[must_use]
-#[inline]
-pub fn all_events() -> Vec<Event> {
+impl fmt::Display for Event {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{} ({})", self.name, self.year)
+    }
+}
+
+impl PartialOrd for Event {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for Event {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.year
+            .cmp(&other.year)
+            .then_with(|| self.name.cmp(&other.name))
+    }
+}
+
+fn build_events() -> Vec<Event> {
     vec![
         Event {
             name: Cow::Borrowed("Invention of Writing"),
@@ -140,7 +165,7 @@ pub fn all_events() -> Vec<Event> {
             description: Cow::Borrowed(
                 "Ashoka's reign unifies most of South Asia, promotes Buddhism and non-violence",
             ),
-            civilizations_involved: vec![Cow::Borrowed("Indus Valley")],
+            civilizations_involved: vec![Cow::Borrowed("Maurya Empire")],
         },
         Event {
             name: Cow::Borrowed("Fall of the Western Roman Empire"),
@@ -216,14 +241,34 @@ pub fn all_events() -> Vec<Event> {
     ]
 }
 
+/// Returns all pre-built historical events.
+///
+/// Data is computed once and cached for the lifetime of the process.
+#[cfg(feature = "std")]
+#[must_use]
+#[inline]
+pub fn all_events() -> &'static [Event] {
+    static DATA: std::sync::LazyLock<Vec<Event>> = std::sync::LazyLock::new(build_events);
+    &DATA
+}
+
+/// Returns all pre-built historical events.
+#[cfg(not(feature = "std"))]
+#[must_use]
+#[inline]
+pub fn all_events() -> Vec<Event> {
+    build_events()
+}
+
 /// Returns events matching the given category.
 #[must_use]
 #[inline]
 pub fn by_category(category: &EventCategory) -> Vec<Event> {
     tracing::debug!(?category, "looking up events by category");
     all_events()
-        .into_iter()
+        .iter()
         .filter(|e| e.category == *category)
+        .cloned()
         .collect()
 }
 
@@ -233,9 +278,24 @@ pub fn by_category(category: &EventCategory) -> Vec<Event> {
 pub fn at_year(year: i32) -> Vec<Event> {
     tracing::debug!(year, "looking up events at year");
     all_events()
-        .into_iter()
+        .iter()
         .filter(|e| e.year == year)
+        .cloned()
         .collect()
+}
+
+/// Look up an event by exact name (case-insensitive).
+///
+/// Returns `Err(ItihasError::EventNotFound)` if no event matches.
+#[inline]
+pub fn by_name(name: &str) -> Result<Event, ItihasError> {
+    tracing::debug!(name, "looking up event by name");
+    let lower = name.to_lowercase();
+    all_events()
+        .iter()
+        .find(|e| e.name.to_lowercase() == lower)
+        .cloned()
+        .ok_or_else(|| ItihasError::EventNotFound(String::from(name)))
 }
 
 #[cfg(test)]
@@ -280,9 +340,9 @@ mod tests {
     #[test]
     fn test_event_serde_roundtrip() {
         for event in all_events() {
-            let json = serde_json::to_string(&event).unwrap();
+            let json = serde_json::to_string(event).unwrap();
             let back: Event = serde_json::from_str(&json).unwrap();
-            assert_eq!(event, back);
+            assert_eq!(*event, back);
         }
     }
 

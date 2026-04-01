@@ -4,9 +4,15 @@
 //! [`FigureDomain`] classification enum, and 10 pre-built figures spanning
 //! from Hammurabi to Ada Lovelace.
 
-use std::borrow::Cow;
+use alloc::borrow::Cow;
+use alloc::string::String;
+use alloc::vec;
+use alloc::vec::Vec;
+use core::fmt;
 
 use serde::{Deserialize, Serialize};
+
+use crate::error::ItihasError;
 
 /// Domain of a historical figure's primary contribution.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -34,6 +40,7 @@ pub enum FigureDomain {
 ///
 /// Years use astronomical year numbering: negative = BCE, positive = CE.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[non_exhaustive]
 pub struct Figure {
     /// Name of the figure.
     pub name: Cow<'static, str>,
@@ -49,10 +56,18 @@ pub struct Figure {
     pub description: Cow<'static, str>,
 }
 
-/// Returns all pre-built historical figures.
-#[must_use]
-#[inline]
-pub fn all_figures() -> Vec<Figure> {
+impl fmt::Display for Figure {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match (self.birth_year, self.death_year) {
+            (Some(b), Some(d)) => write!(f, "{} ({} – {})", self.name, b, d),
+            (Some(b), None) => write!(f, "{} (b. {})", self.name, b),
+            (None, Some(d)) => write!(f, "{} (d. {})", self.name, d),
+            (None, None) => write!(f, "{}", self.name),
+        }
+    }
+}
+
+fn build_figures() -> Vec<Figure> {
     vec![
         Figure {
             name: Cow::Borrowed("Hammurabi"),
@@ -78,7 +93,7 @@ pub fn all_figures() -> Vec<Figure> {
             name: Cow::Borrowed("Ashoka"),
             birth_year: Some(-304),
             death_year: Some(-232),
-            civilization: Cow::Borrowed("Indus Valley"),
+            civilization: Cow::Borrowed("Maurya Empire"),
             domain: FigureDomain::Ruler,
             description: Cow::Borrowed(
                 "Maurya emperor who unified most of South Asia and promoted Buddhism",
@@ -157,15 +172,49 @@ pub fn all_figures() -> Vec<Figure> {
     ]
 }
 
+/// Returns all pre-built historical figures.
+///
+/// Data is computed once and cached for the lifetime of the process.
+#[cfg(feature = "std")]
+#[must_use]
+#[inline]
+pub fn all_figures() -> &'static [Figure] {
+    static DATA: std::sync::LazyLock<Vec<Figure>> = std::sync::LazyLock::new(build_figures);
+    &DATA
+}
+
+/// Returns all pre-built historical figures.
+#[cfg(not(feature = "std"))]
+#[must_use]
+#[inline]
+pub fn all_figures() -> Vec<Figure> {
+    build_figures()
+}
+
 /// Returns figures matching the given domain.
 #[must_use]
 #[inline]
 pub fn by_domain(domain: &FigureDomain) -> Vec<Figure> {
     tracing::debug!(?domain, "looking up figures by domain");
     all_figures()
-        .into_iter()
+        .iter()
         .filter(|f| f.domain == *domain)
+        .cloned()
         .collect()
+}
+
+/// Look up a figure by exact name (case-insensitive).
+///
+/// Returns `Err(ItihasError::FigureNotFound)` if no figure matches.
+#[inline]
+pub fn by_name(name: &str) -> Result<Figure, ItihasError> {
+    tracing::debug!(name, "looking up figure by name");
+    let lower = name.to_lowercase();
+    all_figures()
+        .iter()
+        .find(|f| f.name.to_lowercase() == lower)
+        .cloned()
+        .ok_or_else(|| ItihasError::FigureNotFound(String::from(name)))
 }
 
 #[cfg(test)]
@@ -208,9 +257,9 @@ mod tests {
     #[test]
     fn test_figure_serde_roundtrip() {
         for fig in all_figures() {
-            let json = serde_json::to_string(&fig).unwrap();
+            let json = serde_json::to_string(fig).unwrap();
             let back: Figure = serde_json::from_str(&json).unwrap();
-            assert_eq!(fig, back);
+            assert_eq!(*fig, back);
         }
     }
 

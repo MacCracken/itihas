@@ -4,9 +4,16 @@
 //! [`EraCategory`] classification enum, and pre-built eras from the Bronze Age
 //! to the Information Age.
 
-use std::borrow::Cow;
+use alloc::borrow::Cow;
+use alloc::string::String;
+use alloc::vec;
+use alloc::vec::Vec;
+use core::cmp::Ordering;
+use core::fmt;
 
 use serde::{Deserialize, Serialize};
+
+use crate::error::ItihasError;
 
 /// Classification of historical periods.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -31,6 +38,7 @@ pub enum EraCategory {
 /// Years use astronomical year numbering: negative values represent BCE
 /// (e.g., -3300 = 3300 BCE), positive values represent CE.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[non_exhaustive]
 pub struct Era {
     /// Name of the era.
     pub name: Cow<'static, str>,
@@ -46,10 +54,27 @@ pub struct Era {
     pub category: EraCategory,
 }
 
-/// Returns all pre-built eras.
-#[must_use]
-#[inline]
-pub fn all_eras() -> Vec<Era> {
+impl fmt::Display for Era {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{} ({} – {})", self.name, self.start_year, self.end_year)
+    }
+}
+
+impl PartialOrd for Era {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for Era {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.start_year
+            .cmp(&other.start_year)
+            .then_with(|| self.end_year.cmp(&other.end_year))
+    }
+}
+
+fn build_eras() -> Vec<Era> {
     vec![
         Era {
             name: Cow::Borrowed("Bronze Age"),
@@ -118,6 +143,25 @@ pub fn all_eras() -> Vec<Era> {
     ]
 }
 
+/// Returns all pre-built eras.
+///
+/// Data is computed once and cached for the lifetime of the process.
+#[cfg(feature = "std")]
+#[must_use]
+#[inline]
+pub fn all_eras() -> &'static [Era] {
+    static DATA: std::sync::LazyLock<Vec<Era>> = std::sync::LazyLock::new(build_eras);
+    &DATA
+}
+
+/// Returns all pre-built eras.
+#[cfg(not(feature = "std"))]
+#[must_use]
+#[inline]
+pub fn all_eras() -> Vec<Era> {
+    build_eras()
+}
+
 /// Returns all eras that contain the given year.
 ///
 /// Years use astronomical year numbering: negative = BCE, positive = CE.
@@ -126,9 +170,24 @@ pub fn all_eras() -> Vec<Era> {
 pub fn eras_containing(year: i32) -> Vec<Era> {
     tracing::debug!(year, "looking up eras containing year");
     all_eras()
-        .into_iter()
+        .iter()
         .filter(|e| year >= e.start_year && year <= e.end_year)
+        .cloned()
         .collect()
+}
+
+/// Look up an era by exact name (case-insensitive).
+///
+/// Returns `Err(ItihasError::UnknownEra)` if no era matches.
+#[inline]
+pub fn by_name(name: &str) -> Result<Era, ItihasError> {
+    tracing::debug!(name, "looking up era by name");
+    let lower = name.to_lowercase();
+    all_eras()
+        .iter()
+        .find(|e| e.name.to_lowercase() == lower)
+        .cloned()
+        .ok_or_else(|| ItihasError::UnknownEra(String::from(name)))
 }
 
 #[cfg(test)]
@@ -177,9 +236,9 @@ mod tests {
     #[test]
     fn test_era_serde_roundtrip() {
         for era in all_eras() {
-            let json = serde_json::to_string(&era).unwrap();
+            let json = serde_json::to_string(era).unwrap();
             let back: Era = serde_json::from_str(&json).unwrap();
-            assert_eq!(era, back);
+            assert_eq!(*era, back);
         }
     }
 

@@ -38,6 +38,10 @@
 //! - **lipi** — linguistics (historical script/language context)
 //! - **vidya** — programming reference (history of computing)
 
+#![cfg_attr(not(feature = "std"), no_std)]
+
+extern crate alloc;
+
 pub mod calendar;
 pub mod civilization;
 pub mod era;
