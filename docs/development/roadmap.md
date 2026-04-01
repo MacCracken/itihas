@@ -1,13 +1,6 @@
 # Development Roadmap
 
-> **Status**: 1.0 | **Current**: 1.0.0
-
-## Completed
-
-### AI Integration (v1.0.0)
-
-- [x] Hoosh query types and data-driven answer resolution (`hoosh` feature)
-- [x] MCP tool definitions stub (`mcp` feature, pending bote integration)
+> **Status**: 1.0 | **Current**: 1.0.1
 
 ## Backlog
 
