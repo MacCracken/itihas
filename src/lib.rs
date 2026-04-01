@@ -9,15 +9,15 @@
 //! Six modules:
 //!
 //! - [`era`] — Historical periods with date ranges and civilizational phases.
-//!   Pre-built eras from Bronze Age to Information Age, `eras_containing(year)` lookup
+//!   25 pre-built eras (8 global + 17 regional), `eras_containing(year)` lookup
 //! - [`civilization`] — Major civilizations with geographic extent, peak period,
-//!   key traits. 10 pre-built civilizations, `by_region()` and `active_at()` lookups
-//! - [`event`] — Structured historical events with category, era, and civilizations
-//!   involved. 15 pre-built major world events
+//!   key traits. 52 pre-built civilizations, `by_region()` and `active_at()` lookups
+//! - [`event`] — Structured historical events with category, era, significance,
+//!   and civilizations involved. 105 pre-built world events
 //! - [`calendar`] — Calendar system metadata: type, epoch, months, leap rules
 //!   (not computation — that belongs in sankhya). 8 pre-built calendar systems
 //! - [`figure`] — Historical figures with era/civilization context and domain
-//!   classification. 10 pre-built figures
+//!   classification. 52 pre-built figures
 //! - [`error`] — `ItihasError` with variants for unknown entities and invalid lookups
 //!
 //! # Relationship to Other Crates

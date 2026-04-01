@@ -2,7 +2,7 @@
 
 use itihas::calendar::{CalendarSystem, CalendarType};
 use itihas::civilization::{self, Civilization};
-use itihas::era::{self, Era, EraCategory};
+use itihas::era::{self, Era, EraCategory, EraScope};
 use itihas::event::{self, Event, EventCategory, EventSignificance};
 use itihas::figure::{self, Figure, FigureDomain};
 
@@ -73,6 +73,16 @@ fn test_era_category_all_variants_roundtrip() {
         let json = serde_json::to_string(cat).unwrap();
         let back: EraCategory = serde_json::from_str(&json).unwrap();
         assert_eq!(*cat, back);
+    }
+}
+
+#[test]
+fn test_era_scope_all_variants_roundtrip() {
+    let scopes = [EraScope::Global, EraScope::Regional];
+    for s in &scopes {
+        let json = serde_json::to_string(s).unwrap();
+        let back: EraScope = serde_json::from_str(&json).unwrap();
+        assert_eq!(*s, back);
     }
 }
 
@@ -539,4 +549,58 @@ fn test_events_sort_chronologically() {
     for w in events.windows(2) {
         assert!(w[0].year <= w[1].year);
     }
+}
+
+// ---------------------------------------------------------------------------
+// EraScope tests
+// ---------------------------------------------------------------------------
+
+#[test]
+fn test_by_scope_partitions_all_eras() {
+    let all = era::all_eras();
+    let global = era::by_scope(&EraScope::Global);
+    let regional = era::by_scope(&EraScope::Regional);
+    assert!(!global.is_empty());
+    assert!(!regional.is_empty());
+    assert_eq!(global.len() + regional.len(), all.len());
+    for e in &global {
+        assert_eq!(e.scope, EraScope::Global);
+    }
+    for e in &regional {
+        assert_eq!(e.scope, EraScope::Regional);
+    }
+}
+
+#[test]
+fn test_regional_eras_have_specific_regions() {
+    let regional = era::by_scope(&EraScope::Regional);
+    for e in &regional {
+        assert!(
+            e.region != "Global",
+            "regional era '{}' has region 'Global'",
+            e.name
+        );
+    }
+}
+
+#[test]
+fn test_era_by_region_east_asia() {
+    let east_asia = era::by_region("East Asia");
+    assert!(!east_asia.is_empty());
+    // Should include Chinese dynasties
+    assert!(east_asia.iter().any(|e| e.name == "Tang Dynasty"));
+}
+
+#[test]
+fn test_era_by_region_south_asia() {
+    let south_asia = era::by_region("South Asia");
+    assert!(!south_asia.is_empty());
+    assert!(south_asia.iter().any(|e| e.name == "Vedic Period"));
+}
+
+#[test]
+fn test_era_by_region_mesoamerica() {
+    let meso = era::by_region("Mesoamerica");
+    assert_eq!(meso.len(), 3);
+    assert!(meso.iter().any(|e| e.name == "Mesoamerican Classic"));
 }
