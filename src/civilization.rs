@@ -955,10 +955,11 @@ mod tests {
 
     #[test]
     fn test_civilization_serde_roundtrip() {
-        for civ in all_civilizations() {
+        let civs = all_civilizations();
+        for civ in civs.iter() {
             let json = serde_json::to_string(civ).unwrap();
             let back: Civilization = serde_json::from_str(&json).unwrap();
-            assert_eq!(*civ, back);
+            assert_eq!(civ, &back);
         }
     }
 }

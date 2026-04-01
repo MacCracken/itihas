@@ -214,10 +214,11 @@ mod tests {
 
     #[test]
     fn test_calendar_serde_roundtrip() {
-        for cal in all_calendars() {
+        let cals = all_calendars();
+        for cal in cals.iter() {
             let json = serde_json::to_string(cal).unwrap();
             let back: CalendarSystem = serde_json::from_str(&json).unwrap();
-            assert_eq!(*cal, back);
+            assert_eq!(cal, &back);
         }
     }
 

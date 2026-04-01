@@ -696,10 +696,11 @@ mod tests {
 
     #[test]
     fn test_figure_serde_roundtrip() {
-        for fig in all_figures() {
+        let figs = all_figures();
+        for fig in figs.iter() {
             let json = serde_json::to_string(fig).unwrap();
             let back: Figure = serde_json::from_str(&json).unwrap();
-            assert_eq!(*fig, back);
+            assert_eq!(fig, &back);
         }
     }
 

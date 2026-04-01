@@ -505,10 +505,11 @@ mod tests {
 
     #[test]
     fn test_era_serde_roundtrip() {
-        for era in all_eras() {
+        let eras = all_eras();
+        for era in eras.iter() {
             let json = serde_json::to_string(era).unwrap();
             let back: Era = serde_json::from_str(&json).unwrap();
-            assert_eq!(*era, back);
+            assert_eq!(era, &back);
         }
     }
 

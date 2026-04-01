@@ -1454,10 +1454,11 @@ mod tests {
 
     #[test]
     fn test_event_serde_roundtrip() {
-        for event in all_events() {
+        let events = all_events();
+        for event in events.iter() {
             let json = serde_json::to_string(event).unwrap();
             let back: Event = serde_json::from_str(&json).unwrap();
-            assert_eq!(*event, back);
+            assert_eq!(event, &back);
         }
     }
 

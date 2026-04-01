@@ -6,6 +6,7 @@
 
 use alloc::borrow::Cow;
 use alloc::string::String;
+use alloc::string::ToString;
 use alloc::vec;
 use alloc::vec::Vec;
 use core::fmt;
@@ -297,10 +298,11 @@ mod tests {
 
     #[test]
     fn test_causality_serde_roundtrip() {
-        for c in all_causalities() {
+        let causalities = all_causalities();
+        for c in causalities.iter() {
             let json = serde_json::to_string(c).unwrap();
             let back: Causality = serde_json::from_str(&json).unwrap();
-            assert_eq!(*c, back);
+            assert_eq!(c, &back);
         }
     }
 

@@ -14,46 +14,51 @@ use itihas::interaction;
 
 #[test]
 fn test_all_eras_serde_roundtrip() {
-    for era in era::all_eras() {
+    let eras = era::all_eras();
+    for era in eras.iter() {
         let json = serde_json::to_string(era).unwrap();
         let back: Era = serde_json::from_str(&json).unwrap();
-        assert_eq!(*era, back);
+        assert_eq!(era, &back);
     }
 }
 
 #[test]
 fn test_all_civilizations_serde_roundtrip() {
-    for civ in civilization::all_civilizations() {
+    let civs = civilization::all_civilizations();
+    for civ in civs.iter() {
         let json = serde_json::to_string(civ).unwrap();
         let back: Civilization = serde_json::from_str(&json).unwrap();
-        assert_eq!(*civ, back);
+        assert_eq!(civ, &back);
     }
 }
 
 #[test]
 fn test_all_events_serde_roundtrip() {
-    for event in event::all_events() {
+    let events = event::all_events();
+    for event in events.iter() {
         let json = serde_json::to_string(event).unwrap();
         let back: Event = serde_json::from_str(&json).unwrap();
-        assert_eq!(*event, back);
+        assert_eq!(event, &back);
     }
 }
 
 #[test]
 fn test_all_calendars_serde_roundtrip() {
-    for cal in itihas::calendar::all_calendars() {
+    let cals = itihas::calendar::all_calendars();
+    for cal in cals.iter() {
         let json = serde_json::to_string(cal).unwrap();
         let back: CalendarSystem = serde_json::from_str(&json).unwrap();
-        assert_eq!(*cal, back);
+        assert_eq!(cal, &back);
     }
 }
 
 #[test]
 fn test_all_figures_serde_roundtrip() {
-    for fig in figure::all_figures() {
+    let figs = figure::all_figures();
+    for fig in figs.iter() {
         let json = serde_json::to_string(fig).unwrap();
         let back: Figure = serde_json::from_str(&json).unwrap();
-        assert_eq!(*fig, back);
+        assert_eq!(fig, &back);
     }
 }
 

@@ -476,10 +476,11 @@ mod tests {
 
     #[test]
     fn test_interaction_serde_roundtrip() {
-        for i in all_interactions() {
+        let interactions = all_interactions();
+        for i in interactions.iter() {
             let json = serde_json::to_string(i).unwrap();
             let back: CivInteraction = serde_json::from_str(&json).unwrap();
-            assert_eq!(*i, back);
+            assert_eq!(i, &back);
         }
     }
 

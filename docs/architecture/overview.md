@@ -10,20 +10,24 @@ itihas/
 │   ├── lib.rs            — public API, module re-exports
 │   ├── error.rs          — ItihasError enum (non_exhaustive)
 │   ├── era.rs            — historical periods, date ranges, era categories
-│   │                       7 pre-built eras, eras_containing() lookup
+│   │                       25 eras (8 global + 17 regional), temporal/scope lookups
 │   ├── civilization.rs   — major civilizations, geographic extent, traits
-│   │                       10 pre-built civilizations, by_region/active_at
-│   ├── event.rs          — structured historical events, categories
-│   │                       15 pre-built events
+│   │                       52 civilizations, by_region/active_at/by_name
+│   ├── event.rs          — structured historical events, categories, significance
+│   │                       105 events, timeline slicing, category/significance filters
+│   ├── causality.rs      — causal links between events, strength ratings
+│   │                       chain traversal: causes_of/effects_of/chain
+│   ├── interaction.rs    — civilization interaction graph, influence scoring
+│   │                       trade/war/diplomacy, region proximity
 │   ├── calendar.rs       — calendar system metadata (type, epoch, months)
 │   │                       8 pre-built calendar systems
 │   ├── figure.rs         — historical figures, domain classification
-│   │                       10 pre-built figures
+│   │                       52 figures across 8 domains
 │   └── logging.rs        — optional ITIHAS_LOG env-based tracing init
 ├── benches/
-│   └── benchmarks.rs     — criterion benchmarks (6 benchmarks)
+│   └── benchmarks.rs     — criterion benchmarks (19 benchmarks)
 ├── tests/
-│   └── integration.rs    — cross-module integration tests
+│   └── integration.rs    — cross-module integration tests (59 tests)
 └── examples/
     └── basic.rs          — runnable usage example
 ```
@@ -33,22 +37,26 @@ itihas/
 ```
 Year / region query
   │
-  ├─→ era           — eras_containing(year) → matching Era structs
-  ├─→ civilization   — active_at(year), by_region(region) → matching Civilization structs
-  ├─→ event         — all_events() → Event structs with category, year, civilizations
-  ├─→ calendar      — all_calendars() → CalendarSystem metadata
-  └─→ figure        — all_figures() → Figure structs with era/civilization context
+  ├─→ era           — eras_containing(year), by_scope(), by_region()
+  ├─→ civilization   — active_at(year), by_region(region), by_name()
+  ├─→ event         — events_between(start, end), by_category(), by_significance()
+  ├─→ causality     — causes_of(event), effects_of(event), chain(event, depth)
+  ├─→ interaction   — interactions_for(civ), between(a, b), influence_score()
+  ├─→ calendar      — all_calendars(), by_name()
+  └─→ figure        — by_domain(), by_name()
 ```
 
 ## Pre-built Data
 
 | Module | Count | Examples |
 |--------|-------|---------|
-| Eras | 7 | Bronze Age, Classical Antiquity, Renaissance, Information Age |
-| Civilizations | 10 | Mesopotamia, Egypt, Indus Valley, Greece, Rome, Maya |
-| Events | 15 | Invention of writing, Fall of Rome, Printing press |
+| Eras | 25 | Bronze Age, Classical Antiquity, Tang Dynasty, Vedic Period |
+| Civilizations | 52 | Mesopotamia, Mali Empire, Khmer Empire, Inca Empire |
+| Events | 105 | Invention of Writing, Fall of Rome, Moon Landing |
+| Causalities | 13 | Writing → Hammurabi, Printing Press → French Revolution |
+| Interactions | 20 | Egypt ↔ Hittite (War/Diplomacy), Rome ↔ China (Trade) |
 | Calendars | 8 | Gregorian, Julian, Islamic, Hebrew, Chinese, Hindu, Maya, Egyptian |
-| Figures | 10 | Hammurabi, Aristotle, Ashoka, Gutenberg |
+| Figures | 52 | Hammurabi, Confucius, Hypatia, Mansa Musa, Ada Lovelace |
 
 ## Dependency Stack
 
@@ -76,8 +84,10 @@ itihas
 ## Design Principles
 
 - **Data-driven**: Historical data as structured Rust types, not embedded strings
-- **Queryable**: Every dataset supports lookup, filtering by year/region
+- **Queryable**: Every dataset supports lookup, filtering by year/region/category
 - **Composable**: Each module is independent — consumers pull only what they need
 - **Serializable**: All types implement Serialize + Deserialize for data exchange
-- **Extensible**: `#[non_exhaustive]` on all enums — new variants without breaking changes
-- **Zero-alloc statics**: `Cow<'static, str>` for pre-built data
+- **Extensible**: `#[non_exhaustive]` on all public enums and structs
+- **Zero-alloc statics**: `Cow<'static, str>` + `LazyLock` for sub-nanosecond data access
+- **Graph-ready**: Causality chains and interaction graphs for relational queries
+- **`no_std` compatible**: All modules use `alloc`/`core` imports; `std` feature adds caching
