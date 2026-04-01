@@ -3,7 +3,7 @@
 use itihas::calendar::{CalendarSystem, CalendarType};
 use itihas::civilization::{self, Civilization};
 use itihas::era::{self, Era, EraCategory};
-use itihas::event::{self, Event, EventCategory};
+use itihas::event::{self, Event, EventCategory, EventSignificance};
 use itihas::figure::{self, Figure, FigureDomain};
 
 // ---------------------------------------------------------------------------
@@ -107,6 +107,21 @@ fn test_calendar_type_all_variants_roundtrip() {
         let json = serde_json::to_string(t).unwrap();
         let back: CalendarType = serde_json::from_str(&json).unwrap();
         assert_eq!(*t, back);
+    }
+}
+
+#[test]
+fn test_event_significance_all_variants_roundtrip() {
+    let levels = [
+        EventSignificance::Local,
+        EventSignificance::Regional,
+        EventSignificance::Continental,
+        EventSignificance::Global,
+    ];
+    for s in &levels {
+        let json = serde_json::to_string(s).unwrap();
+        let back: EventSignificance = serde_json::from_str(&json).unwrap();
+        assert_eq!(*s, back);
     }
 }
 

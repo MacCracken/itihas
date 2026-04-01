@@ -46,6 +46,25 @@ impl fmt::Display for EraCategory {
     }
 }
 
+/// Whether an era represents a global periodization or a regional tradition.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[non_exhaustive]
+pub enum EraScope {
+    /// Standard world-history periodization (Bronze Age, Classical, etc.).
+    Global,
+    /// Region-specific periodization (Chinese dynasties, Indian yugas, etc.).
+    Regional,
+}
+
+impl fmt::Display for EraScope {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Global => f.write_str("Global"),
+            Self::Regional => f.write_str("Regional"),
+        }
+    }
+}
+
 /// A historical era with date range and region.
 ///
 /// Years use astronomical year numbering: negative values represent BCE
@@ -65,6 +84,8 @@ pub struct Era {
     pub description: Cow<'static, str>,
     /// Category classification.
     pub category: EraCategory,
+    /// Whether this is a global or regional periodization.
+    pub scope: EraScope,
 }
 
 impl fmt::Display for Era {
@@ -93,6 +114,7 @@ impl Ord for Era {
 
 fn build_eras() -> Vec<Era> {
     vec![
+        // ---- Global periodization ----
         Era {
             name: Cow::Borrowed("Bronze Age"),
             start_year: -3500,
@@ -102,6 +124,7 @@ fn build_eras() -> Vec<Era> {
                 "Emergence of bronze metallurgy, early writing systems, and first cities",
             ),
             category: EraCategory::Ancient,
+            scope: EraScope::Global,
         },
         Era {
             name: Cow::Borrowed("Iron Age"),
@@ -112,6 +135,7 @@ fn build_eras() -> Vec<Era> {
                 "Widespread iron smelting, alphabetic writing, rise of empires",
             ),
             category: EraCategory::Ancient,
+            scope: EraScope::Global,
         },
         Era {
             name: Cow::Borrowed("Classical Antiquity"),
@@ -122,6 +146,7 @@ fn build_eras() -> Vec<Era> {
                 "Greek and Roman civilization, philosophy, democracy, republic",
             ),
             category: EraCategory::Classical,
+            scope: EraScope::Global,
         },
         Era {
             name: Cow::Borrowed("Middle Ages"),
@@ -130,6 +155,7 @@ fn build_eras() -> Vec<Era> {
             region: Cow::Borrowed("Europe, Near East"),
             description: Cow::Borrowed("Feudalism, monasticism, Islamic Golden Age, Crusades"),
             category: EraCategory::Medieval,
+            scope: EraScope::Global,
         },
         Era {
             name: Cow::Borrowed("Renaissance"),
@@ -140,6 +166,7 @@ fn build_eras() -> Vec<Era> {
                 "Revival of classical learning, art, science, and exploration",
             ),
             category: EraCategory::EarlyModern,
+            scope: EraScope::Global,
         },
         Era {
             name: Cow::Borrowed("Age of Enlightenment"),
@@ -150,6 +177,7 @@ fn build_eras() -> Vec<Era> {
                 "Scientific Revolution, rationalism, empiricism, social contract theory",
             ),
             category: EraCategory::EarlyModern,
+            scope: EraScope::Global,
         },
         Era {
             name: Cow::Borrowed("Industrial Age"),
@@ -158,6 +186,7 @@ fn build_eras() -> Vec<Era> {
             region: Cow::Borrowed("Global"),
             description: Cow::Borrowed("Mechanization, mass production, urbanization, world wars"),
             category: EraCategory::Modern,
+            scope: EraScope::Global,
         },
         Era {
             name: Cow::Borrowed("Information Age"),
@@ -166,6 +195,195 @@ fn build_eras() -> Vec<Era> {
             region: Cow::Borrowed("Global"),
             description: Cow::Borrowed("Digital revolution, internet, AI, globalization"),
             category: EraCategory::Contemporary,
+            scope: EraScope::Global,
+        },
+        // ---- Chinese dynasties ----
+        Era {
+            name: Cow::Borrowed("Xia Dynasty"),
+            start_year: -2070,
+            end_year: -1600,
+            region: Cow::Borrowed("East Asia"),
+            description: Cow::Borrowed(
+                "Semi-legendary first dynasty of China, Yellow River valley",
+            ),
+            category: EraCategory::Ancient,
+            scope: EraScope::Regional,
+        },
+        Era {
+            name: Cow::Borrowed("Shang Dynasty"),
+            start_year: -1600,
+            end_year: -1046,
+            region: Cow::Borrowed("East Asia"),
+            description: Cow::Borrowed("Oracle bones, bronze casting, earliest Chinese writing"),
+            category: EraCategory::Ancient,
+            scope: EraScope::Regional,
+        },
+        Era {
+            name: Cow::Borrowed("Zhou Dynasty"),
+            start_year: -1046,
+            end_year: -256,
+            region: Cow::Borrowed("East Asia"),
+            description: Cow::Borrowed(
+                "Mandate of Heaven, Confucius, Laozi, Hundred Schools of Thought",
+            ),
+            category: EraCategory::Ancient,
+            scope: EraScope::Regional,
+        },
+        Era {
+            name: Cow::Borrowed("Qin Dynasty"),
+            start_year: -221,
+            end_year: -206,
+            region: Cow::Borrowed("East Asia"),
+            description: Cow::Borrowed(
+                "First unification of China, Great Wall begun, Legalism, terracotta army",
+            ),
+            category: EraCategory::Classical,
+            scope: EraScope::Regional,
+        },
+        Era {
+            name: Cow::Borrowed("Han Dynasty"),
+            start_year: -206,
+            end_year: 220,
+            region: Cow::Borrowed("East Asia"),
+            description: Cow::Borrowed(
+                "Silk Road, Confucian state, paper invention, civil service exams",
+            ),
+            category: EraCategory::Classical,
+            scope: EraScope::Regional,
+        },
+        Era {
+            name: Cow::Borrowed("Tang Dynasty"),
+            start_year: 618,
+            end_year: 907,
+            region: Cow::Borrowed("East Asia"),
+            description: Cow::Borrowed(
+                "Golden age of Chinese poetry, cosmopolitan culture, woodblock printing",
+            ),
+            category: EraCategory::Medieval,
+            scope: EraScope::Regional,
+        },
+        Era {
+            name: Cow::Borrowed("Song Dynasty"),
+            start_year: 960,
+            end_year: 1279,
+            region: Cow::Borrowed("East Asia"),
+            description: Cow::Borrowed(
+                "Movable type, gunpowder weapons, compass navigation, Neo-Confucianism",
+            ),
+            category: EraCategory::Medieval,
+            scope: EraScope::Regional,
+        },
+        Era {
+            name: Cow::Borrowed("Ming Dynasty"),
+            start_year: 1368,
+            end_year: 1644,
+            region: Cow::Borrowed("East Asia"),
+            description: Cow::Borrowed(
+                "Great Wall reconstruction, Forbidden City, Zheng He voyages, porcelain",
+            ),
+            category: EraCategory::EarlyModern,
+            scope: EraScope::Regional,
+        },
+        Era {
+            name: Cow::Borrowed("Qing Dynasty"),
+            start_year: 1644,
+            end_year: 1912,
+            region: Cow::Borrowed("East Asia"),
+            description: Cow::Borrowed(
+                "Last imperial dynasty, Manchu rule, territorial expansion, Opium Wars",
+            ),
+            category: EraCategory::EarlyModern,
+            scope: EraScope::Regional,
+        },
+        // ---- Indian periods ----
+        Era {
+            name: Cow::Borrowed("Vedic Period"),
+            start_year: -1500,
+            end_year: -500,
+            region: Cow::Borrowed("South Asia"),
+            description: Cow::Borrowed(
+                "Composition of the Vedas, varna system, early Hinduism, Sanskrit literature",
+            ),
+            category: EraCategory::Ancient,
+            scope: EraScope::Regional,
+        },
+        Era {
+            name: Cow::Borrowed("Maurya Period"),
+            start_year: -322,
+            end_year: -185,
+            region: Cow::Borrowed("South Asia"),
+            description: Cow::Borrowed(
+                "First pan-Indian empire under Chandragupta and Ashoka, spread of Buddhism",
+            ),
+            category: EraCategory::Classical,
+            scope: EraScope::Regional,
+        },
+        Era {
+            name: Cow::Borrowed("Gupta Period"),
+            start_year: 320,
+            end_year: 550,
+            region: Cow::Borrowed("South Asia"),
+            description: Cow::Borrowed(
+                "Golden age of India: zero, decimal system, Kalidasa, Aryabhata, Nalanda",
+            ),
+            category: EraCategory::Classical,
+            scope: EraScope::Regional,
+        },
+        Era {
+            name: Cow::Borrowed("Delhi Sultanate"),
+            start_year: 1206,
+            end_year: 1526,
+            region: Cow::Borrowed("South Asia"),
+            description: Cow::Borrowed(
+                "Turkic and Afghan Muslim rule in northern India, Indo-Islamic architecture",
+            ),
+            category: EraCategory::Medieval,
+            scope: EraScope::Regional,
+        },
+        Era {
+            name: Cow::Borrowed("Mughal Period"),
+            start_year: 1526,
+            end_year: 1857,
+            region: Cow::Borrowed("South Asia"),
+            description: Cow::Borrowed(
+                "Babur to Bahadur Shah, Taj Mahal, Akbar's religious tolerance, Urdu synthesis",
+            ),
+            category: EraCategory::EarlyModern,
+            scope: EraScope::Regional,
+        },
+        // ---- Mesoamerican periods ----
+        Era {
+            name: Cow::Borrowed("Mesoamerican Preclassic"),
+            start_year: -2000,
+            end_year: 250,
+            region: Cow::Borrowed("Mesoamerica"),
+            description: Cow::Borrowed(
+                "Olmec civilization, early Maya settlements, development of writing and calendars",
+            ),
+            category: EraCategory::Ancient,
+            scope: EraScope::Regional,
+        },
+        Era {
+            name: Cow::Borrowed("Mesoamerican Classic"),
+            start_year: 250,
+            end_year: 900,
+            region: Cow::Borrowed("Mesoamerica"),
+            description: Cow::Borrowed(
+                "Maya golden age, Teotihuacan, Zapotec, monumental architecture and astronomy",
+            ),
+            category: EraCategory::Classical,
+            scope: EraScope::Regional,
+        },
+        Era {
+            name: Cow::Borrowed("Mesoamerican Postclassic"),
+            start_year: 900,
+            end_year: 1521,
+            region: Cow::Borrowed("Mesoamerica"),
+            description: Cow::Borrowed(
+                "Toltec and Aztec empires, Chichen Itza, Tenochtitlan, Spanish contact",
+            ),
+            category: EraCategory::Medieval,
+            scope: EraScope::Regional,
         },
     ]
 }
@@ -203,6 +421,31 @@ pub fn eras_containing(year: i32) -> Vec<Era> {
         .collect()
 }
 
+/// Returns eras matching the given scope (Global or Regional).
+#[must_use]
+#[inline]
+pub fn by_scope(scope: &EraScope) -> Vec<Era> {
+    tracing::debug!(?scope, "looking up eras by scope");
+    all_eras()
+        .iter()
+        .filter(|e| e.scope == *scope)
+        .cloned()
+        .collect()
+}
+
+/// Returns eras whose region contains the given substring (case-insensitive).
+#[must_use]
+#[inline]
+pub fn by_region(region: &str) -> Vec<Era> {
+    tracing::debug!(region, "looking up eras by region");
+    let lower = region.to_lowercase();
+    all_eras()
+        .iter()
+        .filter(|e| e.region.to_lowercase().contains(&lower))
+        .cloned()
+        .collect()
+}
+
 /// Look up an era by exact name (case-insensitive).
 ///
 /// Returns `Err(ItihasError::UnknownEra)` if no era matches.
@@ -223,7 +466,7 @@ mod tests {
 
     #[test]
     fn test_all_eras_count() {
-        assert_eq!(all_eras().len(), 8);
+        assert_eq!(all_eras().len(), 25);
     }
 
     #[test]
