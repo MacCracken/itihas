@@ -55,7 +55,13 @@ pub mod event;
 pub mod figure;
 pub mod interaction;
 
+#[cfg(feature = "hoosh")]
+pub mod hoosh;
+
 #[cfg(feature = "logging")]
 pub mod logging;
+
+#[cfg(feature = "mcp")]
+pub mod mcp;
 
 pub use error::ItihasError;
