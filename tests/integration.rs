@@ -6,6 +6,7 @@ use itihas::civilization::{self, Civilization};
 use itihas::era::{self, Era, EraCategory, EraScope};
 use itihas::event::{self, Event, EventCategory, EventSignificance};
 use itihas::figure::{self, Figure, FigureDomain};
+use itihas::interaction;
 
 // ---------------------------------------------------------------------------
 // Serde roundtrips — all types
@@ -662,4 +663,58 @@ fn test_chain_follows_correct_depth() {
     for (_, depth) in &ch {
         assert!(*depth <= 2);
     }
+}
+
+// ---------------------------------------------------------------------------
+// Interaction tests
+// ---------------------------------------------------------------------------
+
+#[test]
+fn test_interaction_civs_are_known() {
+    let civ_names: Vec<_> = civilization::all_civilizations()
+        .iter()
+        .map(|c| c.name.clone())
+        .collect();
+    for i in interaction::all_interactions() {
+        assert!(
+            civ_names.contains(&i.civ_a),
+            "interaction references unknown civ_a '{}'",
+            i.civ_a
+        );
+        assert!(
+            civ_names.contains(&i.civ_b),
+            "interaction references unknown civ_b '{}'",
+            i.civ_b
+        );
+    }
+}
+
+#[test]
+fn test_interaction_neighbors_are_known_civs() {
+    let civ_names: Vec<_> = civilization::all_civilizations()
+        .iter()
+        .map(|c| c.name.clone())
+        .collect();
+    let rome_neighbors = interaction::neighbors("Roman Empire");
+    for n in &rome_neighbors {
+        assert!(
+            civ_names.contains(n),
+            "neighbor '{}' is not a known civilization",
+            n
+        );
+    }
+}
+
+#[test]
+fn test_influence_score_symmetric() {
+    let ab = interaction::influence_score("Ancient Egypt", "Hittite Empire");
+    let ba = interaction::influence_score("Hittite Empire", "Ancient Egypt");
+    assert_eq!(ab, ba);
+}
+
+#[test]
+fn test_region_proximity_symmetric() {
+    let ab = interaction::region_proximity("Roman Empire", "Ancient Greece");
+    let ba = interaction::region_proximity("Ancient Greece", "Roman Empire");
+    assert_eq!(ab, ba);
 }

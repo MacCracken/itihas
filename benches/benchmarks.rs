@@ -70,6 +70,47 @@ fn bench_events_between(c: &mut Criterion) {
     });
 }
 
+fn bench_all_causalities(c: &mut Criterion) {
+    c.bench_function("all_causalities", |b| {
+        b.iter(itihas::causality::all_causalities)
+    });
+}
+
+fn bench_causes_of(c: &mut Criterion) {
+    c.bench_function("causes_of_french_revolution", |b| {
+        b.iter(|| itihas::causality::causes_of(black_box("French Revolution")))
+    });
+}
+
+fn bench_chain(c: &mut Criterion) {
+    c.bench_function("chain_writing_depth3", |b| {
+        b.iter(|| itihas::causality::chain(black_box("Invention of Writing"), black_box(3)))
+    });
+}
+
+fn bench_all_interactions(c: &mut Criterion) {
+    c.bench_function("all_interactions", |b| {
+        b.iter(itihas::interaction::all_interactions)
+    });
+}
+
+fn bench_interactions_for(c: &mut Criterion) {
+    c.bench_function("interactions_for_rome", |b| {
+        b.iter(|| itihas::interaction::interactions_for(black_box("Roman Empire")))
+    });
+}
+
+fn bench_influence_score(c: &mut Criterion) {
+    c.bench_function("influence_score_egypt_hittite", |b| {
+        b.iter(|| {
+            itihas::interaction::influence_score(
+                black_box("Ancient Egypt"),
+                black_box("Hittite Empire"),
+            )
+        })
+    });
+}
+
 criterion_group!(
     benches,
     bench_all_eras,
@@ -85,5 +126,11 @@ criterion_group!(
     bench_calendar_by_name,
     bench_all_figures,
     bench_figures_by_domain,
+    bench_all_causalities,
+    bench_causes_of,
+    bench_chain,
+    bench_all_interactions,
+    bench_interactions_for,
+    bench_influence_score,
 );
 criterion_main!(benches);
