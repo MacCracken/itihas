@@ -1383,6 +1383,22 @@ pub fn by_significance(significance: &EventSignificance) -> Vec<Event> {
         .collect()
 }
 
+/// Returns events that occurred between `start` and `end` years (inclusive).
+///
+/// Results are sorted chronologically.
+#[must_use]
+#[inline]
+pub fn events_between(start: i32, end: i32) -> Vec<Event> {
+    tracing::debug!(start, end, "looking up events between years");
+    let mut results: Vec<Event> = all_events()
+        .iter()
+        .filter(|e| e.year >= start && e.year <= end)
+        .cloned()
+        .collect();
+    results.sort();
+    results
+}
+
 /// Look up an event by exact name (case-insensitive).
 ///
 /// Returns `Err(ItihasError::EventNotFound)` if no event matches.
@@ -1488,5 +1504,24 @@ mod tests {
                 .iter()
                 .all(|e| e.significance == EventSignificance::Global)
         );
+    }
+
+    #[test]
+    fn test_events_between() {
+        let events = events_between(-500, 500);
+        assert!(!events.is_empty());
+        for e in &events {
+            assert!(e.year >= -500 && e.year <= 500);
+        }
+        // Should be sorted
+        for w in events.windows(2) {
+            assert!(w[0].year <= w[1].year);
+        }
+    }
+
+    #[test]
+    fn test_events_between_empty() {
+        let events = events_between(-100_000, -99_000);
+        assert!(events.is_empty());
     }
 }

@@ -1,6 +1,7 @@
 //! Integration tests for itihas — cross-module behavior.
 
 use itihas::calendar::{CalendarSystem, CalendarType};
+use itihas::causality;
 use itihas::civilization::{self, Civilization};
 use itihas::era::{self, Era, EraCategory, EraScope};
 use itihas::event::{self, Event, EventCategory, EventSignificance};
@@ -417,6 +418,19 @@ fn test_events_at_year_returns_correct_year() {
 }
 
 #[test]
+fn test_events_between_classical_antiquity() {
+    let events = event::events_between(-800, 476);
+    assert!(!events.is_empty());
+    for e in &events {
+        assert!(e.year >= -800 && e.year <= 476);
+    }
+    // Verify chronological order
+    for w in events.windows(2) {
+        assert!(w[0].year <= w[1].year);
+    }
+}
+
+#[test]
 fn test_calendar_by_name_found_and_not_found() {
     assert!(itihas::calendar::by_name("gregorian").is_ok());
     assert!(itihas::calendar::by_name("Martian").is_err());
@@ -603,4 +617,49 @@ fn test_era_by_region_mesoamerica() {
     let meso = era::by_region("Mesoamerica");
     assert_eq!(meso.len(), 3);
     assert!(meso.iter().any(|e| e.name == "Mesoamerican Classic"));
+}
+
+// ---------------------------------------------------------------------------
+// Causality tests
+// ---------------------------------------------------------------------------
+
+#[test]
+fn test_causality_references_known_events() {
+    let event_names: Vec<_> = event::all_events().iter().map(|e| e.name.clone()).collect();
+    for c in causality::all_causalities() {
+        assert!(
+            event_names.contains(&c.cause),
+            "causality references unknown cause event '{}'",
+            c.cause
+        );
+        assert!(
+            event_names.contains(&c.effect),
+            "causality references unknown effect event '{}'",
+            c.effect
+        );
+    }
+}
+
+#[test]
+fn test_causality_cause_precedes_effect() {
+    for c in causality::all_causalities() {
+        let cause_event = event::by_name(&c.cause).unwrap();
+        let effect_event = event::by_name(&c.effect).unwrap();
+        assert!(
+            cause_event.year <= effect_event.year,
+            "cause '{}' (year {}) occurs after effect '{}' (year {})",
+            c.cause,
+            cause_event.year,
+            c.effect,
+            effect_event.year
+        );
+    }
+}
+
+#[test]
+fn test_chain_follows_correct_depth() {
+    let ch = causality::chain("Invention of Writing", 2);
+    for (_, depth) in &ch {
+        assert!(*depth <= 2);
+    }
 }

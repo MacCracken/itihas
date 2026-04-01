@@ -43,11 +43,13 @@
 extern crate alloc;
 
 pub mod calendar;
+pub mod causality;
 pub mod civilization;
 pub mod era;
 pub mod error;
 pub mod event;
 pub mod figure;
+pub mod interaction;
 
 #[cfg(feature = "logging")]
 pub mod logging;

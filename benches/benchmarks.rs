@@ -64,6 +64,12 @@ fn bench_figures_by_domain(c: &mut Criterion) {
     });
 }
 
+fn bench_events_between(c: &mut Criterion) {
+    c.bench_function("events_between_500bce_500ce", |b| {
+        b.iter(|| itihas::event::events_between(black_box(-500), black_box(500)))
+    });
+}
+
 criterion_group!(
     benches,
     bench_all_eras,
@@ -74,6 +80,7 @@ criterion_group!(
     bench_all_events,
     bench_events_by_category,
     bench_events_at_year,
+    bench_events_between,
     bench_all_calendars,
     bench_calendar_by_name,
     bench_all_figures,
