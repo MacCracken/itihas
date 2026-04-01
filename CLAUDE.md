@@ -7,7 +7,7 @@
 - **Type**: Flat library crate
 - **License**: GPL-3.0
 - **MSRV**: 1.89
-- **Version**: SemVer 0.D.M pre-1.0
+- **Version**: SemVer
 
 ## Consumers
 
@@ -77,6 +77,7 @@ sankhya (ancient math), avatara (simulation), kiran (game engine), joshua (strat
 - Do not `unwrap()` or `panic!()` in library code
 - Do not skip benchmarks before claiming performance improvements
 - Do not commit `target/` or `Cargo.lock` (library crates only)
+- **NEVER bump version** (VERSION, Cargo.toml) unless the user explicitly says to
 
 ## Documentation Structure
 
