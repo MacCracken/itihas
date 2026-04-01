@@ -13,6 +13,8 @@ Used by [sankhya](https://github.com/MacCracken/sankhya) (ancient math), [avatar
 | `era` | Historical periods with date ranges, civilizational phases, era category lookup |
 | `civilization` | Major civilizations with geographic extent, peak period, key traits |
 | `event` | Structured historical events with category, era, and civilizations involved |
+| `causality` | Causal links between events with strength classification and chain traversal |
+| `interaction` | Civilization interaction graph: trade, war, alliance, influence scoring |
 | `calendar` | Calendar system metadata: type, epoch, months, leap rules (not computation) |
 | `figure` | Historical figures with era/civilization context and domain classification |
 | `error` | `ItihasError` with variants for unknown entities and invalid lookups |
@@ -23,13 +25,15 @@ Used by [sankhya](https://github.com/MacCracken/sankhya) (ancient math), [avatar
 |---------|---------|-------------|
 | `std` | yes | Standard library support |
 | `logging` | no | Structured logging via `ITIHAS_LOG` env var |
+| `hoosh` | no | Query types and data-driven answer resolution |
+| `mcp` | no | MCP tool definitions (pending bote integration) |
 | `full` | -- | Enables all features |
 
 ## Quick Start
 
 ```toml
 [dependencies]
-itihas = "0.1"
+itihas = "1"
 ```
 
 ```rust

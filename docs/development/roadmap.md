@@ -2,12 +2,17 @@
 
 > **Status**: 1.0 | **Current**: 1.0.0
 
+## Completed
+
+### AI Integration (v1.0.0)
+
+- [x] Hoosh query types and data-driven answer resolution (`hoosh` feature)
+- [x] MCP tool definitions stub (`mcp` feature, pending bote integration)
+
 ## Backlog
 
 ### AI Integration
 
-- [x] Hoosh query types and data-driven answer resolution (`hoosh` feature)
-- [x] MCP tool definitions stub (`mcp` feature, pending bote integration)
 - [ ] MCP tool invoke handlers (blocked on bote framework)
 - [ ] Natural language era/event lookup via Hoosh LLM inference
 - [ ] Daimon client for agent registration (when daimon is available)

@@ -23,7 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **event** — `by_category()`, `at_year()`, `by_significance()`, `by_name()` lookups
 - **event** — `Ord` impl for chronological sorting
 - **causality** — Causal links between events with `CausalStrength` enum (Weak, Moderate, Strong, Direct). 13 pre-built causal links. `causes_of()`, `effects_of()`, `chain()` traversal
-- **interaction** — Civilization interaction graph with `InteractionType` enum (Trade, War, CulturalExchange, Alliance, Conquest, Diplomacy). 20 pre-built interactions. `interactions_for()`, `by_type()`, `between()`, `neighbors()` queries
+- **interaction** — Civilization interaction graph with `InteractionType` enum (Trade, War, CulturalExchange, Alliance, Conquest, Diplomacy). 22 pre-built interactions. `interactions_for()`, `by_type()`, `between()`, `neighbors()` queries
 - **interaction** — `influence_score()` weighted scoring and `region_proximity()` geographic proximity analysis
 - **calendar** — Calendar system metadata. `CalendarSystem` struct, `CalendarType` enum (Solar, Lunar, Lunisolar, Fixed). 8 pre-built calendar systems. `by_name()` lookup
 - **figure** — Historical figures with era/civilization context. `Figure` struct, `FigureDomain` enum (Ruler, Philosopher, Scientist, Artist, Military, Religious, Explorer, Inventor). 52 pre-built figures across all domains. `by_domain()`, `by_name()` lookups
@@ -32,5 +32,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - All public types: `Display` impls, `Cow<'static, str>` for zero-alloc statics, full serde roundtrip coverage, `#[non_exhaustive]` on all enums and structs, `#[must_use]` on all pure functions
 - `no_std` support via `alloc`/`core` imports; `std` feature adds `LazyLock` caching (sub-nanosecond `all_*()` calls)
 - `by_name()` lookups on all data modules returning `Result<T, ItihasError>`
-- 122 tests (63 unit + 59 integration), 19 criterion benchmarks, 97.68% line coverage
+- 135 tests (76 unit + 59 integration), 19 criterion benchmarks, 97.68% line coverage
 - Documentation: architecture overview, usage guide, API docs
