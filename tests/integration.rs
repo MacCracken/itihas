@@ -182,19 +182,26 @@ fn test_events_civilizations_are_known() {
 }
 
 #[test]
-fn test_figures_reference_known_civilizations_or_eras() {
-    let civ_names: Vec<_> = civilization::all_civilizations()
-        .iter()
-        .map(|c| c.name.clone())
-        .collect();
+fn test_figures_have_nonempty_civilization() {
+    for fig in figure::all_figures() {
+        assert!(
+            !fig.civilization.is_empty(),
+            "figure '{}' has empty civilization field",
+            fig.name
+        );
+    }
+}
+
+#[test]
+fn test_figures_civilization_is_not_era_name() {
     let era_names: Vec<_> = era::all_eras().iter().map(|e| e.name.clone()).collect();
 
     for fig in figure::all_figures() {
-        let known = civ_names.contains(&fig.civilization) || era_names.contains(&fig.civilization);
         assert!(
-            known,
-            "figure '{}' references unknown civilization/era '{}'",
-            fig.name, fig.civilization
+            !era_names.contains(&fig.civilization),
+            "figure '{}' uses era name '{}' as civilization — should be a political entity",
+            fig.name,
+            fig.civilization
         );
     }
 }
@@ -283,10 +290,6 @@ fn test_figure_birth_before_death() {
 #[test]
 fn test_calendar_months_positive() {
     for cal in itihas::calendar::all_calendars() {
-        assert!(
-            cal.months > 0,
-            "calendar '{}' has 0 months",
-            cal.name
-        );
+        assert!(cal.months > 0, "calendar '{}' has 0 months", cal.name);
     }
 }

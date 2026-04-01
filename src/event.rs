@@ -103,9 +103,7 @@ pub fn all_events() -> Vec<Event> {
             year: -753,
             era: Cow::Borrowed("Iron Age"),
             category: EventCategory::Founding,
-            description: Cow::Borrowed(
-                "Traditional date of the founding of Rome by Romulus",
-            ),
+            description: Cow::Borrowed("Traditional date of the founding of Rome by Romulus"),
             civilizations_involved: vec![Cow::Borrowed("Roman Empire")],
         },
         Event {
@@ -212,9 +210,7 @@ pub fn all_events() -> Vec<Event> {
             year: 1989,
             era: Cow::Borrowed("Information Age"),
             category: EventCategory::Invention,
-            description: Cow::Borrowed(
-                "Tim Berners-Lee proposes the World Wide Web at CERN",
-            ),
+            description: Cow::Borrowed("Tim Berners-Lee proposes the World Wide Web at CERN"),
             civilizations_involved: vec![],
         },
     ]
@@ -262,17 +258,17 @@ mod tests {
     fn test_by_category_invention() {
         let inventions = by_category(&EventCategory::Invention);
         assert!(inventions.len() >= 2);
-        assert!(inventions
-            .iter()
-            .any(|e| e.name == "Invention of Writing"));
+        assert!(inventions.iter().any(|e| e.name == "Invention of Writing"));
     }
 
     #[test]
     fn test_at_year_exact() {
         let events = at_year(476);
-        assert!(events
-            .iter()
-            .any(|e| e.name == "Fall of the Western Roman Empire"));
+        assert!(
+            events
+                .iter()
+                .any(|e| e.name == "Fall of the Western Roman Empire")
+        );
     }
 
     #[test]

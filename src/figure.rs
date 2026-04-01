@@ -118,7 +118,7 @@ pub fn all_figures() -> Vec<Figure> {
             name: Cow::Borrowed("Johannes Gutenberg"),
             birth_year: Some(1400),
             death_year: Some(1468),
-            civilization: Cow::Borrowed("Renaissance"),
+            civilization: Cow::Borrowed("Holy Roman Empire"),
             domain: FigureDomain::Inventor,
             description: Cow::Borrowed(
                 "Inventor of movable type printing in Europe, revolutionizing information access",
@@ -128,7 +128,7 @@ pub fn all_figures() -> Vec<Figure> {
             name: Cow::Borrowed("Leonardo da Vinci"),
             birth_year: Some(1452),
             death_year: Some(1519),
-            civilization: Cow::Borrowed("Renaissance"),
+            civilization: Cow::Borrowed("Italian city-states"),
             domain: FigureDomain::Artist,
             description: Cow::Borrowed(
                 "Polymath: painter, sculptor, architect, scientist, engineer, inventor",
@@ -138,7 +138,7 @@ pub fn all_figures() -> Vec<Figure> {
             name: Cow::Borrowed("Isaac Newton"),
             birth_year: Some(1643),
             death_year: Some(1727),
-            civilization: Cow::Borrowed("Industrial Age"),
+            civilization: Cow::Borrowed("Kingdom of England"),
             domain: FigureDomain::Scientist,
             description: Cow::Borrowed(
                 "Mathematician and physicist, laws of motion and universal gravitation",
@@ -148,7 +148,7 @@ pub fn all_figures() -> Vec<Figure> {
             name: Cow::Borrowed("Ada Lovelace"),
             birth_year: Some(1815),
             death_year: Some(1852),
-            civilization: Cow::Borrowed("Industrial Age"),
+            civilization: Cow::Borrowed("British Empire"),
             domain: FigureDomain::Scientist,
             description: Cow::Borrowed(
                 "Mathematician, recognized as the first computer programmer for her work on Babbage's Analytical Engine",

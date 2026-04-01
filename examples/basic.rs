@@ -7,10 +7,7 @@ fn main() {
     for c in &civs {
         println!(
             "  {} ({}) — founded ~{} BCE, script: {}",
-            c.name,
-            c.region,
-            -c.founding_year,
-            c.script,
+            c.name, c.region, -c.founding_year, c.script,
         );
     }
     println!();

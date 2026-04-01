@@ -86,9 +86,7 @@ pub fn all_eras() -> Vec<Era> {
             start_year: 476,
             end_year: 1453,
             region: Cow::Borrowed("Europe, Near East"),
-            description: Cow::Borrowed(
-                "Feudalism, monasticism, Islamic Golden Age, Crusades",
-            ),
+            description: Cow::Borrowed("Feudalism, monasticism, Islamic Golden Age, Crusades"),
             category: EraCategory::Medieval,
         },
         Era {
@@ -106,9 +104,7 @@ pub fn all_eras() -> Vec<Era> {
             start_year: 1760,
             end_year: 1970,
             region: Cow::Borrowed("Global"),
-            description: Cow::Borrowed(
-                "Mechanization, mass production, urbanization, world wars",
-            ),
+            description: Cow::Borrowed("Mechanization, mass production, urbanization, world wars"),
             category: EraCategory::Modern,
         },
         Era {
@@ -116,9 +112,7 @@ pub fn all_eras() -> Vec<Era> {
             start_year: 1970,
             end_year: i32::MAX,
             region: Cow::Borrowed("Global"),
-            description: Cow::Borrowed(
-                "Digital revolution, internet, AI, globalization",
-            ),
+            description: Cow::Borrowed("Digital revolution, internet, AI, globalization"),
             category: EraCategory::Contemporary,
         },
     ]
