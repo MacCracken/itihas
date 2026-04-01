@@ -37,6 +37,21 @@ pub enum EventCategory {
     Collapse,
 }
 
+impl fmt::Display for EventCategory {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::War => f.write_str("War"),
+            Self::Treaty => f.write_str("Treaty"),
+            Self::Discovery => f.write_str("Discovery"),
+            Self::Invention => f.write_str("Invention"),
+            Self::Revolution => f.write_str("Revolution"),
+            Self::Migration => f.write_str("Migration"),
+            Self::Founding => f.write_str("Founding"),
+            Self::Collapse => f.write_str("Collapse"),
+        }
+    }
+}
+
 /// A structured historical event.
 ///
 /// Years use astronomical year numbering: negative = BCE, positive = CE.

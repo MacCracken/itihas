@@ -39,11 +39,19 @@ pub struct Civilization {
 
 impl fmt::Display for Civilization {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "{} ({}, {} – {})",
-            self.name, self.region, self.founding_year, self.end_year
-        )
+        if self.end_year == i32::MAX {
+            write!(
+                f,
+                "{} ({}, {} – present)",
+                self.name, self.region, self.founding_year
+            )
+        } else {
+            write!(
+                f,
+                "{} ({}, {} – {})",
+                self.name, self.region, self.founding_year, self.end_year
+            )
+        }
     }
 }
 

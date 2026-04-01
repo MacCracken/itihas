@@ -28,6 +28,17 @@ pub enum CalendarType {
     Fixed,
 }
 
+impl fmt::Display for CalendarType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Solar => f.write_str("Solar"),
+            Self::Lunar => f.write_str("Lunar"),
+            Self::Lunisolar => f.write_str("Lunisolar"),
+            Self::Fixed => f.write_str("Fixed"),
+        }
+    }
+}
+
 /// Metadata about a calendar system.
 ///
 /// Describes the structure and rules of a calendar without performing
@@ -51,7 +62,7 @@ impl fmt::Display for CalendarSystem {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "{} ({:?}, epoch {})",
+            "{} ({}, epoch {})",
             self.name, self.calendar_type, self.epoch_year
         )
     }

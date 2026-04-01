@@ -33,6 +33,19 @@ pub enum EraCategory {
     Contemporary,
 }
 
+impl fmt::Display for EraCategory {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Ancient => f.write_str("Ancient"),
+            Self::Classical => f.write_str("Classical"),
+            Self::Medieval => f.write_str("Medieval"),
+            Self::EarlyModern => f.write_str("Early Modern"),
+            Self::Modern => f.write_str("Modern"),
+            Self::Contemporary => f.write_str("Contemporary"),
+        }
+    }
+}
+
 /// A historical era with date range and region.
 ///
 /// Years use astronomical year numbering: negative values represent BCE
@@ -56,7 +69,11 @@ pub struct Era {
 
 impl fmt::Display for Era {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{} ({} – {})", self.name, self.start_year, self.end_year)
+        if self.end_year == i32::MAX {
+            write!(f, "{} ({} – present)", self.name, self.start_year)
+        } else {
+            write!(f, "{} ({} – {})", self.name, self.start_year, self.end_year)
+        }
     }
 }
 
@@ -78,8 +95,8 @@ fn build_eras() -> Vec<Era> {
     vec![
         Era {
             name: Cow::Borrowed("Bronze Age"),
-            start_year: -3300,
-            end_year: -1200,
+            start_year: -3500,
+            end_year: -1100,
             region: Cow::Borrowed("Near East, Mediterranean, South Asia"),
             description: Cow::Borrowed(
                 "Emergence of bronze metallurgy, early writing systems, and first cities",
@@ -121,6 +138,16 @@ fn build_eras() -> Vec<Era> {
             region: Cow::Borrowed("Europe"),
             description: Cow::Borrowed(
                 "Revival of classical learning, art, science, and exploration",
+            ),
+            category: EraCategory::EarlyModern,
+        },
+        Era {
+            name: Cow::Borrowed("Age of Enlightenment"),
+            start_year: 1600,
+            end_year: 1789,
+            region: Cow::Borrowed("Europe"),
+            description: Cow::Borrowed(
+                "Scientific Revolution, rationalism, empiricism, social contract theory",
             ),
             category: EraCategory::EarlyModern,
         },
@@ -196,7 +223,7 @@ mod tests {
 
     #[test]
     fn test_all_eras_count() {
-        assert_eq!(all_eras().len(), 7);
+        assert_eq!(all_eras().len(), 8);
     }
 
     #[test]

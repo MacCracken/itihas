@@ -308,6 +308,40 @@ fn test_calendar_months_positive() {
     }
 }
 
+#[test]
+fn test_civilization_peak_era_is_known() {
+    let era_names: Vec<_> = era::all_eras().iter().map(|e| e.name.clone()).collect();
+    for civ in civilization::all_civilizations() {
+        assert!(
+            era_names.contains(&civ.peak_era),
+            "civilization '{}' references unknown peak_era '{}'",
+            civ.name,
+            civ.peak_era
+        );
+    }
+}
+
+#[test]
+fn test_event_year_within_era_range() {
+    for event in event::all_events() {
+        let era = era::by_name(&event.era).unwrap_or_else(|_| {
+            panic!(
+                "event '{}' references unknown era '{}'",
+                event.name, event.era
+            )
+        });
+        assert!(
+            event.year >= era.start_year && event.year <= era.end_year,
+            "event '{}' (year {}) falls outside era '{}' ({} – {})",
+            event.name,
+            event.year,
+            era.name,
+            era.start_year,
+            era.end_year
+        );
+    }
+}
+
 // ---------------------------------------------------------------------------
 // Query function integration tests
 // ---------------------------------------------------------------------------
@@ -429,7 +463,13 @@ fn test_era_display() {
     let era = era::by_name("Bronze Age").unwrap();
     let s = era.to_string();
     assert!(s.contains("Bronze Age"));
-    assert!(s.contains("-3300"));
+    assert!(s.contains("-3500"));
+
+    // Ongoing era should display "present" instead of i32::MAX
+    let info = era::by_name("Information Age").unwrap();
+    let s = info.to_string();
+    assert!(s.contains("present"));
+    assert!(!s.contains("2147483647"));
 }
 
 #[test]

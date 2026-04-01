@@ -5,7 +5,7 @@ use alloc::string::String;
 use thiserror::Error;
 
 /// Errors that can occur in historical data processing.
-#[derive(Debug, Error)]
+#[derive(Debug, Clone, PartialEq, Eq, Error)]
 #[non_exhaustive]
 pub enum ItihasError {
     /// Era not found by name.

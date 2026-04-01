@@ -36,6 +36,21 @@ pub enum FigureDomain {
     Inventor,
 }
 
+impl fmt::Display for FigureDomain {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Ruler => f.write_str("Ruler"),
+            Self::Philosopher => f.write_str("Philosopher"),
+            Self::Scientist => f.write_str("Scientist"),
+            Self::Artist => f.write_str("Artist"),
+            Self::Military => f.write_str("Military"),
+            Self::Religious => f.write_str("Religious"),
+            Self::Explorer => f.write_str("Explorer"),
+            Self::Inventor => f.write_str("Inventor"),
+        }
+    }
+}
+
 /// A historical figure.
 ///
 /// Years use astronomical year numbering: negative = BCE, positive = CE.
