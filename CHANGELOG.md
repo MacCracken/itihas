@@ -22,6 +22,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **error** — `SiteNotFound` and `RouteNotFound` variants added to `ItihasError`
 - 6 new criterion benchmarks for site and trade modules (25 total)
 - **civilization** — Added Arab Caliphates (632–1517) to civilization data (53 total)
+- **daimon** — Daimon agent orchestrator integration (`daimon` feature): `mcp::daimon::register_tools()` registers all itihas tools on a `McpHostRegistry`, `host_tool_descriptions()` converts tool definitions to daimon's `McpToolDescription` format, `invoke()` dispatches tool calls and returns typed `McpToolResult`
+- 7 new daimon integration tests (registry registration, tool invocation, error propagation, serde roundtrip)
 
 ### Fixed
 

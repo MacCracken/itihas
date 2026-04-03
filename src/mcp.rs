@@ -334,6 +334,176 @@ fn parse_figure_domain(s: &str) -> Option<figure::FigureDomain> {
     }
 }
 
+// ── Daimon integration (feature: `daimon`) ──────────────────────────────
+
+/// Daimon agent orchestrator integration.
+///
+/// Registers itihas MCP tools on a daimon [`bote::host::McpHostRegistry`] so they
+/// appear in daimon's tool manifest and can be invoked via the
+/// `/v1/mcp/call` endpoint.
+///
+/// # Usage
+///
+/// ```rust,ignore
+/// use bote::host::McpHostRegistry;
+/// use itihas::mcp::daimon;
+///
+/// let mut registry = McpHostRegistry::new();
+/// daimon::register_tools(&mut registry);
+/// ```
+#[cfg(feature = "daimon")]
+pub mod daimon {
+    use bote::host::{McpHostRegistry, McpToolDescription, McpToolResult};
+
+    use super::*;
+
+    /// Convert itihas [`ToolDef`] definitions into daimon-compatible
+    /// [`McpToolDescription`] format and register them on the host registry.
+    pub fn register_tools(registry: &mut McpHostRegistry) {
+        tracing::info!("registering itihas tools with daimon");
+        for desc in host_tool_descriptions() {
+            tracing::debug!(tool = %desc.name, "registering itihas tool");
+            registry.register_builtin(desc);
+        }
+    }
+
+    /// Returns itihas tool definitions in daimon's [`McpToolDescription`] format.
+    #[must_use]
+    pub fn host_tool_descriptions() -> Vec<McpToolDescription> {
+        tool_definitions()
+            .into_iter()
+            .map(|def| {
+                McpToolDescription::new(
+                    def.name,
+                    def.description,
+                    serde_json::json!({
+                        "type": def.input_schema.schema_type,
+                        "properties": def.input_schema.properties,
+                        "required": def.input_schema.required,
+                    }),
+                )
+            })
+            .collect()
+    }
+
+    /// Invoke an itihas tool by name with the given arguments.
+    ///
+    /// Returns a [`McpToolResult`] suitable for daimon's MCP response pipeline.
+    /// Returns `None` if the tool name is not recognized.
+    #[must_use]
+    pub fn invoke(name: &str, arguments: serde_json::Value) -> Option<McpToolResult> {
+        let handler: fn(serde_json::Value) -> serde_json::Value = match name {
+            "itihas_era" => handle_era,
+            "itihas_civilization" => handle_civilization,
+            "itihas_event" => handle_event,
+            "itihas_figure" => handle_figure,
+            "itihas_timeline" => handle_timeline,
+            _ => return None,
+        };
+
+        let raw = handler(arguments);
+        Some(to_mcp_tool_result(&raw))
+    }
+
+    /// Convert a raw JSON handler response into a typed [`McpToolResult`].
+    fn to_mcp_tool_result(raw: &serde_json::Value) -> McpToolResult {
+        let is_error = raw
+            .get("isError")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false);
+
+        let text = raw
+            .get("content")
+            .and_then(|v| v.as_array())
+            .and_then(|arr| arr.first())
+            .and_then(|block| block.get("text"))
+            .and_then(|v| v.as_str())
+            .unwrap_or("");
+
+        if is_error {
+            McpToolResult::error(text)
+        } else {
+            McpToolResult::text(text)
+        }
+    }
+
+    #[cfg(test)]
+    mod tests {
+        use super::*;
+
+        #[test]
+        fn test_host_tool_descriptions_count() {
+            assert_eq!(host_tool_descriptions().len(), 5);
+        }
+
+        #[test]
+        fn test_host_tool_descriptions_have_schemas() {
+            for desc in host_tool_descriptions() {
+                assert!(!desc.name.is_empty());
+                assert!(!desc.description.is_empty());
+                assert!(desc.input_schema.get("type").is_some());
+            }
+        }
+
+        #[test]
+        fn test_invoke_known_tool() {
+            let result = invoke("itihas_era", serde_json::json!({"year": 500}));
+            assert!(result.is_some());
+            let result = result.unwrap();
+            assert!(!result.is_error);
+            assert!(!result.content.is_empty());
+            assert_eq!(result.content[0].content_type, "text");
+            assert!(result.content[0].text.is_some());
+        }
+
+        #[test]
+        fn test_invoke_unknown_tool() {
+            assert!(invoke("nonexistent", serde_json::json!({})).is_none());
+        }
+
+        #[test]
+        fn test_invoke_error_propagates() {
+            let result = invoke("itihas_era", serde_json::json!({"name": "Nonexistent"}));
+            let result = result.unwrap();
+            assert!(result.is_error);
+        }
+
+        #[test]
+        fn test_invoke_timeline() {
+            let result = invoke(
+                "itihas_timeline",
+                serde_json::json!({"start_year": -500, "end_year": 500}),
+            );
+            let result = result.unwrap();
+            assert!(!result.is_error);
+            let text = result.content[0].text.as_ref().unwrap();
+            let parsed: serde_json::Value = serde_json::from_str(text).unwrap();
+            assert!(parsed.get("eras").is_some());
+        }
+
+        #[test]
+        fn test_register_tools_on_registry() {
+            let mut registry = McpHostRegistry::new();
+            register_tools(&mut registry);
+            assert_eq!(registry.tool_count(), 5);
+            assert!(registry.find_tool("itihas_era").is_some());
+            assert!(registry.find_tool("itihas_civilization").is_some());
+            assert!(registry.find_tool("itihas_event").is_some());
+            assert!(registry.find_tool("itihas_figure").is_some());
+            assert!(registry.find_tool("itihas_timeline").is_some());
+        }
+
+        #[test]
+        fn test_tool_result_serde_roundtrip() {
+            let result = invoke("itihas_era", serde_json::json!({"year": 0})).unwrap();
+            let json = serde_json::to_string(&result).unwrap();
+            let back: McpToolResult = serde_json::from_str(&json).unwrap();
+            assert_eq!(result.is_error, back.is_error);
+            assert_eq!(result.content.len(), back.content.len());
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -21,12 +21,19 @@
 - [x] `ToolAnnotations::read_only()` on all tools
 - [x] Case-insensitive category/domain parsing
 
+### Daimon Integration (v1.0.2)
+
+- [x] `daimon` feature gate — `mcp::daimon` submodule with `bote/host` dependency
+- [x] `register_tools()` — registers all 5 itihas tools on `McpHostRegistry`
+- [x] `host_tool_descriptions()` — converts `ToolDef` to `McpToolDescription` format
+- [x] `invoke()` — dispatches tool calls by name, returns typed `McpToolResult`
+- [x] 7 integration tests (registry, invocation, error propagation, serde roundtrip)
+
 ## Backlog
 
 ### AI Integration
 
 - [ ] Natural language era/event lookup via Hoosh LLM inference
-- [ ] Daimon client for agent registration (when daimon is available)
 
 ### Archaeological Sites & Trade Routes (v1.0.2)
 
