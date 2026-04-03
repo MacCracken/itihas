@@ -1,6 +1,7 @@
 //! Integration tests for itihas — cross-module behavior.
 
 use itihas::calendar::{CalendarSystem, CalendarType};
+use itihas::campaign::{self, Campaign, CampaignOutcome};
 use itihas::causality;
 use itihas::civilization::{self, Civilization};
 use itihas::era::{self, Era, EraCategory, EraScope};
@@ -904,4 +905,147 @@ fn test_route_display() {
     let display = r.to_string();
     assert!(display.contains("Silk Road"));
     assert!(display.contains("Land"));
+}
+
+// ---------------------------------------------------------------------------
+// Campaign tests
+// ---------------------------------------------------------------------------
+
+#[test]
+fn test_all_campaigns_serde_roundtrip() {
+    for campaign in campaign::all_campaigns().iter() {
+        let json = serde_json::to_string(campaign).unwrap();
+        let back: Campaign = serde_json::from_str(&json).unwrap();
+        assert_eq!(campaign, &back);
+    }
+}
+
+#[test]
+fn test_campaign_date_ordering() {
+    for campaign in campaign::all_campaigns() {
+        assert!(
+            campaign.start_year <= campaign.end_year,
+            "campaign '{}' has start_year ({}) > end_year ({})",
+            campaign.name,
+            campaign.start_year,
+            campaign.end_year
+        );
+    }
+}
+
+#[test]
+fn test_campaign_battles_within_dates() {
+    for campaign in campaign::all_campaigns() {
+        for battle in &campaign.battles {
+            assert!(
+                battle.year >= campaign.start_year && battle.year <= campaign.end_year,
+                "battle '{}' (year {}) outside campaign '{}' ({} – {})",
+                battle.name,
+                battle.year,
+                campaign.name,
+                campaign.start_year,
+                campaign.end_year
+            );
+        }
+    }
+}
+
+#[test]
+fn test_campaign_has_belligerents() {
+    for campaign in campaign::all_campaigns() {
+        assert!(
+            !campaign.belligerents_a.is_empty(),
+            "campaign '{}' has no belligerents_a",
+            campaign.name
+        );
+        assert!(
+            !campaign.belligerents_b.is_empty(),
+            "campaign '{}' has no belligerents_b",
+            campaign.name
+        );
+    }
+}
+
+#[test]
+fn test_campaign_has_commanders() {
+    for campaign in campaign::all_campaigns() {
+        assert!(
+            !campaign.commanders.is_empty(),
+            "campaign '{}' has no commanders",
+            campaign.name
+        );
+    }
+}
+
+#[test]
+fn test_campaign_has_battles() {
+    for campaign in campaign::all_campaigns() {
+        assert!(
+            !campaign.battles.is_empty(),
+            "campaign '{}' has no battles",
+            campaign.name
+        );
+    }
+}
+
+#[test]
+fn test_campaign_by_outcome_returns_correct_outcome() {
+    let victories = campaign::by_outcome(&CampaignOutcome::Victory);
+    assert!(!victories.is_empty());
+    for c in &victories {
+        assert_eq!(c.outcome, CampaignOutcome::Victory);
+    }
+}
+
+#[test]
+fn test_campaign_outcome_all_variants_roundtrip() {
+    let outcomes = [
+        CampaignOutcome::Victory,
+        CampaignOutcome::Defeat,
+        CampaignOutcome::Stalemate,
+        CampaignOutcome::Treaty,
+        CampaignOutcome::Inconclusive,
+    ];
+    for o in &outcomes {
+        let json = serde_json::to_string(o).unwrap();
+        let back: CampaignOutcome = serde_json::from_str(&json).unwrap();
+        assert_eq!(o, &back);
+    }
+}
+
+#[test]
+fn test_campaign_by_name_found() {
+    let c = campaign::by_name("napoleonic wars").unwrap();
+    assert_eq!(c.name, "Napoleonic Wars");
+}
+
+#[test]
+fn test_campaign_by_name_not_found() {
+    assert!(campaign::by_name("Star Wars").is_err());
+}
+
+#[test]
+fn test_campaign_sort_chronologically() {
+    let mut campaigns = campaign::all_campaigns().to_vec();
+    campaigns.sort();
+    for w in campaigns.windows(2) {
+        assert!(w[0].start_year <= w[1].start_year);
+    }
+}
+
+#[test]
+fn test_campaign_display() {
+    let c = campaign::by_name("Napoleonic Wars").unwrap();
+    let display = c.to_string();
+    assert!(display.contains("Napoleonic Wars"));
+    assert!(display.contains("Defeat"));
+}
+
+#[test]
+fn test_campaigns_between_overlapping() {
+    let campaigns = campaign::campaigns_between(-500, -200);
+    assert!(!campaigns.is_empty());
+    for c in &campaigns {
+        assert!(c.start_year <= -200 && c.end_year >= -500);
+    }
 }

@@ -47,10 +47,16 @@
 - [x] `SiteNotFound` and `RouteNotFound` error variants
 - [x] 6 new benchmarks for site and trade modules
 
+### Military Campaigns (v1.0.2)
+
+- [x] `campaign` module — 14 campaigns with 40+ battles, commanders, belligerents, and outcomes
+- [x] `CampaignOutcome` enum, `Battle` struct, chronological sorting
+- [x] `CampaignNotFound` error variant
+- [x] 3 new benchmarks
+
 ## Future (demand-gated)
 
 - Historical map data (geographic boundaries per era)
-- Military campaign timelines
 - Cultural diffusion tracking
 - Historical population estimates
 - Historical climate data correlation
@@ -58,4 +64,4 @@
 ## Outstanding (external dependencies)
 
 - [x] sankhya consuming itihas — added as feature-gated optional dep
-- [ ] avatara consuming itihas — avatara needs to add `itihas` as optional dep for historical simulation context
+- [x] avatara consuming itihas — added as optional dep for historical simulation context

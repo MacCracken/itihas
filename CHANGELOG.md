@@ -26,6 +26,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 7 new daimon integration tests (registry registration, tool invocation, error propagation, serde roundtrip)
 - **hoosh-llm** — Natural language historical queries via LLM inference (`hoosh-llm` feature): `hoosh::llm::answer()` sends NL questions to hoosh with 6 tool definitions, LLM selects the appropriate lookup, itihas resolves from data. `resolve_era_lookup()` for era-specific queries. Falls back to pure LLM generation for questions outside data coverage
 - 12 new hoosh-llm tests (tool def validation, tool call parsing, era resolution, missing args handling)
+- **campaign** — Military campaigns module: `Campaign` struct, `Battle` struct, `CampaignOutcome` enum (Victory, Defeat, Stalemate, Treaty, Inconclusive). 14 pre-built campaigns with 40+ battles spanning 2500 years. `all_campaigns()`, `by_region()`, `by_civilization()`, `by_commander()`, `by_outcome()`, `active_at()`, `campaigns_between()`, `by_name()` lookups. `Ord` impl for chronological sorting
+- **error** — `CampaignNotFound` variant added to `ItihasError`
+- 3 new criterion benchmarks for campaign module (28 total)
 
 ### Fixed
 

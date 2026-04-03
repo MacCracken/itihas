@@ -17,6 +17,7 @@ Used by [sankhya](https://github.com/MacCracken/sankhya) (ancient math), [avatar
 | `interaction` | Civilization interaction graph: trade, war, alliance, influence scoring |
 | `calendar` | Calendar system metadata: type, epoch, months, leap rules (not computation) |
 | `figure` | Historical figures with era/civilization context and domain classification |
+| `campaign` | Military campaigns with battles, commanders, belligerents, and outcomes |
 | `site` | Archaeological sites with location, period, type, and discovery metadata |
 | `trade` | Historical trade routes with endpoints, commodities, and civilization context |
 | `error` | `ItihasError` with variants for unknown entities and invalid lookups |

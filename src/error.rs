@@ -39,4 +39,8 @@ pub enum ItihasError {
     /// Trade route not found by name.
     #[error("route not found: {0}")]
     RouteNotFound(String),
+
+    /// Military campaign not found by name.
+    #[error("campaign not found: {0}")]
+    CampaignNotFound(String),
 }

@@ -22,8 +22,10 @@
 //!   (not computation — that belongs in sankhya). 8 pre-built calendar systems
 //! - [`figure`] — Historical figures with era/civilization context and domain
 //!   classification. 52 pre-built figures
+//! - [`campaign`] — Military campaigns with battles, commanders, and outcomes.
+//!   15 pre-built campaigns with 40+ battles
 //! - [`site`] — Archaeological sites with location, period, discovery metadata,
-//!   and civilization association. 33 pre-built sites
+//!   and civilization association. 32 pre-built sites
 //! - [`trade`] — Historical trade routes with endpoints, commodities, and
 //!   civilization context. 15 pre-built routes
 //! - [`error`] — `ItihasError` with variants for unknown entities and invalid lookups
@@ -51,6 +53,7 @@
 extern crate alloc;
 
 pub mod calendar;
+pub mod campaign;
 pub mod causality;
 pub mod civilization;
 pub mod era;

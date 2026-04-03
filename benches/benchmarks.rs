@@ -143,6 +143,22 @@ fn bench_routes_by_commodity(c: &mut Criterion) {
     });
 }
 
+fn bench_all_campaigns(c: &mut Criterion) {
+    c.bench_function("all_campaigns", |b| b.iter(itihas::campaign::all_campaigns));
+}
+
+fn bench_campaigns_by_commander(c: &mut Criterion) {
+    c.bench_function("campaigns_by_commander_napoleon", |b| {
+        b.iter(|| itihas::campaign::by_commander(black_box("Napoleon")))
+    });
+}
+
+fn bench_campaigns_between(c: &mut Criterion) {
+    c.bench_function("campaigns_between_500bce_500ce", |b| {
+        b.iter(|| itihas::campaign::campaigns_between(black_box(-500), black_box(500)))
+    });
+}
+
 criterion_group!(
     benches,
     bench_all_eras,
@@ -170,5 +186,8 @@ criterion_group!(
     bench_all_routes,
     bench_routes_by_region,
     bench_routes_by_commodity,
+    bench_all_campaigns,
+    bench_campaigns_by_commander,
+    bench_campaigns_between,
 );
 criterion_main!(benches);
