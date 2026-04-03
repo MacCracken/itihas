@@ -177,7 +177,7 @@ fn build_campaigns() -> Vec<Campaign> {
             region: Cow::Borrowed("Near East"),
             start_year: -334,
             end_year: -323,
-            belligerents_a: vec![Cow::Borrowed("Ancient Greece")],
+            belligerents_a: vec![Cow::Borrowed("Macedon")],
             belligerents_b: vec![Cow::Borrowed("Persian Empire")],
             commanders: vec![
                 Cow::Borrowed("Alexander the Great"),
@@ -228,7 +228,7 @@ fn build_campaigns() -> Vec<Campaign> {
             start_year: -218,
             end_year: -201,
             belligerents_a: vec![Cow::Borrowed("Carthage")],
-            belligerents_b: vec![Cow::Borrowed("Roman Empire")],
+            belligerents_b: vec![Cow::Borrowed("Roman Republic")],
             commanders: vec![
                 Cow::Borrowed("Hannibal Barca"),
                 Cow::Borrowed("Scipio Africanus"),
@@ -261,7 +261,7 @@ fn build_campaigns() -> Vec<Campaign> {
             region: Cow::Borrowed("Europe"),
             start_year: -58,
             end_year: -50,
-            belligerents_a: vec![Cow::Borrowed("Roman Empire")],
+            belligerents_a: vec![Cow::Borrowed("Roman Republic")],
             belligerents_b: vec![Cow::Borrowed("Gaul")],
             commanders: vec![
                 Cow::Borrowed("Julius Caesar"),
@@ -640,6 +640,7 @@ fn build_campaigns() -> Vec<Campaign> {
             commanders: vec![
                 Cow::Borrowed("Tōgō Heihachirō"),
                 Cow::Borrowed("Nogi Maresuke"),
+                Cow::Borrowed("Aleksei Kuropatkin"),
             ],
             battles: vec![
                 Battle {
@@ -659,9 +660,9 @@ fn build_campaigns() -> Vec<Campaign> {
                     ),
                 },
             ],
-            outcome: CampaignOutcome::Treaty,
+            outcome: CampaignOutcome::Victory,
             description: Cow::Borrowed(
-                "First major victory of an Asian power over a European empire; Treaty of Portsmouth; shifted East Asian power balance",
+                "Decisive Japanese victory over Russia; Treaty of Portsmouth; first modern Asian victory over a European empire",
             ),
         },
     ]

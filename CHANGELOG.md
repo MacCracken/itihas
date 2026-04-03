@@ -59,6 +59,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **interaction** — Mali Empire trade partner "Ancient Egypt"→"Arab Caliphates" (Ancient Egypt ended 30 BCE)
 - **causality** — Fall of Western Rome→Rise of Islam: strength Moderate→Weak (Byzantine-Sassanid exhaustion was the more direct factor)
 - **calendar** — Egyptian Civil calendar type Solar→Fixed (no leap correction; drifted against solar year)
+- **campaign** — Alexander belligerents_a "Ancient Greece"→"Macedon" (Macedonian army, not a Greek coalition)
+- **campaign** — Second Punic War belligerents_b "Roman Empire"→"Roman Republic" (Republic, not Empire in 218 BCE)
+- **campaign** — Gallic Wars belligerents_a "Roman Empire"→"Roman Republic" (Republic, not Empire in 58 BCE)
+- **campaign** — Russo-Japanese War outcome Treaty→Victory (decisive Japanese win despite treaty ending)
+- **campaign** — Russo-Japanese War: added Aleksei Kuropatkin to commanders (was missing Russian side)
 
 ## [1.0.1] - 2026-04-01
 
