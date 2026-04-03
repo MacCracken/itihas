@@ -1,36 +1,36 @@
 # Benchmarks
 
-Latest: **2026-04-03T21:28:21Z** -- commit `cc09a4c`
+Latest: **2026-04-03T21:49:07Z** -- commit `bc7ff4b`
 
-Tracking: `b346dd3` (baseline) -> `cc09a4c` (optimized) -> `cc09a4c` (current)
+Tracking: `b346dd3` (baseline) -> `cc09a4c` (optimized) -> `bc7ff4b` (current)
 
-| Benchmark | Baseline (`b346dd3`) | Mid (`cc09a4c`) | Current (`cc09a4c`) |
+| Benchmark | Baseline (`b346dd3`) | Mid (`cc09a4c`) | Current (`bc7ff4b`) |
 |-----------|------|------|------|
-| `all_eras` | 0.76 ns | 0.73 ns **-5%** | 0.79 ns +3% |
-| `eras_containing_500bce` | 53.03 ns | 52.73 ns | 49.47 ns **-7%** |
-| `all_civilizations` | 0.83 ns | 0.72 ns **-13%** | 0.68 ns **-18%** |
-| `civilizations_active_at_500bce` | 506.1 ns | 439.7 ns **-13%** | 409.2 ns **-19%** |
-| `civilizations_by_region` | 1571.1 ns | 1693.0 ns +8% | 1563.4 ns |
-| `all_events` | 0.71 ns | 0.82 ns +15% | 0.74 ns +4% |
-| `events_by_category_war` | 539.4 ns | 543.8 ns | 489.8 ns **-9%** |
-| `events_at_year_476` | 59.79 ns | 83.41 ns +40% | 59.99 ns |
-| `events_between_500bce_500ce` | 824.0 ns | 823.6 ns | 812.7 ns |
-| `all_calendars` | 0.69 ns | 0.75 ns +8% | 0.70 ns |
-| `calendar_by_name_gregorian` | 44.96 ns | 45.03 ns | 44.85 ns |
-| `all_figures` | 0.69 ns | 0.69 ns | 0.70 ns |
-| `figures_by_domain_scientist` | 219.9 ns | 204.9 ns **-7%** | 215.4 ns |
-| `all_causalities` | 0.81 ns | 0.80 ns | 0.76 ns **-6%** |
-| `causes_of_french_revolution` | 229.4 ns | 232.9 ns | 239.0 ns +4% |
-| `chain_writing_depth3` | 1685.7 ns | 1686.3 ns | 1728.7 ns |
-| `all_interactions` | 0.70 ns | 0.70 ns | 0.71 ns |
-| `interactions_for_rome` | 834.5 ns | 882.0 ns +6% | 868.6 ns +4% |
-| `influence_score_egypt_hittite` | 899.4 ns | 1052.5 ns +17% | 918.8 ns |
-| `all_sites` | -- | -- | 0.69 ns |
-| `sites_by_region_near_east` | -- | -- | 1071.1 ns |
-| `sites_active_at_500bce` | -- | -- | 171.3 ns |
-| `all_routes` | -- | -- | 0.69 ns |
-| `routes_by_region_east_asia` | -- | -- | 1055.2 ns |
-| `routes_by_commodity_silk` | -- | -- | 1542.7 ns |
+| `all_eras` | 0.76 ns | 0.73 ns **-5%** | 0.83 ns +9% |
+| `eras_containing_500bce` | 53.03 ns | 52.73 ns | 50.09 ns **-6%** |
+| `all_civilizations` | 0.83 ns | 0.72 ns **-13%** | 1.02 ns +23% |
+| `civilizations_active_at_500bce` | 506.1 ns | 439.7 ns **-13%** | 1074.2 ns +112% |
+| `civilizations_by_region` | 1571.1 ns | 1693.0 ns +8% | 2869.5 ns +83% |
+| `all_events` | 0.71 ns | 0.82 ns +15% | 0.78 ns +9% |
+| `events_by_category_war` | 539.4 ns | 543.8 ns | 509.9 ns **-5%** |
+| `events_at_year_476` | 59.79 ns | 83.41 ns +40% | 68.55 ns +15% |
+| `events_between_500bce_500ce` | 824.0 ns | 823.6 ns | 951.2 ns +15% |
+| `all_calendars` | 0.69 ns | 0.75 ns +8% | 0.74 ns +7% |
+| `calendar_by_name_gregorian` | 44.96 ns | 45.03 ns | 49.82 ns +11% |
+| `all_figures` | 0.69 ns | 0.69 ns | 0.77 ns +12% |
+| `figures_by_domain_scientist` | 219.9 ns | 204.9 ns **-7%** | 237.5 ns +8% |
+| `all_causalities` | 0.81 ns | 0.80 ns | 0.81 ns |
+| `causes_of_french_revolution` | 229.4 ns | 232.9 ns | 251.2 ns +9% |
+| `chain_writing_depth3` | 1685.7 ns | 1686.3 ns | 1867.3 ns +11% |
+| `all_interactions` | 0.70 ns | 0.70 ns | 0.76 ns +9% |
+| `interactions_for_rome` | 834.5 ns | 882.0 ns +6% | 988.8 ns +18% |
+| `influence_score_egypt_hittite` | 899.4 ns | 1052.5 ns +17% | 1112.0 ns +24% |
+| `all_sites` | -- | -- | 0.79 ns |
+| `sites_by_region_near_east` | -- | -- | 1173.5 ns |
+| `sites_active_at_500bce` | -- | -- | 332.3 ns |
+| `all_routes` | -- | -- | 1.33 ns |
+| `routes_by_region_east_asia` | -- | -- | 2249.4 ns |
+| `routes_by_commodity_silk` | -- | -- | 3049.1 ns |
 
 ---
 

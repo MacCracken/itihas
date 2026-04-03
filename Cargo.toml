@@ -17,6 +17,8 @@ exclude = [".claude/", ".github/", "docs/", "scripts/"]
 serde = { version = "1", default-features = false, features = ["derive", "alloc"] }
 serde_json = { version = "1", optional = true }
 bote = { path = "../bote", optional = true }
+hoosh = { path = "../hoosh", optional = true, default-features = false, features = [] }
+tokio = { version = "1", optional = true, features = ["rt"] }
 thiserror = { version = "2", default-features = false }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"], optional = true }
@@ -32,6 +34,7 @@ daimon = ["mcp", "bote/host"]
 full = ["std", "logging", "hoosh", "mcp"]
 logging = ["dep:tracing-subscriber"]
 hoosh = ["std", "dep:serde_json"]
+hoosh-llm = ["hoosh", "dep:hoosh", "dep:tokio"]
 mcp = ["std", "dep:serde_json", "dep:bote"]
 
 [[bench]]

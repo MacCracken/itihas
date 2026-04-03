@@ -28,6 +28,7 @@ Used by [sankhya](https://github.com/MacCracken/sankhya) (ancient math), [avatar
 | `std` | yes | Standard library support |
 | `logging` | no | Structured logging via `ITIHAS_LOG` env var |
 | `hoosh` | no | Query types and data-driven answer resolution |
+| `hoosh-llm` | no | Natural language queries via hoosh LLM inference |
 | `mcp` | no | MCP tool definitions and handlers via bote |
 | `daimon` | no | Daimon agent orchestrator integration (registers tools on `McpHostRegistry`) |
 | `full` | -- | Enables all features |

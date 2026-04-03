@@ -29,11 +29,16 @@
 - [x] `invoke()` — dispatches tool calls by name, returns typed `McpToolResult`
 - [x] 7 integration tests (registry, invocation, error propagation, serde roundtrip)
 
+### Hoosh LLM Integration (v1.0.2)
+
+- [x] `hoosh-llm` feature gate — `hoosh::llm` submodule with hoosh crate + tokio dependency
+- [x] `answer()` — async NL→structured query via LLM tool calling, data resolution, LLM fallback
+- [x] 6 tool definitions (events_in_range, civilizations_at, causes_of, interactions_between, figure_lookup, era_lookup)
+- [x] `resolve_era_lookup()` — direct era resolution for era_lookup tool calls
+- [x] `parse_tool_call()` — converts LLM tool calls to `HistoryQuery` variants
+- [x] 12 integration tests
+
 ## Backlog
-
-### AI Integration
-
-- [ ] Natural language era/event lookup via Hoosh LLM inference
 
 ### Archaeological Sites & Trade Routes (v1.0.2)
 

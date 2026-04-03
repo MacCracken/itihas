@@ -24,6 +24,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **civilization** — Added Arab Caliphates (632–1517) to civilization data (53 total)
 - **daimon** — Daimon agent orchestrator integration (`daimon` feature): `mcp::daimon::register_tools()` registers all itihas tools on a `McpHostRegistry`, `host_tool_descriptions()` converts tool definitions to daimon's `McpToolDescription` format, `invoke()` dispatches tool calls and returns typed `McpToolResult`
 - 7 new daimon integration tests (registry registration, tool invocation, error propagation, serde roundtrip)
+- **hoosh-llm** — Natural language historical queries via LLM inference (`hoosh-llm` feature): `hoosh::llm::answer()` sends NL questions to hoosh with 6 tool definitions, LLM selects the appropriate lookup, itihas resolves from data. `resolve_era_lookup()` for era-specific queries. Falls back to pure LLM generation for questions outside data coverage
+- 12 new hoosh-llm tests (tool def validation, tool call parsing, era resolution, missing args handling)
 
 ### Fixed
 
