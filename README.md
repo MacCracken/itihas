@@ -17,6 +17,8 @@ Used by [sankhya](https://github.com/MacCracken/sankhya) (ancient math), [avatar
 | `interaction` | Civilization interaction graph: trade, war, alliance, influence scoring |
 | `calendar` | Calendar system metadata: type, epoch, months, leap rules (not computation) |
 | `figure` | Historical figures with era/civilization context and domain classification |
+| `site` | Archaeological sites with location, period, type, and discovery metadata |
+| `trade` | Historical trade routes with endpoints, commodities, and civilization context |
 | `error` | `ItihasError` with variants for unknown entities and invalid lookups |
 
 ## Features
@@ -26,7 +28,7 @@ Used by [sankhya](https://github.com/MacCracken/sankhya) (ancient math), [avatar
 | `std` | yes | Standard library support |
 | `logging` | no | Structured logging via `ITIHAS_LOG` env var |
 | `hoosh` | no | Query types and data-driven answer resolution |
-| `mcp` | no | MCP tool definitions (pending bote integration) |
+| `mcp` | no | MCP tool definitions and handlers via bote |
 | `full` | -- | Enables all features |
 
 ## Quick Start

@@ -7,6 +7,8 @@ use itihas::era::{self, Era, EraCategory, EraScope};
 use itihas::event::{self, Event, EventCategory, EventSignificance};
 use itihas::figure::{self, Figure, FigureDomain};
 use itihas::interaction;
+use itihas::site::{self, Site, SiteType};
+use itihas::trade::{self, RouteType, TradeRoute};
 
 // ---------------------------------------------------------------------------
 // Serde roundtrips — all types
@@ -722,4 +724,184 @@ fn test_region_proximity_symmetric() {
     let ab = interaction::region_proximity("Roman Empire", "Ancient Greece");
     let ba = interaction::region_proximity("Ancient Greece", "Roman Empire");
     assert_eq!(ab, ba);
+}
+
+// ---------------------------------------------------------------------------
+// Site tests
+// ---------------------------------------------------------------------------
+
+#[test]
+fn test_all_sites_serde_roundtrip() {
+    for site in site::all_sites().iter() {
+        let json = serde_json::to_string(site).unwrap();
+        let back: Site = serde_json::from_str(&json).unwrap();
+        assert_eq!(site, &back);
+    }
+}
+
+#[test]
+fn test_site_date_ordering() {
+    for site in site::all_sites() {
+        assert!(
+            site.start_year <= site.end_year,
+            "site '{}' has start_year ({}) > end_year ({})",
+            site.name,
+            site.start_year,
+            site.end_year
+        );
+    }
+}
+
+#[test]
+fn test_site_by_type_returns_correct_type() {
+    let temples = site::by_type(&SiteType::Temple);
+    assert!(!temples.is_empty());
+    for s in &temples {
+        assert_eq!(s.site_type, SiteType::Temple);
+    }
+}
+
+#[test]
+fn test_site_type_all_variants_roundtrip() {
+    let types = [
+        SiteType::Settlement,
+        SiteType::Temple,
+        SiteType::Burial,
+        SiteType::Fortress,
+        SiteType::Monument,
+        SiteType::Palace,
+        SiteType::Workshop,
+        SiteType::Cave,
+        SiteType::Port,
+    ];
+    for st in &types {
+        let json = serde_json::to_string(st).unwrap();
+        let back: SiteType = serde_json::from_str(&json).unwrap();
+        assert_eq!(st, &back);
+    }
+}
+
+#[test]
+fn test_site_by_name_found() {
+    let site = site::by_name("pompeii").unwrap();
+    assert_eq!(site.name, "Pompeii");
+}
+
+#[test]
+fn test_site_by_name_not_found() {
+    assert!(site::by_name("Atlantis").is_err());
+}
+
+#[test]
+fn test_site_display() {
+    let s = site::by_name("Giza").unwrap();
+    let display = s.to_string();
+    assert!(display.contains("Giza"));
+    assert!(display.contains("Egypt"));
+}
+
+// ---------------------------------------------------------------------------
+// Trade route tests
+// ---------------------------------------------------------------------------
+
+#[test]
+fn test_all_routes_serde_roundtrip() {
+    for route in trade::all_routes().iter() {
+        let json = serde_json::to_string(route).unwrap();
+        let back: TradeRoute = serde_json::from_str(&json).unwrap();
+        assert_eq!(route, &back);
+    }
+}
+
+#[test]
+fn test_route_date_ordering() {
+    for route in trade::all_routes() {
+        assert!(
+            route.start_year <= route.end_year,
+            "route '{}' has start_year ({}) > end_year ({})",
+            route.name,
+            route.start_year,
+            route.end_year
+        );
+    }
+}
+
+#[test]
+fn test_route_has_regions() {
+    for route in trade::all_routes() {
+        assert!(
+            !route.regions.is_empty(),
+            "route '{}' has no regions",
+            route.name
+        );
+    }
+}
+
+#[test]
+fn test_route_has_commodities() {
+    for route in trade::all_routes() {
+        assert!(
+            !route.commodities.is_empty(),
+            "route '{}' has no commodities",
+            route.name
+        );
+    }
+}
+
+#[test]
+fn test_route_by_type_returns_correct_type() {
+    let maritime = trade::by_type(&RouteType::Maritime);
+    assert!(!maritime.is_empty());
+    for r in &maritime {
+        assert_eq!(r.route_type, RouteType::Maritime);
+    }
+}
+
+#[test]
+fn test_route_type_all_variants_roundtrip() {
+    let types = [
+        RouteType::Land,
+        RouteType::Maritime,
+        RouteType::River,
+        RouteType::Mixed,
+    ];
+    for rt in &types {
+        let json = serde_json::to_string(rt).unwrap();
+        let back: RouteType = serde_json::from_str(&json).unwrap();
+        assert_eq!(rt, &back);
+    }
+}
+
+#[test]
+fn test_route_by_name_found() {
+    let route = trade::by_name("silk road").unwrap();
+    assert_eq!(route.name, "Silk Road");
+}
+
+#[test]
+fn test_route_by_name_not_found() {
+    assert!(trade::by_name("Route 66").is_err());
+}
+
+#[test]
+fn test_route_by_commodity_returns_matching() {
+    let silk_routes = trade::by_commodity("silk");
+    assert!(!silk_routes.is_empty());
+    for r in &silk_routes {
+        assert!(
+            r.commodities
+                .iter()
+                .any(|c| c.to_lowercase().contains("silk")),
+            "route '{}' does not trade silk",
+            r.name
+        );
+    }
+}
+
+#[test]
+fn test_route_display() {
+    let r = trade::by_name("Silk Road").unwrap();
+    let display = r.to_string();
+    assert!(display.contains("Silk Road"));
+    assert!(display.contains("Land"));
 }

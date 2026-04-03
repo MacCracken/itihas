@@ -160,7 +160,7 @@ fn build_eras() -> Vec<Era> {
         Era {
             name: Cow::Borrowed("Renaissance"),
             start_year: 1400,
-            end_year: 1600,
+            end_year: 1610,
             region: Cow::Borrowed("Europe"),
             description: Cow::Borrowed(
                 "Revival of classical learning, art, science, and exploration",
@@ -170,11 +170,11 @@ fn build_eras() -> Vec<Era> {
         },
         Era {
             name: Cow::Borrowed("Age of Enlightenment"),
-            start_year: 1600,
+            start_year: 1648,
             end_year: 1789,
             region: Cow::Borrowed("Europe"),
             description: Cow::Borrowed(
-                "Scientific Revolution, rationalism, empiricism, social contract theory",
+                "Rationalism, empiricism, natural rights, social contract theory",
             ),
             category: EraCategory::EarlyModern,
             scope: EraScope::Global,
@@ -371,7 +371,7 @@ fn build_eras() -> Vec<Era> {
             description: Cow::Borrowed(
                 "Maya golden age, Teotihuacan, Zapotec, monumental architecture and astronomy",
             ),
-            category: EraCategory::Classical,
+            category: EraCategory::Medieval,
             scope: EraScope::Regional,
         },
         Era {

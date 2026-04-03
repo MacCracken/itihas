@@ -6,7 +6,7 @@
 //!
 //! # Architecture
 //!
-//! Eight modules:
+//! Ten modules:
 //!
 //! - [`era`] — Historical periods with date ranges and civilizational phases.
 //!   25 pre-built eras (8 global + 17 regional), `eras_containing(year)` lookup
@@ -22,6 +22,10 @@
 //!   (not computation — that belongs in sankhya). 8 pre-built calendar systems
 //! - [`figure`] — Historical figures with era/civilization context and domain
 //!   classification. 52 pre-built figures
+//! - [`site`] — Archaeological sites with location, period, discovery metadata,
+//!   and civilization association. 33 pre-built sites
+//! - [`trade`] — Historical trade routes with endpoints, commodities, and
+//!   civilization context. 15 pre-built routes
 //! - [`error`] — `ItihasError` with variants for unknown entities and invalid lookups
 //!
 //! # Relationship to Other Crates
@@ -54,6 +58,8 @@ pub mod error;
 pub mod event;
 pub mod figure;
 pub mod interaction;
+pub mod site;
+pub mod trade;
 
 #[cfg(feature = "hoosh")]
 pub mod hoosh;

@@ -97,9 +97,9 @@ fn build_causalities() -> Vec<Causality> {
         Causality {
             cause: Cow::Borrowed("Fall of the Western Roman Empire"),
             effect: Cow::Borrowed("Rise of Islam"),
-            strength: CausalStrength::Moderate,
+            strength: CausalStrength::Weak,
             description: Cow::Borrowed(
-                "Roman collapse created power vacuums in the Near East, facilitating new political-religious movements",
+                "Western Roman collapse destabilized Mediterranean trade; Byzantine-Sassanid exhaustion was the more direct factor enabling Islam's rapid expansion",
             ),
         },
         // Medieval chains

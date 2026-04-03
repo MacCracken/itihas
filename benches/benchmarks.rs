@@ -111,6 +111,38 @@ fn bench_influence_score(c: &mut Criterion) {
     });
 }
 
+fn bench_all_sites(c: &mut Criterion) {
+    c.bench_function("all_sites", |b| b.iter(itihas::site::all_sites));
+}
+
+fn bench_sites_by_region(c: &mut Criterion) {
+    c.bench_function("sites_by_region_near_east", |b| {
+        b.iter(|| itihas::site::by_region(black_box("Near East")))
+    });
+}
+
+fn bench_sites_active_at(c: &mut Criterion) {
+    c.bench_function("sites_active_at_500bce", |b| {
+        b.iter(|| itihas::site::active_at(black_box(-500)))
+    });
+}
+
+fn bench_all_routes(c: &mut Criterion) {
+    c.bench_function("all_routes", |b| b.iter(itihas::trade::all_routes));
+}
+
+fn bench_routes_by_region(c: &mut Criterion) {
+    c.bench_function("routes_by_region_east_asia", |b| {
+        b.iter(|| itihas::trade::by_region(black_box("East Asia")))
+    });
+}
+
+fn bench_routes_by_commodity(c: &mut Criterion) {
+    c.bench_function("routes_by_commodity_silk", |b| {
+        b.iter(|| itihas::trade::by_commodity(black_box("silk")))
+    });
+}
+
 criterion_group!(
     benches,
     bench_all_eras,
@@ -132,5 +164,11 @@ criterion_group!(
     bench_all_interactions,
     bench_interactions_for,
     bench_influence_score,
+    bench_all_sites,
+    bench_sites_by_region,
+    bench_sites_active_at,
+    bench_all_routes,
+    bench_routes_by_region,
+    bench_routes_by_commodity,
 );
 criterion_main!(benches);

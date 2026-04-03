@@ -195,7 +195,7 @@ fn build_interactions() -> Vec<CivInteraction> {
         },
         CivInteraction {
             civ_a: Cow::Borrowed("Mali Empire"),
-            civ_b: Cow::Borrowed("Ancient Egypt"),
+            civ_b: Cow::Borrowed("Arab Caliphates"),
             interaction_type: InteractionType::Trade,
             start_year: 1235,
             end_year: 1500,

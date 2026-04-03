@@ -13,19 +13,31 @@
 
 - [x] sankhya consuming itihas — feature-gated optional dep for era-aware epoch correlation
 
+### MCP Tool Handlers (v1.0.2)
+
+- [x] MCP tool invoke handlers — 5 handlers wired to bote `Dispatcher` (era, civilization, event, figure, timeline)
+- [x] `register_handlers()` and `register_all()` convenience functions
+- [x] MCP response format (`content` array with `text` type, `isError` flag)
+- [x] `ToolAnnotations::read_only()` on all tools
+- [x] Case-insensitive category/domain parsing
+
 ## Backlog
 
 ### AI Integration
 
-- [ ] MCP tool invoke handlers (blocked on bote framework)
 - [ ] Natural language era/event lookup via Hoosh LLM inference
 - [ ] Daimon client for agent registration (when daimon is available)
+
+### Archaeological Sites & Trade Routes (v1.0.2)
+
+- [x] `site` module — 32 archaeological sites with location, period, type, civilization, and discovery metadata
+- [x] `trade` module — 15 historical trade routes with endpoints, commodities, route type, and civilization context
+- [x] `SiteNotFound` and `RouteNotFound` error variants
+- [x] 6 new benchmarks for site and trade modules
 
 ## Future (demand-gated)
 
 - Historical map data (geographic boundaries per era)
-- Archaeological site metadata
-- Historical trade route data
 - Military campaign timelines
 - Cultural diffusion tracking
 - Historical population estimates

@@ -7,6 +7,52 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **mcp** — 5 MCP tool invoke handlers wired to bote `Dispatcher`: `itihas_era`, `itihas_civilization`, `itihas_event`, `itihas_figure`, `itihas_timeline`
+- **mcp** — `register_handlers()` registers all handlers on an existing dispatcher; `register_all()` registers definitions + handlers in one call
+- **mcp** — All tools annotated with `ToolAnnotations::read_only()` (MCP 2025-11-25)
+- **mcp** — MCP-compliant response format: `content` array with `text` type, `isError` flag for errors
+- **mcp** — Case-insensitive `EventCategory` and `FigureDomain` parsing from string params
+- **mcp** — `itihas_era` tool schema now includes `region` parameter
+- **mcp** — `itihas_event` tool schema now includes `category` parameter
+- **mcp** — 24 new handler tests (was 4 definition tests, now 28 total)
+- **site** — Archaeological sites module: `Site` struct, `SiteType` enum (Settlement, Temple, Burial, Fortress, Monument, Palace, Workshop, Cave, Port). 32 pre-built sites across 10 regions. `all_sites()`, `by_region()`, `by_civilization()`, `by_type()`, `active_at()`, `by_name()` lookups
+- **trade** — Trade routes module: `TradeRoute` struct, `RouteType` enum (Land, Maritime, River, Mixed). 15 pre-built routes spanning 4500 years. `all_routes()`, `by_region()`, `by_commodity()`, `by_type()`, `by_civilization()`, `active_at()`, `by_name()` lookups
+- **error** — `SiteNotFound` and `RouteNotFound` variants added to `ItihasError`
+- 6 new criterion benchmarks for site and trade modules (25 total)
+- **civilization** — Added Arab Caliphates (632–1517) to civilization data (53 total)
+
+### Fixed
+
+- **era** — Age of Enlightenment start_year 1600→1648 (1600 was Scientific Revolution, not Enlightenment)
+- **era** — Renaissance end_year 1600→1610 (closes gap with Enlightenment for early 17th-century events)
+- **era** — Mesoamerican Classic category Classical→Medieval (250–900 CE is Medieval by EraCategory definition)
+- **civilization** — Maya peak_era "Classical Antiquity"→"Mesoamerican Classic" (has its own defined era)
+- **civilization** — Mali Empire script "N'ko script"→"Arabic script" (N'Ko invented 1949, centuries after Mali)
+- **event** — Decline of Indus Valley year -1300→-1900 (major cities abandoned by ~1700 BCE)
+- **event** — Assassination of Julius Caesar: category War→Revolution, significance Regional→Continental
+- **event** — French Revolution era "Industrial Age"→"Age of Enlightenment" (quintessential Enlightenment event)
+- **event** — Fall of Constantinople: added Byzantine Empire to civilizations_involved
+- **event** — Gutenberg Printing Press: added Holy Roman Empire to civilizations_involved
+- **event** — Rise of Islam: added Arab Caliphates to civilizations_involved (was empty)
+- **event** — First Crusade: added Holy Roman Empire to civilizations_involved
+- **event** — Punic Wars: civilizations_involved "Phoenicia"→"Carthage" (Carthage was independent by 264 BCE)
+- **event** — Norman Conquest: civilizations_involved "Viking/Norse"→"Normandy" (Normans ≠ Vikings by 1066)
+- **event** — Polynesian Settlement of NZ: civilizations_involved "Tonga Empire"→"Polynesia" (settlers from eastern Polynesia)
+- **event** — Tokugawa Shogunate era "Age of Enlightenment"→"Renaissance" (1603 predates Enlightenment)
+- **figure** — Julius Caesar civilization "Roman Empire"→"Roman Republic" (died 44 BCE; Empire starts 27 BCE)
+- **figure** — Hannibal Barca civilization "Phoenicia"→"Carthage" (Carthaginian, not generically Phoenician)
+- **figure** — Muhammad civilization "Rashidun Caliphate"→"Quraysh" (Caliphate formed after his death)
+- **figure** — Guru Nanak civilization "Mughal Empire"→"Lodhi Sultanate" (born 1469; Mughals founded 1526)
+- **figure** — Aryabhata description: corrected overclaim about pioneering zero (Brahmagupta formalized zero)
+- **site** — Lalibela civilization "Kingdom of Aksum"→"Zagwe Dynasty" (Aksum fell centuries before construction)
+- **site** — Mycenae civilization "Ancient Greece"→"Mycenaean Civilization" (predates Classical Greece)
+- **trade** — Trans-Saharan Trade start_year -500→300 (organized camel caravan trade began ~3rd century CE)
+- **interaction** — Mali Empire trade partner "Ancient Egypt"→"Arab Caliphates" (Ancient Egypt ended 30 BCE)
+- **causality** — Fall of Western Rome→Rise of Islam: strength Moderate→Weak (Byzantine-Sassanid exhaustion was the more direct factor)
+- **calendar** — Egyptian Civil calendar type Solar→Fixed (no leap correction; drifted against solar year)
+
 ## [1.0.1] - 2026-04-01
 
 ### Fixed

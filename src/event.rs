@@ -236,7 +236,7 @@ fn build_events() -> Vec<Event> {
             description: Cow::Borrowed(
                 "Muhammad's Hijra to Medina, founding the Islamic community",
             ),
-            civilizations_involved: vec![],
+            civilizations_involved: vec![Cow::Borrowed("Arab Caliphates")],
             significance: EventSignificance::Global,
         },
         Event {
@@ -261,7 +261,10 @@ fn build_events() -> Vec<Event> {
             description: Cow::Borrowed(
                 "Ottoman conquest of Constantinople, ending the Byzantine Empire",
             ),
-            civilizations_involved: vec![Cow::Borrowed("Ottoman Empire")],
+            civilizations_involved: vec![
+                Cow::Borrowed("Ottoman Empire"),
+                Cow::Borrowed("Byzantine Empire"),
+            ],
             significance: EventSignificance::Continental,
         },
         Event {
@@ -278,12 +281,12 @@ fn build_events() -> Vec<Event> {
         Event {
             name: Cow::Borrowed("French Revolution"),
             year: 1789,
-            era: Cow::Borrowed("Industrial Age"),
+            era: Cow::Borrowed("Age of Enlightenment"),
             category: EventCategory::Revolution,
             description: Cow::Borrowed(
                 "Overthrow of the monarchy, establishing principles of liberty and equality",
             ),
-            civilizations_involved: vec![],
+            civilizations_involved: vec![Cow::Borrowed("Holy Roman Empire")],
             significance: EventSignificance::Global,
         },
         Event {
@@ -384,7 +387,7 @@ fn build_events() -> Vec<Event> {
         },
         Event {
             name: Cow::Borrowed("Decline of the Indus Valley Civilization"),
-            year: -1300,
+            year: -1900,
             era: Cow::Borrowed("Bronze Age"),
             category: EventCategory::Collapse,
             description: Cow::Borrowed(
@@ -484,19 +487,19 @@ fn build_events() -> Vec<Event> {
             description: Cow::Borrowed(
                 "Series of wars between Rome and Carthage for Mediterranean supremacy",
             ),
-            civilizations_involved: vec![Cow::Borrowed("Roman Empire"), Cow::Borrowed("Phoenicia")],
+            civilizations_involved: vec![Cow::Borrowed("Roman Empire"), Cow::Borrowed("Carthage")],
             significance: EventSignificance::Continental,
         },
         Event {
             name: Cow::Borrowed("Assassination of Julius Caesar"),
             year: -44,
             era: Cow::Borrowed("Classical Antiquity"),
-            category: EventCategory::War,
+            category: EventCategory::Revolution,
             description: Cow::Borrowed(
                 "Roman senators assassinate Caesar, triggering civil wars and the end of the Republic",
             ),
             civilizations_involved: vec![Cow::Borrowed("Roman Empire")],
-            significance: EventSignificance::Regional,
+            significance: EventSignificance::Continental,
         },
         Event {
             name: Cow::Borrowed("Crucifixion of Jesus"),
@@ -711,7 +714,10 @@ fn build_events() -> Vec<Event> {
             description: Cow::Borrowed(
                 "European Christians capture Jerusalem and establish Crusader states",
             ),
-            civilizations_involved: vec![Cow::Borrowed("Byzantine Empire")],
+            civilizations_involved: vec![
+                Cow::Borrowed("Byzantine Empire"),
+                Cow::Borrowed("Holy Roman Empire"),
+            ],
             significance: EventSignificance::Continental,
         },
         Event {
@@ -757,7 +763,7 @@ fn build_events() -> Vec<Event> {
             ),
             civilizations_involved: vec![
                 Cow::Borrowed("Kingdom of England"),
-                Cow::Borrowed("Viking/Norse"),
+                Cow::Borrowed("Normandy"),
             ],
             significance: EventSignificance::Regional,
         },
@@ -791,7 +797,7 @@ fn build_events() -> Vec<Event> {
             description: Cow::Borrowed(
                 "Polynesian navigators reach and settle Aotearoa, becoming the Maori",
             ),
-            civilizations_involved: vec![Cow::Borrowed("Tonga Empire")],
+            civilizations_involved: vec![Cow::Borrowed("Polynesia")],
             significance: EventSignificance::Regional,
         },
         Event {
@@ -962,7 +968,7 @@ fn build_events() -> Vec<Event> {
         Event {
             name: Cow::Borrowed("Tokugawa Shogunate Established"),
             year: 1603,
-            era: Cow::Borrowed("Age of Enlightenment"),
+            era: Cow::Borrowed("Renaissance"),
             category: EventCategory::Founding,
             description: Cow::Borrowed(
                 "Tokugawa Ieyasu unifies Japan and begins over two centuries of stability",

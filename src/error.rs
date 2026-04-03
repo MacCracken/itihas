@@ -31,4 +31,12 @@ pub enum ItihasError {
     /// Figure not found by name.
     #[error("figure not found: {0}")]
     FigureNotFound(String),
+
+    /// Archaeological site not found by name.
+    #[error("site not found: {0}")]
+    SiteNotFound(String),
+
+    /// Trade route not found by name.
+    #[error("route not found: {0}")]
+    RouteNotFound(String),
 }

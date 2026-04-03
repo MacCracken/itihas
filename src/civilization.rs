@@ -150,7 +150,7 @@ fn build_civilizations() -> Vec<Civilization> {
         Civilization {
             name: Cow::Borrowed("Maya"),
             region: Cow::Borrowed("Mesoamerica"),
-            peak_era: Cow::Borrowed("Classical Antiquity"),
+            peak_era: Cow::Borrowed("Mesoamerican Classic"),
             founding_year: -2000,
             end_year: 1500,
             traits: vec![
@@ -265,7 +265,7 @@ fn build_civilizations() -> Vec<Civilization> {
                 Cow::Borrowed("gold trade"),
                 Cow::Borrowed("oral tradition"),
             ],
-            script: Cow::Borrowed("N'ko script"),
+            script: Cow::Borrowed("Arabic script"),
             language_codes: vec![Cow::Borrowed("bm")],
         },
         Civilization {
@@ -731,6 +731,21 @@ fn build_civilizations() -> Vec<Civilization> {
             language_codes: vec![Cow::Borrowed("pal")],
         },
         Civilization {
+            name: Cow::Borrowed("Arab Caliphates"),
+            region: Cow::Borrowed("Near East"),
+            peak_era: Cow::Borrowed("Middle Ages"),
+            founding_year: 632,
+            end_year: 1517,
+            traits: vec![
+                Cow::Borrowed("Islamic scholarship"),
+                Cow::Borrowed("algebra and optics"),
+                Cow::Borrowed("trade networks"),
+                Cow::Borrowed("architectural innovation"),
+            ],
+            script: Cow::Borrowed("Arabic script"),
+            language_codes: vec![Cow::Borrowed("ar")],
+        },
+        Civilization {
             name: Cow::Borrowed("Timurid Empire"),
             region: Cow::Borrowed("Central Asia"),
             peak_era: Cow::Borrowed("Middle Ages"),
@@ -905,7 +920,7 @@ mod tests {
 
     #[test]
     fn test_all_civilizations_count() {
-        assert_eq!(all_civilizations().len(), 52);
+        assert_eq!(all_civilizations().len(), 53);
     }
 
     #[test]

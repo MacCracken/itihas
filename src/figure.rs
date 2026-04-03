@@ -118,7 +118,7 @@ fn build_figures() -> Vec<Figure> {
             name: Cow::Borrowed("Julius Caesar"),
             birth_year: Some(-100),
             death_year: Some(-44),
-            civilization: Cow::Borrowed("Roman Empire"),
+            civilization: Cow::Borrowed("Roman Republic"),
             domain: FigureDomain::Military,
             description: Cow::Borrowed(
                 "Roman general and statesman, conquered Gaul, crossed the Rubicon",
@@ -312,7 +312,7 @@ fn build_figures() -> Vec<Figure> {
             civilization: Cow::Borrowed("Gupta Empire"),
             domain: FigureDomain::Scientist,
             description: Cow::Borrowed(
-                "Indian mathematician and astronomer, pioneered zero and place-value notation",
+                "Indian mathematician and astronomer, pioneered place-value notation and trigonometric functions",
             ),
         },
         Figure {
@@ -429,7 +429,7 @@ fn build_figures() -> Vec<Figure> {
             name: Cow::Borrowed("Hannibal Barca"),
             birth_year: Some(-247),
             death_year: Some(-183),
-            civilization: Cow::Borrowed("Phoenicia"),
+            civilization: Cow::Borrowed("Carthage"),
             domain: FigureDomain::Military,
             description: Cow::Borrowed(
                 "Carthaginian general who crossed the Alps and defeated Roman armies at Cannae",
@@ -490,7 +490,7 @@ fn build_figures() -> Vec<Figure> {
             name: Cow::Borrowed("Muhammad"),
             birth_year: Some(570),
             death_year: Some(632),
-            civilization: Cow::Borrowed("Rashidun Caliphate"),
+            civilization: Cow::Borrowed("Quraysh"),
             domain: FigureDomain::Religious,
             description: Cow::Borrowed(
                 "Prophet of Islam, unified the Arabian Peninsula and established the Muslim community",
@@ -500,7 +500,7 @@ fn build_figures() -> Vec<Figure> {
             name: Cow::Borrowed("Guru Nanak"),
             birth_year: Some(1469),
             death_year: Some(1539),
-            civilization: Cow::Borrowed("Mughal Empire"),
+            civilization: Cow::Borrowed("Lodhi Sultanate"),
             domain: FigureDomain::Religious,
             description: Cow::Borrowed(
                 "Founder of Sikhism, emphasized devotion, equality, and service",

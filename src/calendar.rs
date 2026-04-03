@@ -133,7 +133,7 @@ fn build_calendars() -> Vec<CalendarSystem> {
         },
         CalendarSystem {
             name: Cow::Borrowed("Egyptian (Civil)"),
-            calendar_type: CalendarType::Solar,
+            calendar_type: CalendarType::Fixed,
             epoch_year: -2781,
             months: 12,
             leap_rule_description: Cow::Borrowed(
