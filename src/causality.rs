@@ -3,6 +3,13 @@
 //! Provides [`Causality`] structs representing cause-effect relationships
 //! between events, a [`CausalStrength`] classification, and traversal
 //! functions for exploring causal chains.
+//!
+//! # Sources
+//!
+//! Causal relationships derived from Stearns (2001) and Roberts & Westad
+//! (2013). Strength classifications are editorial assessments based on
+//! historiographic consensus. Full bibliography:
+//! [`docs/sources/general.md`](https://github.com/MacCracken/itihas/blob/main/docs/sources/general.md).
 
 use alloc::borrow::Cow;
 use alloc::string::String;

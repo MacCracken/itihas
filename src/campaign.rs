@@ -3,6 +3,15 @@
 //! Provides [`Campaign`] structs representing major military campaigns,
 //! [`Battle`] for key engagements, [`CampaignOutcome`] classification,
 //! and lookup functions by region, commander, civilization, and period.
+//!
+//! # Sources
+//!
+//! General: Keegan (1993), Black (2009), Fuller (1954--1956). Alexander:
+//! Arrian (Selincourt trans., 1971). Punic Wars: Goldsworthy (2000). Hundred
+//! Years' War: Sumption (1990--2023). Napoleonic: Chandler (1966). American
+//! Civil War: McPherson (1988). Russo-Japanese: Connaughton (1988). Full
+//! bibliography:
+//! [`docs/sources/campaigns.md`](https://github.com/MacCracken/itihas/blob/main/docs/sources/campaigns.md).
 
 use alloc::borrow::Cow;
 use alloc::string::String;
@@ -787,6 +796,8 @@ pub fn by_name(name: &str) -> Result<Campaign, ItihasError> {
 
 #[cfg(test)]
 mod tests {
+    use alloc::format;
+
     use super::*;
 
     #[test]

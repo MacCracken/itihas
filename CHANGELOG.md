@@ -31,6 +31,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **campaign** — Military campaigns module: `Campaign` struct, `Battle` struct, `CampaignOutcome` enum (Victory, Defeat, Stalemate, Treaty, Inconclusive). 14 pre-built campaigns with 40+ battles spanning 2500 years. `all_campaigns()`, `by_region()`, `by_civilization()`, `by_commander()`, `by_outcome()`, `active_at()`, `campaigns_between()`, `by_name()` lookups. `Ord` impl for chronological sorting
 - **error** — `CampaignNotFound` variant added to `ItihasError`
 - 3 new criterion benchmarks for campaign module (28 total)
+- **docs/sources/** — Per-module bibliography with 30+ authoritative references (Stearns, Bickerman, Dershowitz & Reingold, Keegan, Renfrew & Bahn, Frankopan, etc.)
+- Inline `# Sources` doc comments on all 10 data modules linking to full bibliography
 
 ### Fixed
 
@@ -66,6 +68,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **campaign** — Gallic Wars belligerents_a "Roman Empire"→"Roman Republic" (Republic, not Empire in 58 BCE)
 - **campaign** — Russo-Japanese War outcome Treaty→Victory (decisive Japanese win despite treaty ending)
 - **campaign** — Russo-Japanese War: added Aleksei Kuropatkin to commanders (was missing Russian side)
+- **no_std** — `format!` macro not in scope in `site`, `trade`, `campaign` test modules under `--no-default-features` (added `use alloc::format`)
+- **deny.toml** — Added BSD-2/3-Clause, ISC, CDLA-Permissive-2.0 to allowed licenses; wildcards allowed for path deps
+- **Makefile** — `check` target now includes `doc` and `deny`; `test-all` runs `cargo test --no-default-features`
+- **docs** — Updated stale counts in README, CLAUDE.md, SECURITY.md, architecture overview to reflect v1.5.0 state
+- **Cargo.toml** — Switched bote and hoosh from path deps to crates.io versions (0.92, 1.2)
 
 ## [1.0.1] - 2026-04-01
 

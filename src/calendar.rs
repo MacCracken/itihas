@@ -3,6 +3,13 @@
 //! Provides [`CalendarSystem`] structs with metadata about historical and
 //! modern calendar systems. This module provides descriptive metadata only —
 //! actual calendar computation belongs in **sankhya**.
+//!
+//! # Sources
+//!
+//! Dershowitz & Reingold (2018) for all 8 systems. Richards (1998) for
+//! historical context. Egyptian civil calendar: Parker (1950). Full
+//! bibliography:
+//! [`docs/sources/calendars.md`](https://github.com/MacCracken/itihas/blob/main/docs/sources/calendars.md).
 
 use alloc::borrow::Cow;
 use alloc::string::String;

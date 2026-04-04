@@ -3,6 +3,13 @@
 //! Provides [`TradeRoute`] structs representing major historical trade networks,
 //! a [`RouteType`] classification enum, and lookup functions by region,
 //! period, commodity, and civilization.
+//!
+//! # Sources
+//!
+//! General: Curtin (1984). Silk Roads: Liu (2010), Frankopan (2015). Indian
+//! Ocean: Beaujard (2019). Trans-Saharan: Austen (2010). Hanseatic: Dollinger
+//! (1970). Atlantic: Mintz (1985). Full bibliography:
+//! [`docs/sources/trade-routes.md`](https://github.com/MacCracken/itihas/blob/main/docs/sources/trade-routes.md).
 
 use alloc::borrow::Cow;
 use alloc::string::String;
@@ -531,6 +538,8 @@ pub fn by_name(name: &str) -> Result<TradeRoute, ItihasError> {
 
 #[cfg(test)]
 mod tests {
+    use alloc::format;
+
     use super::*;
 
     #[test]

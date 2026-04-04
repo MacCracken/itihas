@@ -1,7 +1,15 @@
 //! Major civilizations with geographic extent, peak period, and key traits.
 //!
-//! Provides [`Civilization`] structs, pre-built data for 52 major world
+//! Provides [`Civilization`] structs, pre-built data for 53 major world
 //! civilizations, and lookup functions by region and active year.
+//!
+//! # Sources
+//!
+//! Dates and traits: Stearns (2001), Trigger (2003). Chinese: Twitchett &
+//! Fairbank (1978--2015). South Asian: Kulke & Rothermund (2016). African:
+//! Connah (2015). Mesoamerican: Coe (2013). Scripts: Daniels & Bright (1996).
+//! Full bibliography:
+//! [`docs/sources/civilizations.md`](https://github.com/MacCracken/itihas/blob/main/docs/sources/civilizations.md).
 
 use alloc::borrow::Cow;
 use alloc::string::String;

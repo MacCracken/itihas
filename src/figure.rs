@@ -3,6 +3,14 @@
 //! Provides [`Figure`] structs representing major historical figures, a
 //! [`FigureDomain`] classification enum, and 52 pre-built figures spanning
 //! from Hammurabi to Nikola Tesla.
+//!
+//! # Sources
+//!
+//! Biographical data: Hornblower & Spawforth (2012), Encyclopaedia Britannica
+//! (2010). Chinese figures: Twitchett & Fairbank (1978--2015). South Asian:
+//! Kulke & Rothermund (2016). West African: Levtzion & Spaulding (2003).
+//! Full bibliography:
+//! [`docs/sources/figures.md`](https://github.com/MacCracken/itihas/blob/main/docs/sources/figures.md).
 
 use alloc::borrow::Cow;
 use alloc::string::String;

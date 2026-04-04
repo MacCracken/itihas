@@ -3,6 +3,13 @@
 //! Provides [`CivInteraction`] structs representing relationships between
 //! civilizations, an [`InteractionType`] classification, and query functions
 //! for exploring the interaction network.
+//!
+//! # Sources
+//!
+//! Interaction data: Stearns (2001), Bentley & Ziegler (2015). Trade
+//! interactions: Curtin (1984). Military interactions: Keegan (1993). Full
+//! bibliography:
+//! [`docs/sources/general.md`](https://github.com/MacCracken/itihas/blob/main/docs/sources/general.md).
 
 use alloc::borrow::Cow;
 use alloc::vec;

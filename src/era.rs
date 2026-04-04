@@ -3,6 +3,13 @@
 //! Provides [`Era`] structs representing major historical periods, an
 //! [`EraCategory`] classification enum, and pre-built eras from the Bronze Age
 //! to the Information Age.
+//!
+//! # Sources
+//!
+//! Global periodization: Stearns (2001). Chinese dynasties: Twitchett & Fairbank
+//! (1978--2015). Indian periods: Kulke & Rothermund (2016). Mesoamerican periods:
+//! Coe (2013). Year numbering: Bickerman (1980). Full bibliography:
+//! [`docs/sources/eras.md`](https://github.com/MacCracken/itihas/blob/main/docs/sources/eras.md).
 
 use alloc::borrow::Cow;
 use alloc::string::String;

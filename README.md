@@ -2,7 +2,7 @@
 
 > **Itihas** (Sanskrit: इतिहास — "thus it was", history, chronicle) — structured world history for AGNOS
 
-Civilizations, eras, events, historical figures, and calendar system metadata as queryable Rust types.
+Civilizations, eras, events, historical figures, campaigns, sites, trade routes, and calendar system metadata as queryable Rust types.
 
 Used by [sankhya](https://github.com/MacCracken/sankhya) (ancient math), [avatara](https://github.com/MacCracken/avatara) (simulation), [kiran](https://github.com/MacCracken/kiran) (game engine), [joshua](https://github.com/MacCracken/joshua) (strategy), [jnana](https://github.com/MacCracken/jnana) (knowledge), [lipi](https://github.com/MacCracken/lipi) (linguistics), and [vidya](https://github.com/MacCracken/vidya) (programming reference).
 

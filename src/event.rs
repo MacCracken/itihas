@@ -3,6 +3,13 @@
 //! Provides [`Event`] structs representing major world events, an
 //! [`EventCategory`] classification enum, and 105 pre-built events spanning
 //! from the invention of writing to the digital revolution.
+//!
+//! # Sources
+//!
+//! Dates and classifications: Stearns (2001), Grun (2005). Ancient: Bauer
+//! (2007), Bickerman (1980). Medieval: Wickham (2009), Abulafia (2011).
+//! Modern: Hobsbawm (1962--1994). Full bibliography:
+//! [`docs/sources/events.md`](https://github.com/MacCracken/itihas/blob/main/docs/sources/events.md).
 
 use alloc::borrow::Cow;
 use alloc::string::String;

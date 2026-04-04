@@ -2,7 +2,7 @@
 
 ## Scope
 
-Itihas is a pure historical data library providing civilization, era, event, calendar, and figure metadata for Rust. The core library performs no I/O and contains no `unsafe` code.
+Itihas is a pure historical data library providing civilization, era, event, campaign, site, trade route, calendar, and figure metadata for Rust. The core library performs no I/O and contains no `unsafe` code.
 
 ## Attack Surface
 
@@ -17,7 +17,8 @@ Itihas is a pure historical data library providing civilization, era, event, cal
 
 | Version | Supported |
 |---------|-----------|
-| 0.1.x | Yes |
+| 1.x | Yes |
+| 0.1.x | No |
 
 ## Reporting
 

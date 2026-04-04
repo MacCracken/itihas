@@ -3,6 +3,13 @@
 //! Provides [`Site`] structs representing major archaeological sites,
 //! a [`SiteType`] classification enum, and lookup functions by region,
 //! period, and civilization.
+//!
+//! # Sources
+//!
+//! Methodology: Renfrew & Bahn (2020). Prehistory: Scarre (2018). UNESCO
+//! sites: World Heritage Centre advisory evaluations. Gobekli Tepe: Schmidt
+//! (2012). Catalhoyuk: Hodder (2006). Ur: Woolley (1982). Full bibliography:
+//! [`docs/sources/sites.md`](https://github.com/MacCracken/itihas/blob/main/docs/sources/sites.md).
 
 use alloc::borrow::Cow;
 use alloc::string::String;
@@ -598,6 +605,8 @@ pub fn by_name(name: &str) -> Result<Site, ItihasError> {
 
 #[cfg(test)]
 mod tests {
+    use alloc::format;
+
     use super::*;
 
     #[test]

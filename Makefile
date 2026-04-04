@@ -18,7 +18,7 @@ test:
 # Full feature matrix test — every feature combo that matters
 test-all: test
 	@echo "── no_std (no default features) ──"
-	cargo check --no-default-features
+	cargo test --no-default-features
 	@echo "── std only ──"
 	cargo test
 	@echo "── hoosh ──"

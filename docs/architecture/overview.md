@@ -12,7 +12,7 @@ itihas/
 │   ├── era.rs            — historical periods, date ranges, era categories
 │   │                       25 eras (8 global + 17 regional), temporal/scope lookups
 │   ├── civilization.rs   — major civilizations, geographic extent, traits
-│   │                       52 civilizations, by_region/active_at/by_name
+│   │                       53 civilizations, by_region/active_at/by_name
 │   ├── event.rs          — structured historical events, categories, significance
 │   │                       105 events, timeline slicing, category/significance filters
 │   ├── causality.rs      — causal links between events, strength ratings
@@ -23,11 +23,19 @@ itihas/
 │   │                       8 pre-built calendar systems
 │   ├── figure.rs         — historical figures, domain classification
 │   │                       52 figures across 8 domains
+│   ├── campaign.rs       — military campaigns, battles, commanders
+│   │                       14 campaigns with belligerents and outcomes
+│   ├── site.rs           — archaeological sites, location, discovery metadata
+│   │                       32 sites with period and type classification
+│   ├── trade.rs          — historical trade routes, endpoints, commodities
+│   │                       15 trade routes with civilization context
+│   ├── hoosh.rs          — query types and data-driven answers (feature-gated)
+│   ├── mcp.rs            — MCP tool definitions and handlers (feature-gated)
 │   └── logging.rs        — optional ITIHAS_LOG env-based tracing init
 ├── benches/
-│   └── benchmarks.rs     — criterion benchmarks (19 benchmarks)
+│   └── benchmarks.rs     — criterion benchmarks (28 benchmarks)
 ├── tests/
-│   └── integration.rs    — cross-module integration tests (59 tests)
+│   └── integration.rs    — cross-module integration tests (89 tests)
 └── examples/
     └── basic.rs          — runnable usage example
 ```
@@ -43,7 +51,10 @@ Year / region query
   ├─→ causality     — causes_of(event), effects_of(event), chain(event, depth)
   ├─→ interaction   — interactions_for(civ), between(a, b), influence_score()
   ├─→ calendar      — all_calendars(), by_name()
-  └─→ figure        — by_domain(), by_name()
+  ├─→ figure        — by_domain(), by_name()
+  ├─→ campaign      — all_campaigns(), by_name(), by_era()
+  ├─→ site          — all_sites(), by_type(), by_region()
+  └─→ trade         — all_routes(), by_commodity(), by_civilization()
 ```
 
 ## Pre-built Data
@@ -51,12 +62,15 @@ Year / region query
 | Module | Count | Examples |
 |--------|-------|---------|
 | Eras | 25 | Bronze Age, Classical Antiquity, Tang Dynasty, Vedic Period |
-| Civilizations | 52 | Mesopotamia, Mali Empire, Khmer Empire, Inca Empire |
+| Civilizations | 53 | Mesopotamia, Mali Empire, Khmer Empire, Inca Empire |
 | Events | 105 | Invention of Writing, Fall of Rome, Moon Landing |
 | Causalities | 13 | Writing → Hammurabi, Printing Press → French Revolution |
-| Interactions | 20 | Egypt ↔ Hittite (War/Diplomacy), Rome ↔ China (Trade) |
+| Interactions | 22 | Egypt ↔ Hittite (War/Diplomacy), Rome ↔ China (Trade) |
 | Calendars | 8 | Gregorian, Julian, Islamic, Hebrew, Chinese, Hindu, Maya, Egyptian |
 | Figures | 52 | Hammurabi, Confucius, Hypatia, Mansa Musa, Ada Lovelace |
+| Campaigns | 14 | Alexander's Conquests, Punic Wars, Mongol Invasions |
+| Sites | 32 | Pompeii, Machu Picchu, Angkor Wat, Troy |
+| Trade Routes | 15 | Silk Road, Trans-Saharan, Amber Road |
 
 ## Dependency Stack
 

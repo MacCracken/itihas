@@ -2,7 +2,7 @@
 
 ## Project Identity
 
-**Itihas** (Sanskrit: इतिहास — "thus it was", history, chronicle) — Structured world history: civilizations, eras, events, historical figures, and calendar metadata
+**Itihas** (Sanskrit: इतिहास — "thus it was", history, chronicle) — Structured world history: civilizations, eras, events, historical figures, campaigns, sites, trade routes, and calendar metadata
 
 - **Type**: Flat library crate
 - **License**: GPL-3.0
