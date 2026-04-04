@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.5.0] - 2026-04-03
+
 ### Added
 
 - **mcp** — 5 MCP tool invoke handlers wired to bote `Dispatcher`: `itihas_era`, `itihas_civilization`, `itihas_event`, `itihas_figure`, `itihas_timeline`
@@ -90,6 +92,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `no_std` support via `alloc`/`core`; `std` feature adds `LazyLock` caching
 - All public types: `Display` impls, `Cow<'static, str>` for zero-alloc statics, full serde roundtrip, `#[non_exhaustive]` on all enums and structs, `#[must_use]` on all pure functions
 
-[Unreleased]: https://github.com/MacCracken/itihas/compare/v1.0.1...HEAD
+[Unreleased]: https://github.com/MacCracken/itihas/compare/v1.5.0...HEAD
+[1.5.0]: https://github.com/MacCracken/itihas/compare/v1.0.1...v1.5.0
 [1.0.1]: https://github.com/MacCracken/itihas/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/MacCracken/itihas/releases/tag/v1.0.0

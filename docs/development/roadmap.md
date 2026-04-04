@@ -1,6 +1,6 @@
 # Development Roadmap
 
-> **Status**: 1.0 | **Current**: 1.0.1
+> **Status**: 1.x | **Current**: 1.5.0
 
 ## Completed
 
