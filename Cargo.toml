@@ -16,8 +16,8 @@ exclude = [".claude/", ".github/", "docs/", "scripts/"]
 [dependencies]
 serde = { version = "1", default-features = false, features = ["derive", "alloc"] }
 serde_json = { version = "1", optional = true }
-bote = { path = "../bote", optional = true }
-hoosh = { path = "../hoosh", optional = true, default-features = false, features = [] }
+bote = { version = "0.92", optional = true }
+hoosh = { version = "1.2", optional = true, default-features = false, features = [] }
 tokio = { version = "1", optional = true, features = ["rt"] }
 thiserror = { version = "2", default-features = false }
 tracing = "0.1"
