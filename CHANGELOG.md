@@ -9,36 +9,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [2.0.0] - 2026-04-12
 
-### Changed
+### Added
 
-- **Language port**: Ported entire codebase from Rust to Cyrius (cc3 v3.6.3)
-- **era** — 25 eras, `eras_containing()`, `eras_by_scope()`, `eras_by_region()`, `era_by_name()` lookups
-- **civilization** — 53 civilizations, `civs_active_at()`, `civs_by_region()`, `civ_by_name()` lookups
-- **event** — 105 events, `events_by_category()`, `event_by_name()` lookups
-- **figure** — 52 figures, `figures_by_domain()`, `figure_by_name()` lookups
-- **causality** — 13 causal links, `causes_of()`, `effects_of()` traversal
-- **interaction** — 21 interactions, `interactions_for()`, `interactions_between()`, `influence_score()`
-- **calendar** — 8 calendar systems, `calendar_by_name()` lookup
-- **campaign** — 14 campaigns with 40+ battles, `campaign_by_name()` lookup
-- **site** — 32 archaeological sites, `site_by_name()` lookup
-- **trade** — 15 trade routes, `route_by_name()`, `routes_by_commodity()` lookups
-- **error** — Integer error code enum (ERR_UNKNOWN_ERA through ERR_CAMPAIGN_NOT_FOUND)
+- **Language port**: Entire codebase ported from Rust v1.5.0 to Cyrius (cc3 v3.6.3). 8,846 lines of Rust → 1,591 lines of Cyrius. 141KB static ELF binary (x86_64)
+- **era** — 25 eras (8 global + 17 regional). `era_count()`, `era_get()`, `era_by_name()`, `eras_containing()`, `eras_by_scope()`, `eras_by_region()`. Accessor functions: `era_name()`, `era_start()`, `era_end()`, `era_region()`, `era_cat()`, `era_scope()`
+- **civilization** — 53 civilizations. `civ_count()`, `civ_get()`, `civ_by_name()`, `civs_active_at()`, `civs_by_region()`. Accessors: `civ_name()`, `civ_region()`, `civ_found()`, `civ_end()`
+- **event** — 105 events. `event_count()`, `event_by_name()`, `events_by_category()`, `events_by_significance()`, `events_at_year()`, `events_between()`. Accessors: `evt_name()`, `evt_year()`, `evt_cat()`, `evt_sig()`
+- **figure** — 52 figures across 8 domains. `figure_count()`, `figure_by_name()`, `figures_by_domain()`. Accessors: `fig_name()`, `fig_domain()`
+- **causality** — 13 causal links. `causality_count()`, `causes_of()`, `effects_of()`, `causal_chain()` (BFS traversal with depth tracking). Accessors: `caus_cause()`, `caus_effect()`, `chain_entry_name()`, `chain_entry_depth()`
+- **interaction** — 21 civilization interactions. `interaction_count()`, `interactions_for()`, `interactions_between()`, `interactions_by_type()`, `interaction_neighbors()`, `influence_score()`, `region_proximity()`. Accessors: `int_civa()`, `int_civb()`, `int_type()`
+- **calendar** — 8 calendar systems. `calendar_count()`, `calendar_by_name()`. Accessors: `cal_name()`, `cal_type()`, `cal_epoch()`, `cal_months()`
+- **campaign** — 14 campaigns with 40+ battles. `campaign_count()`, `campaign_by_name()`, `campaigns_by_region()`, `campaigns_by_outcome()`, `campaigns_by_commander()`, `campaigns_by_civilization()`, `campaigns_active_at()`, `campaigns_between()`. Accessors: `camp_name()`, `camp_region()`, `camp_out()`, `camp_cmds()`, `camp_bella()`, `camp_bellb()`
+- **site** — 32 archaeological sites. `site_count()`, `site_by_name()`, `sites_by_region()`, `sites_by_type()`, `sites_by_civilization()`, `sites_active_at()`. Accessors: `site_name()`, `site_region()`
+- **trade** — 15 trade routes. `route_count()`, `route_by_name()`, `routes_by_commodity()`, `routes_by_region()`, `routes_by_type()`, `routes_by_civilization()`, `routes_active_at()`. Accessors: `rt_name()`, `rt_comm()`
+- **error** — Integer error code enum (`ERR_UNKNOWN_ERA` through `ERR_CAMPAIGN_NOT_FOUND`)
+- **logging** — `itihas_log_init()`, `itihas_log_init_level()` via sakshi (vendored stdlib)
+- 128 functions across 13 source files
+- 97-assertion test suite: 10 module counts, 30+ name lookups (found and not-found), 20+ filter queries, causal chain BFS verification, influence score symmetry, region proximity, date ordering validation (eras, civs, campaigns, sites, routes), cross-module boundary checks
 - Heap-allocated structs via `store64`/`load64` with offset enum constants
 - Lazy initialization with global pointer caching (same pattern as Rust `LazyLock`)
 - Str auto-coercion for string parameters (Cyrius v3.6.0)
-- 26-assertion test suite covering all module counts, name lookups, and filter queries
-- 117KB static ELF binary (x86_64), no external dependencies
+- `split_regions()` helper for comma-delimited region string parsing
+- Rust v1.5.0 source preserved in `rust-old/` for reference
+- Benchmark comparison document: `benchmarks-rust-v-cyrius.md`
 
 ### Removed
 
 - **Rust toolchain** — Cargo.toml, rust-toolchain.toml, deny.toml, codecov.yml moved to `rust-old/`
-- **serde** — JSON serialization/deserialization (no Cyrius equivalent yet)
+- **serde** — JSON serialization/deserialization (no Cyrius equivalent yet; argonaut integration planned)
 - **thiserror** — Error derive (replaced with integer error enum)
-- **tracing** — Structured logging (will use sakshi dep when available)
-- **hoosh** — LLM query module (deferred, needs hoosh Cyrius dep)
-- **mcp** — MCP tool handlers (deferred, needs bote Cyrius dep)
-- **logging** — Tracing init (deferred, needs sakshi dep)
-- **Description fields** — Stripped from event, figure, campaign, site, trade modules to fit 32KB string data compiler limit. Names, dates, enums, and all lookup functions preserved. Descriptions can be loaded from external data file in future release.
+- **hoosh** — LLM query module (blocked: needs hoosh Cyrius port)
+- **mcp** — MCP tool handlers (blocked: needs bote Cyrius port)
+- **daimon** — Agent orchestrator integration (blocked: needs bote Cyrius port)
+- **Description fields** — Stripped from event, figure, campaign, site, trade modules to fit cc3 32KB string data limit. Names, dates, enums, and all lookup functions preserved. Full descriptions to be restored when cc3 str_data is expanded or via external data loading
 
 ### Breaking
 
@@ -47,6 +50,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Filter functions return Cyrius vec instead of `Vec<T>`
 - Civilization `traits` and `language_codes` stored as semicolon-delimited Str instead of `Vec<Cow<str>>`
 - Trade route `regions`, `civilizations`, `commodities` stored as semicolon-delimited Str
+- Campaign `belligerents_a`, `belligerents_b`, `commanders` stored as semicolon-delimited Str
 - Case-sensitive name lookups (Rust was case-insensitive via `to_lowercase()`)
 - No `Display`, `Ord`, `Serialize`, `Deserialize` trait impls
 

@@ -1,20 +1,22 @@
 # Benchmarks: Rust v1.5.0 vs Cyrius v2.0.0
 
 Last Rust run: **2026-04-03T23:06:50Z** (commit `3d1bed9`, criterion 0.5)
-Cyrius port: **2026-04-12** (cc3 v3.6.3, 117KB binary)
+Cyrius port: **2026-04-12** (cc3 v3.6.3, 141KB binary)
 
 ## Port Summary
 
 | Metric | Rust v1.5.0 | Cyrius v2.0.0 |
 |--------|-------------|---------------|
-| Source lines | 8,846 | 1,033 |
-| Binary | library crate | 117KB static ELF |
+| Source lines | 8,846 | 1,591 |
+| Binary | library crate | 141KB static ELF |
 | Compiler | rustc 1.89 | cc3 3.6.3 (288KB) |
-| Dependencies | serde, thiserror, tracing, criterion | none (vendored stdlib) |
-| Test assertions | 26 | 26 |
+| Dependencies | serde, thiserror, tracing, criterion | sakshi (vendored stdlib) |
+| Functions | ~60 public | 128 |
+| Test assertions | 26 | 97 |
 | Data entities | 297 | 297 |
-| Serde roundtrip | yes | not yet (no JSON) |
+| Serde roundtrip | yes | not yet (argonaut planned) |
 | Description fields | full text | stripped (32KB str_data limit) |
+| Logging | tracing crate | sakshi (vendored) |
 
 ## Rust Benchmark Results (last run)
 
@@ -74,60 +76,67 @@ linear scan over cached `&'static [T]`.
 - `str_eq` is byte-level comparison — no case folding overhead but case-sensitive
 - Linear scan over `vec_get` with pointer deref per element
 - All string data lives in bump-allocated heap — no reference counting
-- 117KB binary vs Rust library (no standalone binary to compare)
+- 141KB binary vs Rust library (no standalone binary to compare)
 
-## Cyrius Benchmark Coverage
+## Cyrius Function & Test Coverage
 
-Ported test coverage mapped to Rust benchmarks:
+All 28 Rust benchmarked functions have Cyrius equivalents.
+Tests exercise correctness; `.bcyr` timing harness needed for performance comparison.
 
-| Rust benchmark | Cyrius test | Status |
-|----------------|-------------|--------|
-| `all_eras` (count) | `era_count() == 25` | Ported |
-| `eras_containing` | `eras_containing(2025) > 0` | Ported |
-| `all_civilizations` (count) | `civ_count() == 53` | Ported |
-| `civilizations_active_at` | `civs_active_at(-500) > 0` | Ported |
-| `civilizations_by_region` | -- | Not yet (needs Cyrius bench) |
-| `all_events` (count) | `event_count() == 105` | Ported |
-| `events_by_category` | `events_by_category(CAT_WAR) > 0` | Ported |
-| `events_at_year` | -- | Not yet |
-| `events_between` | -- | Not yet |
-| `all_calendars` (count) | `calendar_count() == 8` | Ported |
-| `calendar_by_name` | `calendar_by_name("Gregorian") != 0` | Ported |
-| `all_figures` (count) | `figure_count() == 52` | Ported |
-| `figures_by_domain` | `figures_by_domain(DOM_RULER) > 0` | Ported |
-| `all_causalities` (count) | `causality_count() == 13` | Ported |
-| `causes_of` | `causes_of("French Revolution") > 0` | Ported |
-| `chain` | -- | Not yet (chain fn exists but not tested) |
-| `all_interactions` (count) | `interaction_count() == 21` | Ported |
-| `interactions_for` | `interactions_for("Roman Empire") > 0` | Ported |
-| `influence_score` | `influence_score("Ancient Egypt","Hittite Empire") > 0` | Ported |
-| `all_sites` (count) | `site_count() == 32` | Ported |
-| `sites_by_region` | -- | Not yet |
-| `sites_active_at` | -- | Not yet |
-| `all_routes` (count) | `route_count() == 15` | Ported |
-| `routes_by_region` | -- | Not yet |
-| `routes_by_commodity` | `routes_by_commodity("silk") > 0` | Ported |
-| `all_campaigns` (count) | `campaign_count() == 14` | Ported |
-| `campaigns_by_commander` | -- | Not yet |
-| `campaigns_between` | -- | Not yet |
+| Rust benchmark | Cyrius function | Tested |
+|----------------|----------------|--------|
+| `all_eras` | `era_count()` | count=25 |
+| `eras_containing_500bce` | `eras_containing()` | 2025, -500, -50000 (empty) |
+| `all_civilizations` | `civ_count()` | count=53 |
+| `civilizations_active_at_500bce` | `civs_active_at()` | -500, -100000 (empty), boundary checks |
+| `civilizations_by_region` | `civs_by_region()` | "Near East" |
+| `all_events` | `event_count()` | count=105 |
+| `events_by_category_war` | `events_by_category()` | CAT_WAR, CAT_INVENTION |
+| `events_at_year_476` | `events_at_year()` | 476, -753, verifies year value |
+| `events_between_500bce_500ce` | `events_between()` | -800..476 |
+| `all_calendars` | `calendar_count()` | count=8 |
+| `calendar_by_name_gregorian` | `calendar_by_name()` | Gregorian, Hijri, Maya, Martian (not found) |
+| `all_figures` | `figure_count()` | count=52 |
+| `figures_by_domain_scientist` | `figures_by_domain()` | DOM_RULER, DOM_SCIENTIST, DOM_EXPLORER |
+| `all_causalities` | `causality_count()` | count=13 |
+| `causes_of_french_revolution` | `causes_of()` | French Revolution |
+| `chain_writing_depth3` | `causal_chain()` | depth=3, verifies [0]=Hammurabi at depth 1 |
+| `all_interactions` | `interaction_count()` | count=21 |
+| `interactions_for_rome` | `interactions_for()` | Roman Empire |
+| `influence_score_egypt_hittite` | `influence_score()` | Egypt-Hittite >0, symmetry, unrelated=0 |
+| `all_sites` | `site_count()` | count=32 |
+| `sites_by_region_near_east` | `sites_by_region()` | Near East |
+| `sites_active_at_500bce` | `sites_active_at()` | -500 |
+| `all_routes` | `route_count()` | count=15 |
+| `routes_by_region_east_asia` | `routes_by_region()` | East Asia |
+| `routes_by_commodity_silk` | `routes_by_commodity()` | silk |
+| `all_campaigns` | `campaign_count()` | count=14 |
+| `campaigns_by_commander_napoleon` | `campaigns_by_commander()` | Napoleon |
+| `campaigns_between_500bce_500ce` | `campaigns_between()` | -500..-200 |
 
-**Ported: 20/28** (71%). Remaining 8 are filter/search benchmarks that
-need `cyrius bench` (.bcyr harness) to produce comparable timing data.
+**Coverage: 28/28** (100%). All functions ported and tested.
+
+Additional Cyrius functions not in Rust benchmarks:
+- `events_by_significance()`, `sites_by_type()`, `sites_by_civilization()`,
+  `routes_by_type()`, `routes_by_civilization()`, `routes_active_at()`,
+  `campaigns_by_region()`, `campaigns_by_outcome()`, `campaigns_by_civilization()`,
+  `campaigns_active_at()`, `interactions_by_type()`, `interaction_neighbors()`,
+  `region_proximity()`, `itihas_log_init()`
 
 ## Not Yet Ported
 
 | Rust feature | Reason | Plan |
 |-------------|--------|------|
-| Serde roundtrip (JSON) | No JSON serialization yet | Port when argonaut integration available |
-| Case-insensitive lookups | Cyrius has no `to_lowercase` | Add `str_lower` to stdlib or accept case-sensitive |
-| Description fields | 32KB str_data compiler limit | Load from external data file or wait for limit bump |
-| Display impls | No `Display` trait in Cyrius | `_str()` functions exist for enums |
-| `hoosh` module | LLM integration, needs hoosh dep | Post-port |
-| `mcp` module | MCP tools, needs bote dep | Post-port |
-| `logging` module | tracing integration | Use sakshi dep |
-| Integration tests (55 Rust tests) | Cross-module validation | Expand test suite incrementally |
-| Fuzz testing | No .fcyr harness yet | Write after core benchmarks |
+| Serde roundtrip (JSON) | No JSON serialization yet | v2.2.0: argonaut integration |
+| Case-insensitive lookups | Cyrius has no `to_lowercase` | v2.1.0: add `str_lower` to stdlib |
+| Description fields | 32KB str_data compiler limit | v2.1.0: external data file or cc3 limit bump |
+| Display impls | No `Display` trait in Cyrius | Future: `_to_str()` format functions |
+| `hoosh` module (6 fns) | Needs hoosh Cyrius port | v2.3.0: blocked on hoosh repo |
+| `mcp` module (4 fns) | Needs bote Cyrius port | v2.3.0: blocked on bote repo |
+| `daimon` module (3 fns) | Needs bote Cyrius port | v2.3.0: blocked on bote repo |
+| `.bcyr` benchmarks | Need timing harness | v2.1.0: port criterion benchmarks |
 
 ---
 
-Generated during Cyrius port, 2026-04-12. Rust data from `rust-old/bench-history.csv`.
+Generated during Cyrius port, 2026-04-12. Updated 2026-04-12.
+Rust data from `rust-old/bench-history.csv`.

@@ -79,8 +79,8 @@ sh tests/test_itihas.sh    # Build + run test suite
 
 ## Port History
 
-Ported from Rust v1.5.0 (8,846 lines) to Cyrius v0.1.0 (1,033 lines) on 2026-04-12.
-Previous Rust source preserved in `rust-old/` for reference.
+Ported from Rust v1.5.0 (8,846 lines) to Cyrius v2.0.0 (1,591 lines, 128 functions, 97 tests) on 2026-04-12.
+141KB static ELF binary. Previous Rust source preserved in `rust-old/` for reference.
 See [benchmarks-rust-v-cyrius.md](benchmarks-rust-v-cyrius.md) for comparison.
 
 ## License
