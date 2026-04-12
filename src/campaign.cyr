@@ -111,3 +111,63 @@ fn campaign_by_name(name: Str) {
     }
     return 0;
 }
+
+fn campaigns_by_region(region: Str) {
+    var result = vec_new();
+    var v = all_campaigns(); var n = vec_len(v);
+    for (var i = 0; i < n; i = i + 1) {
+        var p = vec_get(v, i);
+        if (str_contains(camp_region(p), region) == 1) { vec_push(result, p); }
+    }
+    return result;
+}
+
+fn campaigns_by_outcome(outcome) {
+    var result = vec_new();
+    var v = all_campaigns(); var n = vec_len(v);
+    for (var i = 0; i < n; i = i + 1) {
+        var p = vec_get(v, i);
+        if (camp_out(p) == outcome) { vec_push(result, p); }
+    }
+    return result;
+}
+
+fn campaigns_by_commander(cmd: Str) {
+    var result = vec_new();
+    var v = all_campaigns(); var n = vec_len(v);
+    for (var i = 0; i < n; i = i + 1) {
+        var p = vec_get(v, i);
+        if (str_contains(camp_cmds(p), cmd) == 1) { vec_push(result, p); }
+    }
+    return result;
+}
+
+fn campaigns_by_civilization(civ: Str) {
+    var result = vec_new();
+    var v = all_campaigns(); var n = vec_len(v);
+    for (var i = 0; i < n; i = i + 1) {
+        var p = vec_get(v, i);
+        if (str_contains(camp_bella(p), civ) == 1 || str_contains(camp_bellb(p), civ) == 1) { vec_push(result, p); }
+    }
+    return result;
+}
+
+fn campaigns_active_at(year) {
+    var result = vec_new();
+    var v = all_campaigns(); var n = vec_len(v);
+    for (var i = 0; i < n; i = i + 1) {
+        var p = vec_get(v, i);
+        if (year >= load64(p+CAMP_START) && year <= load64(p+CAMP_END)) { vec_push(result, p); }
+    }
+    return result;
+}
+
+fn campaigns_between(sy, ey) {
+    var result = vec_new();
+    var v = all_campaigns(); var n = vec_len(v);
+    for (var i = 0; i < n; i = i + 1) {
+        var p = vec_get(v, i);
+        if (load64(p+CAMP_START) <= ey && load64(p+CAMP_END) >= sy) { vec_push(result, p); }
+    }
+    return result;
+}

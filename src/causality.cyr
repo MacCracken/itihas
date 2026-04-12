@@ -58,3 +58,66 @@ fn effects_of(event_name: Str) {
     }
     return result;
 }
+
+# BFS causal chain: returns vec of [name_str, depth] pairs stored as 16-byte entries
+enum ChainOff { CH_NAME=0; CH_DEPTH=8; CH_SIZE=16; }
+
+fn causal_chain(event_name: Str, max_depth) {
+    var results = vec_new();
+    var visited = vec_new();
+    var frontier = vec_new();
+    vec_push(visited, event_name);
+
+    # Seed with direct effects
+    var eff = effects_of(event_name);
+    var en = vec_len(eff);
+    for (var i = 0; i < en; i = i + 1) {
+        var link = vec_get(eff, i);
+        var ename = caus_effect(link);
+        var already = 0;
+        var vn = vec_len(visited);
+        for (var j = 0; j < vn; j = j + 1) {
+            if (str_eq(vec_get(visited, j), ename) == 1) { already = 1; }
+        }
+        if (already == 0) {
+            vec_push(visited, ename);
+            var entry = alloc(CH_SIZE);
+            store64(entry + CH_NAME, ename);
+            store64(entry + CH_DEPTH, 1);
+            vec_push(results, entry);
+            if (1 < max_depth) { vec_push(frontier, entry); }
+        }
+    }
+
+    # Process frontier
+    var fi = 0;
+    while (fi < vec_len(frontier)) {
+        var curr = vec_get(frontier, fi);
+        fi = fi + 1;
+        var cdepth = load64(curr + CH_DEPTH);
+        if (cdepth >= max_depth) { continue; }
+        var eff2 = effects_of(load64(curr + CH_NAME));
+        var en2 = vec_len(eff2);
+        for (var k = 0; k < en2; k = k + 1) {
+            var link2 = vec_get(eff2, k);
+            var ename2 = caus_effect(link2);
+            var already2 = 0;
+            var vn2 = vec_len(visited);
+            for (var m = 0; m < vn2; m = m + 1) {
+                if (str_eq(vec_get(visited, m), ename2) == 1) { already2 = 1; }
+            }
+            if (already2 == 0) {
+                vec_push(visited, ename2);
+                var entry2 = alloc(CH_SIZE);
+                store64(entry2 + CH_NAME, ename2);
+                store64(entry2 + CH_DEPTH, cdepth + 1);
+                vec_push(results, entry2);
+                if (cdepth + 1 < max_depth) { vec_push(frontier, entry2); }
+            }
+        }
+    }
+    return results;
+}
+
+fn chain_entry_name(p) { return load64(p + CH_NAME); }
+fn chain_entry_depth(p) { return load64(p + CH_DEPTH); }

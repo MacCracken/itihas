@@ -70,6 +70,36 @@ fn interactions_between(ca: Str, cb: Str) {
     return result;
 }
 
+fn interactions_by_type(itype) {
+    var result = vec_new();
+    var v = all_interactions(); var n = vec_len(v);
+    for (var i = 0; i < n; i = i + 1) {
+        var p = vec_get(v, i);
+        if (int_type(p) == itype) { vec_push(result, p); }
+    }
+    return result;
+}
+
+fn interaction_neighbors(civ: Str) {
+    var result = vec_new();
+    var v = all_interactions(); var n = vec_len(v);
+    for (var i = 0; i < n; i = i + 1) {
+        var p = vec_get(v, i);
+        var neighbor = 0;
+        if (str_eq(int_civa(p), civ) == 1) { neighbor = int_civb(p); }
+        elif (str_eq(int_civb(p), civ) == 1) { neighbor = int_civa(p); }
+        if (neighbor != 0) {
+            var dup = 0;
+            var rn = vec_len(result);
+            for (var j = 0; j < rn; j = j + 1) {
+                if (str_eq(vec_get(result, j), neighbor) == 1) { dup = 1; }
+            }
+            if (dup == 0) { vec_push(result, neighbor); }
+        }
+    }
+    return result;
+}
+
 fn influence_score(ca: Str, cb: Str) {
     var btw = interactions_between(ca, cb);
     var score = 0;

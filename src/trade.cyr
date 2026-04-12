@@ -60,3 +60,43 @@ fn routes_by_commodity(comm: Str) {
     }
     return result;
 }
+
+fn routes_by_region(region: Str) {
+    var result = vec_new();
+    var v = all_routes(); var n = vec_len(v);
+    for (var i = 0; i < n; i = i + 1) {
+        var p = vec_get(v, i);
+        if (str_contains(load64(p+RT_REGIONS), region) == 1) { vec_push(result, p); }
+    }
+    return result;
+}
+
+fn routes_by_type(rtype) {
+    var result = vec_new();
+    var v = all_routes(); var n = vec_len(v);
+    for (var i = 0; i < n; i = i + 1) {
+        var p = vec_get(v, i);
+        if (load64(p+RT_TYPE) == rtype) { vec_push(result, p); }
+    }
+    return result;
+}
+
+fn routes_by_civilization(civ: Str) {
+    var result = vec_new();
+    var v = all_routes(); var n = vec_len(v);
+    for (var i = 0; i < n; i = i + 1) {
+        var p = vec_get(v, i);
+        if (str_contains(load64(p+RT_CIVS), civ) == 1) { vec_push(result, p); }
+    }
+    return result;
+}
+
+fn routes_active_at(year) {
+    var result = vec_new();
+    var v = all_routes(); var n = vec_len(v);
+    for (var i = 0; i < n; i = i + 1) {
+        var p = vec_get(v, i);
+        if (year >= load64(p+RT_START) && year <= load64(p+RT_END)) { vec_push(result, p); }
+    }
+    return result;
+}

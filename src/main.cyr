@@ -1,5 +1,5 @@
-# itihas — Structured World History (Cyrius port)
-# 10 modules, 8846 lines of Rust → Cyrius
+# itihas — Structured World History v2.0.0
+# 10 modules, 297 entities, ported from 8846 lines of Rust
 
 include "lib/string.cyr"
 include "lib/fmt.cyr"
@@ -29,6 +29,10 @@ fn check(val, expected, name) {
         tf = tf + 1;
         syscall(SYS_WRITE, 2, "FAIL: ", 6);
         syscall(SYS_WRITE, 2, name, strlen(name));
+        syscall(SYS_WRITE, 2, " expected=", 10);
+        print_num(expected);
+        syscall(SYS_WRITE, 2, " got=", 5);
+        print_num(val);
         syscall(SYS_WRITE, 2, "\n", 1);
     }
     return 0;
@@ -45,45 +49,247 @@ fn ok(val, name) {
     return 0;
 }
 
+fn zero(val, name) {
+    if (val == 0) { tp = tp + 1; }
+    else {
+        tf = tf + 1;
+        syscall(SYS_WRITE, 2, "FAIL (expected 0): ", 19);
+        syscall(SYS_WRITE, 2, name, strlen(name));
+        syscall(SYS_WRITE, 2, "\n", 1);
+    }
+    return 0;
+}
+
 alloc_init();
-println("=== itihas test suite ===");
+println("=== itihas v2.0.0 test suite ===");
 
+# ---------------------------------------------------------------
+# Module counts
+# ---------------------------------------------------------------
+println("--- counts ---");
 check(era_count(), 25, "era_count=25");
-ok(era_by_name("Bronze Age"), "era Bronze Age");
-ok(vec_len(eras_containing(2025)) > 0, "eras containing 2025");
-
 check(calendar_count(), 8, "calendar_count=8");
-ok(calendar_by_name("Gregorian"), "cal Gregorian");
-
 check(civ_count(), 53, "civ_count=53");
-ok(civ_by_name("Mesopotamia"), "civ Mesopotamia");
-ok(vec_len(civs_active_at((0-500))) > 0, "civs active -500");
-
 check(figure_count(), 52, "figure_count=52");
-ok(figure_by_name("Aristotle"), "fig Aristotle");
-ok(vec_len(figures_by_domain(DOM_RULER)) > 0, "fig domain Ruler");
-
 check(event_count(), 105, "event_count=105");
-ok(event_by_name("French Revolution"), "evt French Revolution");
-ok(vec_len(events_by_category(CAT_WAR)) > 0, "evt cat War");
-
 check(causality_count(), 13, "causality_count=13");
-ok(vec_len(causes_of("French Revolution")) > 0, "causes of French Rev");
-
 check(interaction_count(), 21, "interaction_count=21");
+check(campaign_count(), 14, "campaign_count=14");
+check(site_count(), 32, "site_count=32");
+check(route_count(), 15, "route_count=15");
+
+# ---------------------------------------------------------------
+# Era lookups
+# ---------------------------------------------------------------
+println("--- era ---");
+ok(era_by_name("Bronze Age"), "era Bronze Age");
+ok(era_by_name("Information Age"), "era Information Age");
+zero(era_by_name("Space Age"), "era Space Age not found");
+ok(vec_len(eras_containing(2025)) > 0, "eras containing 2025");
+ok(vec_len(eras_containing((0-500))) > 0, "eras containing -500");
+check(vec_len(eras_containing((0-50000))), 0, "eras containing -50000 empty");
+ok(vec_len(eras_by_scope(SCOPE_GLOBAL)) > 0, "eras global");
+ok(vec_len(eras_by_scope(SCOPE_REGIONAL)) > 0, "eras regional");
+ok(vec_len(eras_by_region("East Asia")) > 0, "eras East Asia");
+ok(vec_len(eras_by_region("South Asia")) > 0, "eras South Asia");
+check(vec_len(eras_by_region("Mesoamerica")), 3, "eras Mesoamerica=3");
+
+# ---------------------------------------------------------------
+# Calendar lookups
+# ---------------------------------------------------------------
+println("--- calendar ---");
+ok(calendar_by_name("Gregorian"), "cal Gregorian");
+ok(calendar_by_name("Hijri"), "cal Hijri");
+ok(calendar_by_name("Maya"), "cal Maya");
+zero(calendar_by_name("Martian"), "cal Martian not found");
+
+# ---------------------------------------------------------------
+# Civilization lookups
+# ---------------------------------------------------------------
+println("--- civilization ---");
+ok(civ_by_name("Mesopotamia"), "civ Mesopotamia");
+ok(civ_by_name("Ancient Greece"), "civ Ancient Greece");
+ok(civ_by_name("Tokugawa Shogunate"), "civ Tokugawa");
+zero(civ_by_name("Atlantis"), "civ Atlantis not found");
+ok(vec_len(civs_active_at((0-500))) > 0, "civs active -500");
+ok(vec_len(civs_by_region("Near East")) > 0, "civs Near East");
+check(vec_len(civs_active_at((0-100000))), 0, "civs active -100000 empty");
+
+# ---------------------------------------------------------------
+# Figure lookups
+# ---------------------------------------------------------------
+println("--- figure ---");
+ok(figure_by_name("Aristotle"), "fig Aristotle");
+ok(figure_by_name("Ada Lovelace"), "fig Ada Lovelace");
+zero(figure_by_name("Gandalf"), "fig Gandalf not found");
+ok(vec_len(figures_by_domain(DOM_RULER)) > 0, "fig domain Ruler");
+ok(vec_len(figures_by_domain(DOM_SCIENTIST)) > 0, "fig domain Scientist");
+ok(vec_len(figures_by_domain(DOM_EXPLORER)) > 0, "fig domain Explorer");
+
+# ---------------------------------------------------------------
+# Event lookups
+# ---------------------------------------------------------------
+println("--- event ---");
+ok(event_by_name("French Revolution"), "evt French Revolution");
+ok(event_by_name("Fall of Constantinople"), "evt Fall of Constantinople");
+zero(event_by_name("Battle of Endor"), "evt Battle of Endor not found");
+ok(vec_len(events_by_category(CAT_WAR)) > 0, "evt cat War");
+ok(vec_len(events_by_category(CAT_INVENTION)) > 0, "evt cat Invention");
+ok(vec_len(events_by_significance(SIG_GLOBAL)) > 0, "evt sig Global");
+ok(vec_len(events_at_year(476)) > 0, "evt at_year 476");
+ok(vec_len(events_at_year((0-753))) > 0, "evt at_year -753");
+ok(vec_len(events_between((0-800), 476)) > 0, "evt between -800..476");
+
+# Verify events_at_year returns correct year
+var evts_476 = events_at_year(476);
+var evt0 = vec_get(evts_476, 0);
+check(evt_year(evt0), 476, "evt at_year returns year 476");
+
+# ---------------------------------------------------------------
+# Causality lookups
+# ---------------------------------------------------------------
+println("--- causality ---");
+ok(vec_len(causes_of("French Revolution")) > 0, "causes of French Rev");
+ok(vec_len(effects_of("Invention of Writing")) > 0, "effects of Writing");
+var chain = causal_chain("Invention of Writing", 3);
+ok(vec_len(chain) > 0, "chain from Writing depth 3");
+# Code of Hammurabi should be at depth 1
+var ch0 = vec_get(chain, 0);
+ok(str_eq(chain_entry_name(ch0), "Code of Hammurabi") == 1, "chain[0] = Code of Hammurabi");
+check(chain_entry_depth(ch0), 1, "chain[0] depth=1");
+
+# ---------------------------------------------------------------
+# Interaction lookups
+# ---------------------------------------------------------------
+println("--- interaction ---");
 ok(vec_len(interactions_for("Roman Empire")) > 0, "int for Rome");
 ok(influence_score("Ancient Egypt", "Hittite Empire") > 0, "inf score Egypt-Hittite");
+# Symmetric
+check(influence_score("Ancient Egypt", "Hittite Empire"), influence_score("Hittite Empire", "Ancient Egypt"), "inf score symmetric");
+check(influence_score("Inca Empire", "Ancient China"), 0, "inf score unrelated=0");
+ok(vec_len(interactions_by_type(INT_WAR)) > 0, "int type War");
+ok(vec_len(interactions_by_type(INT_TRADE)) > 0, "int type Trade");
+var rome_nbrs = interaction_neighbors("Roman Empire");
+ok(vec_len(rome_nbrs) > 0, "Rome has neighbors");
+ok(vec_len(interactions_between("Ancient Egypt", "Hittite Empire")) >= 2, "Egypt-Hittite >= 2 interactions");
 
-check(campaign_count(), 14, "campaign_count=14");
+# ---------------------------------------------------------------
+# Campaign lookups
+# ---------------------------------------------------------------
+println("--- campaign ---");
 ok(campaign_by_name("Napoleonic Wars"), "camp Napoleonic");
+zero(campaign_by_name("Star Wars"), "camp Star Wars not found");
+ok(vec_len(campaigns_by_outcome(OUT_VICTORY)) > 0, "camp outcome Victory");
+ok(vec_len(campaigns_by_commander("Napoleon")) > 0, "camp cmd Napoleon");
+ok(vec_len(campaigns_by_region("Europe")) > 0, "camp region Europe");
+ok(vec_len(campaigns_by_civilization("Roman Republic")) > 0, "camp civ Roman Republic");
+ok(vec_len(campaigns_between((0-500), (0-200))) > 0, "camp between -500..-200");
 
-check(site_count(), 32, "site_count=32");
+# ---------------------------------------------------------------
+# Site lookups
+# ---------------------------------------------------------------
+println("--- site ---");
 ok(site_by_name("Machu Picchu"), "site Machu Picchu");
+ok(site_by_name("Pompeii"), "site Pompeii");
+zero(site_by_name("Atlantis"), "site Atlantis not found");
+ok(vec_len(sites_by_region("Near East")) > 0, "sites Near East");
+ok(vec_len(sites_by_type(ST_TEMPLE)) > 0, "sites type Temple");
+ok(vec_len(sites_active_at((0-500))) > 0, "sites active -500");
+ok(vec_len(sites_by_civilization("Ancient Egypt")) > 0, "sites civ Egypt");
 
-check(route_count(), 15, "route_count=15");
+# ---------------------------------------------------------------
+# Trade route lookups
+# ---------------------------------------------------------------
+println("--- trade ---");
 ok(route_by_name("Silk Road"), "route Silk Road");
+zero(route_by_name("Route 66"), "route Route 66 not found");
 ok(vec_len(routes_by_commodity("silk")) > 0, "routes commodity silk");
+ok(vec_len(routes_by_region("East Asia")) > 0, "routes region East Asia");
+ok(vec_len(routes_by_type(RT_MARITIME)) > 0, "routes type Maritime");
+ok(vec_len(routes_by_civilization("Roman Empire")) > 0, "routes civ Rome");
+ok(vec_len(routes_active_at(1000)) > 0, "routes active 1000");
 
+# ---------------------------------------------------------------
+# Integration: cross-module validation
+# ---------------------------------------------------------------
+println("--- integration ---");
+
+# Era date ordering: start < end for all eras
+var era_dates_ok = 1;
+var ev = all_eras();
+var en = vec_len(ev);
+for (var i = 0; i < en; i = i + 1) {
+    var p = vec_get(ev, i);
+    if (era_start(p) >= era_end(p)) { era_dates_ok = 0; }
+}
+ok(era_dates_ok, "era start < end for all");
+
+# Civ date ordering: founding < end for all
+var civ_dates_ok = 1;
+var cv = all_civilizations();
+var cn = vec_len(cv);
+for (var i = 0; i < cn; i = i + 1) {
+    var p = vec_get(cv, i);
+    if (civ_found(p) >= civ_end(p)) { civ_dates_ok = 0; }
+}
+ok(civ_dates_ok, "civ founding < end for all");
+
+# Campaign date ordering: start <= end
+var camp_dates_ok = 1;
+var cpv = all_campaigns();
+var cpn = vec_len(cpv);
+for (var i = 0; i < cpn; i = i + 1) {
+    var p = vec_get(cpv, i);
+    if (load64(p+CAMP_START) > load64(p+CAMP_END)) { camp_dates_ok = 0; }
+}
+ok(camp_dates_ok, "campaign start <= end for all");
+
+# Site date ordering: start <= end
+var site_dates_ok = 1;
+var sv = all_sites();
+var sn = vec_len(sv);
+for (var i = 0; i < sn; i = i + 1) {
+    var p = vec_get(sv, i);
+    if (load64(p+SITE_START) > load64(p+SITE_END)) { site_dates_ok = 0; }
+}
+ok(site_dates_ok, "site start <= end for all");
+
+# Route date ordering: start <= end
+var route_dates_ok = 1;
+var rv = all_routes();
+var rn = vec_len(rv);
+for (var i = 0; i < rn; i = i + 1) {
+    var p = vec_get(rv, i);
+    if (load64(p+RT_START) > load64(p+RT_END)) { route_dates_ok = 0; }
+}
+ok(route_dates_ok, "route start <= end for all");
+
+# Eras + civs at 500 BCE should both return results
+ok(vec_len(eras_containing((0-500))) > 0 && vec_len(civs_active_at((0-500))) > 0, "500 BCE has eras and civs");
+
+# Boundary: Mesopotamia founding year is active
+var mesop = civ_by_name("Mesopotamia");
+ok(mesop, "Mesopotamia exists");
+var mesop_civs = civs_active_at(civ_found(mesop));
+var found_mesop = 0;
+var mn = vec_len(mesop_civs);
+for (var i = 0; i < mn; i = i + 1) {
+    if (str_eq(civ_name(vec_get(mesop_civs, i)), "Mesopotamia") == 1) { found_mesop = 1; }
+}
+ok(found_mesop, "Mesopotamia active at own founding year");
+
+# Rome active at end year (476)
+var rome_civs = civs_active_at(476);
+var found_rome = 0;
+var rmn = vec_len(rome_civs);
+for (var i = 0; i < rmn; i = i + 1) {
+    if (str_eq(civ_name(vec_get(rome_civs, i)), "Roman Empire") == 1) { found_rome = 1; }
+}
+ok(found_rome, "Roman Empire active at end year 476");
+
+# ---------------------------------------------------------------
+# Summary
+# ---------------------------------------------------------------
 println("");
 syscall(SYS_WRITE, 1, "passed: ", 8);
 print_num(tp);

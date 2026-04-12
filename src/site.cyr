@@ -59,6 +59,46 @@ fn all_sites() {
 }
 fn site_count() { return vec_len(all_sites()); }
 
+fn sites_by_region(region: Str) {
+    var result = vec_new();
+    var v = all_sites(); var n = vec_len(v);
+    for (var i = 0; i < n; i = i + 1) {
+        var p = vec_get(v, i);
+        if (str_contains(site_region(p), region) == 1) { vec_push(result, p); }
+    }
+    return result;
+}
+
+fn sites_by_type(stype) {
+    var result = vec_new();
+    var v = all_sites(); var n = vec_len(v);
+    for (var i = 0; i < n; i = i + 1) {
+        var p = vec_get(v, i);
+        if (load64(p+SITE_TYPE) == stype) { vec_push(result, p); }
+    }
+    return result;
+}
+
+fn sites_by_civilization(civ: Str) {
+    var result = vec_new();
+    var v = all_sites(); var n = vec_len(v);
+    for (var i = 0; i < n; i = i + 1) {
+        var p = vec_get(v, i);
+        if (str_contains(load64(p+SITE_CIV), civ) == 1) { vec_push(result, p); }
+    }
+    return result;
+}
+
+fn sites_active_at(year) {
+    var result = vec_new();
+    var v = all_sites(); var n = vec_len(v);
+    for (var i = 0; i < n; i = i + 1) {
+        var p = vec_get(v, i);
+        if (year >= load64(p+SITE_START) && year <= load64(p+SITE_END)) { vec_push(result, p); }
+    }
+    return result;
+}
+
 fn site_by_name(name: Str) {
     var v = all_sites(); var n = vec_len(v);
     for (var i = 0; i < n; i = i + 1) {

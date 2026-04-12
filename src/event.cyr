@@ -144,6 +144,36 @@ fn events_by_category(cat) {
     return result;
 }
 
+fn events_at_year(year) {
+    var result = vec_new();
+    var v = all_events(); var n = vec_len(v);
+    for (var i = 0; i < n; i = i + 1) {
+        var p = vec_get(v, i);
+        if (evt_year(p) == year) { vec_push(result, p); }
+    }
+    return result;
+}
+
+fn events_between(sy, ey) {
+    var result = vec_new();
+    var v = all_events(); var n = vec_len(v);
+    for (var i = 0; i < n; i = i + 1) {
+        var p = vec_get(v, i);
+        if (evt_year(p) >= sy && evt_year(p) <= ey) { vec_push(result, p); }
+    }
+    return result;
+}
+
+fn events_by_significance(sig) {
+    var result = vec_new();
+    var v = all_events(); var n = vec_len(v);
+    for (var i = 0; i < n; i = i + 1) {
+        var p = vec_get(v, i);
+        if (evt_sig(p) == sig) { vec_push(result, p); }
+    }
+    return result;
+}
+
 fn event_by_name(name: Str) {
     var v = all_events(); var n = vec_len(v);
     for (var i = 0; i < n; i = i + 1) {
