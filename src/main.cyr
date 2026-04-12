@@ -19,6 +19,7 @@ include "src/interaction.cyr"
 include "src/campaign.cyr"
 include "src/site.cyr"
 include "src/trade.cyr"
+include "src/logging.cyr"
 
 var tp = 0;
 var tf = 0;
@@ -277,6 +278,18 @@ for (var i = 0; i < mn; i = i + 1) {
     if (str_eq(civ_name(vec_get(mesop_civs, i)), "Mesopotamia") == 1) { found_mesop = 1; }
 }
 ok(found_mesop, "Mesopotamia active at own founding year");
+
+# Region proximity
+check(region_proximity("Mesopotamia", "Assyrian Empire"), 100, "prox Mesopotamia-Assyria=100");
+ok(region_proximity("Roman Empire", "Ancient Greece") >= 50, "prox Rome-Greece >= 50");
+check(region_proximity("Inca Empire", "Ancient China"), 0, "prox Inca-China=0");
+check(region_proximity("Atlantis", "Ancient Greece"), 0, "prox unknown=0");
+# Symmetric
+check(region_proximity("Roman Empire", "Ancient Greece"), region_proximity("Ancient Greece", "Roman Empire"), "prox symmetric");
+
+# Logging init (just verify it doesn't crash)
+itihas_log_init();
+tp = tp + 1; # count as pass if we get here
 
 # Rome active at end year (476)
 var rome_civs = civs_active_at(476);

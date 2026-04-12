@@ -1,0 +1,14 @@
+# itihas — structured logging via sakshi
+# Equivalent to Rust's logging module (ITIHAS_LOG env-based init)
+
+include "lib/sakshi.cyr"
+
+fn itihas_log_init() {
+    sakshi_set_level(SK_INFO);
+    return 0;
+}
+
+fn itihas_log_init_level(level) {
+    sakshi_set_level(level);
+    return 0;
+}

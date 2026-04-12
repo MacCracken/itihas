@@ -116,3 +116,65 @@ fn influence_score(ca: Str, cb: Str) {
     }
     return score;
 }
+
+# Split a ", "-delimited region string into a vec of trimmed Str parts
+# e.g. "Near East, Europe" → ["Near East", "Europe"]
+fn split_regions(region_str) {
+    var parts = vec_new();
+    var slen = str_len(region_str);
+    var sd = str_data(region_str);
+    var start = 0;
+    var si = 0;
+    while (si < slen) {
+        # Look for ", " (comma + space)
+        if (si + 1 < slen && load8(sd + si) == 44 && load8(sd + si + 1) == 32) {
+            if (si > start) {
+                vec_push(parts, str_new(sd + start, si - start));
+            }
+            si = si + 2;
+            start = si;
+        } else {
+            si = si + 1;
+        }
+    }
+    if (start < slen) {
+        vec_push(parts, str_new(sd + start, slen - start));
+    }
+    return parts;
+}
+
+# Geographic proximity score between two civilizations (0-100)
+# 100 = identical region strings, 50-99 = shared region components, 0 = no overlap
+fn region_proximity(ca: Str, cb: Str) {
+    var civ_a = civ_by_name(ca);
+    var civ_b = civ_by_name(cb);
+    if (civ_a == 0 || civ_b == 0) { return 0; }
+
+    var reg_a = civ_region(civ_a);
+    var reg_b = civ_region(civ_b);
+
+    # Exact match
+    if (str_eq(reg_a, reg_b) == 1) { return 100; }
+
+    # Split and count shared components
+    var parts_a = split_regions(reg_a);
+    var parts_b = split_regions(reg_b);
+    var na = vec_len(parts_a);
+    var nb = vec_len(parts_b);
+
+    var overlap = 0;
+    for (var i = 0; i < na; i = i + 1) {
+        var pa = vec_get(parts_a, i);
+        for (var j = 0; j < nb; j = j + 1) {
+            if (str_eq(pa, vec_get(parts_b, j)) == 1) { overlap = overlap + 1; }
+        }
+    }
+
+    if (overlap == 0) { return 0; }
+
+    var total = na;
+    if (nb > na) { total = nb; }
+
+    # Scale to 50-99 range
+    return 50 + (overlap * 49) / total;
+}
