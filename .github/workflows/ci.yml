@@ -12,93 +12,152 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  CARGO_TERM_COLOR: always
-  RUST_BACKTRACE: 1
+  CYRIUS_VERSION: "3.6.3"
 
 jobs:
+  # ── Build ──
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Cyrius toolchain
+        run: |
+          curl -sLO "https://github.com/MacCracken/cyrius/releases/download/$CYRIUS_VERSION/cyrius-$CYRIUS_VERSION-x86_64-linux.tar.gz"
+          tar xzf "cyrius-$CYRIUS_VERSION-x86_64-linux.tar.gz"
+          CYRIUS_DIR="cyrius-$CYRIUS_VERSION-x86_64-linux"
+          mkdir -p "$HOME/.cyrius/bin" "$HOME/.cyrius/lib"
+          cp "$CYRIUS_DIR/bin/"* "$HOME/.cyrius/bin/" 2>/dev/null || true
+          cp -r "$CYRIUS_DIR/lib/"* "$HOME/.cyrius/lib/" 2>/dev/null || true
+          chmod +x "$HOME/.cyrius/bin/"* 2>/dev/null || true
+          echo "$HOME/.cyrius/bin" >> $GITHUB_PATH
+
+      - name: Build itihas
+        run: |
+          mkdir -p build
+          cat src/main.cyr | cc3 > build/itihas 2>/tmp/cc3_stderr
+          if [ $? -ne 0 ]; then
+            cat /tmp/cc3_stderr
+            exit 1
+          fi
+          chmod +x build/itihas
+          echo "itihas: $(wc -c < build/itihas) bytes"
+          grep -v '^$' /tmp/cc3_stderr 2>/dev/null || true
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-x86_64
+          path: build/itihas
+          retention-days: 5
+
+  # ── Check & Format ──
   check:
-    name: Check + Clippy + Format
+    name: Check & Format
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          components: rustfmt, clippy
-      - uses: Swatinem/rust-cache@v2
-      - run: cargo fmt --all -- --check
-      - run: cargo clippy --all-features --all-targets -- -D warnings
-      - run: cargo check --all-features
 
+      - name: Install Cyrius toolchain
+        run: |
+          curl -sLO "https://github.com/MacCracken/cyrius/releases/download/$CYRIUS_VERSION/cyrius-$CYRIUS_VERSION-x86_64-linux.tar.gz"
+          tar xzf "cyrius-$CYRIUS_VERSION-x86_64-linux.tar.gz"
+          CYRIUS_DIR="cyrius-$CYRIUS_VERSION-x86_64-linux"
+          mkdir -p "$HOME/.cyrius/bin" "$HOME/.cyrius/lib"
+          cp "$CYRIUS_DIR/bin/"* "$HOME/.cyrius/bin/" 2>/dev/null || true
+          cp -r "$CYRIUS_DIR/lib/"* "$HOME/.cyrius/lib/" 2>/dev/null || true
+          chmod +x "$HOME/.cyrius/bin/"* 2>/dev/null || true
+          echo "$HOME/.cyrius/bin" >> $GITHUB_PATH
+
+      - name: Format check
+        run: |
+          FAIL=0
+          for f in src/*.cyr; do
+            [ -f "$f" ] || continue
+            cyrfmt "$f" > /tmp/fmt_check
+            if ! diff -q "$f" /tmp/fmt_check >/dev/null 2>&1; then
+              echo "  NEEDS FORMAT: $f"
+              FAIL=1
+            fi
+          done
+          test $FAIL -eq 0 && echo "PASS: all files formatted"
+
+  # ── Security ──
   security:
-    name: Security Audit
+    name: Security Scan
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      - run: cargo install cargo-audit --locked
-      - run: cargo audit
 
-  deny:
-    name: Dependency Check
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: EmbarkStudios/cargo-deny-action@v2
+      - name: Scan for dangerous patterns
+        run: |
+          WARN=0
+          if grep -rn 'syscall(59' src/ 2>/dev/null | grep -v "# " | grep -v logging; then
+            echo "WARN: raw execve syscall"
+            WARN=1
+          fi
+          if grep -rn 'syscall(57' src/ 2>/dev/null | grep -v "# "; then
+            echo "WARN: raw fork syscall"
+            WARN=1
+          fi
+          echo "security scan complete (warnings: $WARN)"
 
+  # ── Tests ──
   test:
-    name: Test (${{ matrix.os }})
-    needs: [check]
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: ubuntu-latest
-          - os: macos-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
-      - run: cargo test --all-features
-      - run: cargo test --no-default-features
-      - run: cargo test --features logging
-      - run: cargo test --features full
-      - run: cargo test --doc
-
-  msrv:
-    name: MSRV (1.89)
+    name: Test
+    needs: [build]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@1.89.0
-      - uses: Swatinem/rust-cache@v2
-      - run: cargo check --all-features
-      - run: cargo test --all-features
 
-  coverage:
-    name: Coverage
-    runs-on: ubuntu-latest
-    needs: [check]
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          components: llvm-tools-preview
-      - uses: Swatinem/rust-cache@v2
-      - run: cargo install cargo-llvm-cov --locked
-      - run: cargo llvm-cov --all-features --fail-under-lines 85 --lcov --output-path lcov.info
-      - uses: codecov/codecov-action@v4
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        with:
-          files: lcov.info
-          fail_ci_if_error: false
-        env:
-          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+      - name: Install Cyrius toolchain
+        run: |
+          curl -sLO "https://github.com/MacCracken/cyrius/releases/download/$CYRIUS_VERSION/cyrius-$CYRIUS_VERSION-x86_64-linux.tar.gz"
+          tar xzf "cyrius-$CYRIUS_VERSION-x86_64-linux.tar.gz"
+          CYRIUS_DIR="cyrius-$CYRIUS_VERSION-x86_64-linux"
+          mkdir -p "$HOME/.cyrius/bin" "$HOME/.cyrius/lib"
+          cp "$CYRIUS_DIR/bin/"* "$HOME/.cyrius/bin/" 2>/dev/null || true
+          cp -r "$CYRIUS_DIR/lib/"* "$HOME/.cyrius/lib/" 2>/dev/null || true
+          chmod +x "$HOME/.cyrius/bin/"* 2>/dev/null || true
+          echo "$HOME/.cyrius/bin" >> $GITHUB_PATH
 
-  doc:
+      - name: Run test suite
+        run: |
+          mkdir -p build
+          cat src/main.cyr | cc3 > build/itihas 2>&1
+          chmod +x build/itihas
+          ./build/itihas 2>&1 | tee /tmp/test_output
+          grep -q "all tests passed" /tmp/test_output
+
+  # ── Documentation ──
+  docs:
     name: Documentation
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      - run: RUSTDOCFLAGS="-D warnings" cargo doc --all-features --no-deps
+
+      - name: Check required docs exist
+        run: |
+          MISSING=0
+          for doc in README.md CHANGELOG.md VERSION CONTRIBUTING.md SECURITY.md LICENSE CODE_OF_CONDUCT.md cyrius.toml; do
+            if [ -f "$doc" ]; then
+              echo "  OK: $doc"
+            else
+              echo "  MISSING: $doc"
+              MISSING=1
+            fi
+          done
+          exit $MISSING
+
+      - name: Verify version consistency
+        run: |
+          VERSION=$(cat VERSION | tr -d '[:space:]')
+          TOML_VERSION=$(grep '^version' cyrius.toml | head -1 | sed 's/.*"\(.*\)"/\1/')
+          echo "VERSION file:  $VERSION"
+          echo "cyrius.toml:   $TOML_VERSION"
+          if [ "$VERSION" != "$TOML_VERSION" ]; then
+            echo "FAIL: VERSION != cyrius.toml"
+            exit 1
+          fi
+          echo "Version consistent"
