@@ -7,57 +7,48 @@ Thank you for your interest in contributing to Itihas.
 1. Fork and clone the repository
 2. Create a feature branch from `main`
 3. Make your changes
-4. Run `make check` to validate
+4. Run `sh tests/test_itihas.sh` to validate
 5. Open a pull request
 
 ## Prerequisites
 
-- Rust stable (MSRV 1.89)
-- Components: `rustfmt`, `clippy`
-- Optional: `cargo-audit`, `cargo-deny`, `cargo-llvm-cov`
+- Cyrius >= 3.6.3 (`cyriusly install 3.6.3`)
+- cc3 compiler on PATH
 
-## Makefile Targets
+## Commands
 
 | Command | Description |
 |---------|-------------|
-| `make check` | fmt + clippy + test + audit |
-| `make fmt` | Check formatting |
-| `make clippy` | Lint with `-D warnings` |
-| `make test` | Run test suite |
-| `make audit` | Security audit |
-| `make deny` | Supply chain checks |
-| `make bench` | Run benchmarks with history tracking |
-| `make coverage` | Generate coverage report |
-| `make doc` | Build documentation |
+| `sh tests/test_itihas.sh` | Build + run full test suite |
+| `cat src/main.cyr \| cc3 > build/itihas` | Manual build |
+| `./build/itihas` | Run tests |
 
 ## Adding Historical Data
 
-1. Add pre-built data in the relevant module (e.g., `era::all_eras()`)
-2. Use `Cow::Borrowed` for all string fields in static data
-3. Add serde roundtrip tests
-4. Update README module table if needed
-5. Add benchmarks for lookup functions
+1. Add data entries in the relevant module (e.g., `src/era.cyr`)
+2. Use `store64`/`load64` with offset enums for heap struct fields
+3. String params annotated `: Str` for auto-coercion
+4. Update count assertion in `src/main.cyr`
+5. Verify build: `cat src/main.cyr | cc3 > build/itihas`
 
 ## Code Style
 
-- `cargo fmt` — mandatory
-- `cargo clippy -- -D warnings` — zero warnings
-- Doc comments on all public items
-- `#[non_exhaustive]` on public enums
-- No `unsafe` code
-- No `println!` — use `tracing` for logging
+- One `var` declaration per variable name per function scope
+- `(0 - N)` for negative year literals (no negative literals in Cyrius)
+- Enum values for struct field offsets (e.g., `ERA_NAME=0; ERA_START=8;`)
+- Accessor functions for struct fields (e.g., `fn era_name(p) { return load64(p+ERA_NAME); }`)
+- Comments with `#`
 
 ## Testing
 
-- Unit tests colocated in modules (`#[cfg(test)] mod tests`)
-- Integration tests in `tests/`
-- Feature-gated tests with `#[cfg(feature = "...")]`
-- Target: 80%+ line coverage
+- Assertions in `src/main.cyr` test harness
+- `sh tests/test_itihas.sh` for full build + test cycle
+- Target: all data counts verified, all `by_name` lookups working
 
 ## Commits
 
-- Use conventional-style messages
 - One logical change per commit
+- Descriptive messages
 
 ## License
 

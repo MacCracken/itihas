@@ -4,10 +4,10 @@
 
 **Itihas** (Sanskrit: इतिहास — "thus it was", history, chronicle) — Structured world history: civilizations, eras, events, historical figures, campaigns, sites, trade routes, and calendar metadata
 
-- **Type**: Flat library crate
+- **Type**: Cyrius library (ported from Rust v1.5.0)
 - **License**: GPL-3.0
-- **MSRV**: 1.89
-- **Version**: SemVer
+- **Compiler**: Cyrius cc3 >= 3.6.3
+- **Version**: SemVer 2.0.0
 
 ## Consumers
 
@@ -19,8 +19,8 @@ sankhya (ancient math), avatara (simulation), kiran (game engine), joshua (strat
 
 0. Read roadmap, CHANGELOG, and open issues — know what was intended before auditing what was built
 1. Test + benchmark sweep of existing code
-2. Cleanliness check: `cargo fmt --check`, `cargo clippy --all-features --all-targets -- -D warnings`, `cargo audit`, `cargo deny check`, `RUSTDOCFLAGS="-D warnings" cargo doc --all-features --no-deps`
-3. Get baseline benchmarks (`./scripts/bench-history.sh`)
+2. Cleanliness check: `cat src/main.cyr | cc3 > build/itihas && chmod +x build/itihas && ./build/itihas`
+3. Get baseline benchmarks (when `.bcyr` harness exists)
 4. Internal deep review — gaps, optimizations, security, logging/errors, docs
 5. External research — domain completeness, missing capabilities, best practices, world-class accuracy
 6. Cleanliness check — must be clean after review
@@ -31,16 +31,16 @@ sankhya (ancient math), avatara (simulation), kiran (game engine), joshua (strat
 ### Work Loop / Working Loop (continuous)
 
 1. Work phase — new features, roadmap items, bug fixes
-2. Cleanliness check: `cargo fmt --check`, `cargo clippy --all-features --all-targets -- -D warnings`, `cargo audit`, `cargo deny check`, `RUSTDOCFLAGS="-D warnings" cargo doc --all-features --no-deps`
+2. Cleanliness check: `cat src/main.cyr | cc3 > build/itihas && chmod +x build/itihas && ./build/itihas`
 3. Test + benchmark additions for new code
-4. Run benchmarks (`./scripts/bench-history.sh`)
+4. Run benchmarks (when `.bcyr` harness exists)
 5. Internal review — performance, memory, security, throughput, correctness
 6. Cleanliness check — must be clean after audit
 7. Deeper tests/benchmarks from audit observations
 8. Run benchmarks again — prove the wins
 9. If audit heavy → return to step 5
 10. Documentation — update CHANGELOG, roadmap, docs
-11. Version check — VERSION, Cargo.toml, recipe all in sync
+11. Version check — VERSION, cyrius.toml all in sync
 12. Return to step 1
 
 ### Task Sizing
@@ -60,7 +60,7 @@ sankhya (ancient math), avatara (simulation), kiran (game engine), joshua (strat
 
 - **Never skip benchmarks.** Numbers don't lie. The CSV history is the proof.
 - **Tests + benchmarks are the way.** Minimum 80%+ coverage target.
-- **Own the stack.** If an AGNOS crate wraps an external lib, depend on the AGNOS crate.
+- **Own the stack.** If an AGNOS project wraps an external lib, depend on the AGNOS project.
 - **No magic.** Every operation is measurable, auditable, traceable.
 - **`#[non_exhaustive]`** on all public enums.
 - **`#[must_use]`** on all pure functions.
@@ -74,10 +74,9 @@ sankhya (ancient math), avatara (simulation), kiran (game engine), joshua (strat
 - **Do not commit or push** — the user handles all git operations (commit, push, tag)
 - **NEVER use `gh` CLI** — use `curl` to GitHub API only
 - Do not add unnecessary dependencies — keep it lean
-- Do not `unwrap()` or `panic!()` in library code
 - Do not skip benchmarks before claiming performance improvements
-- Do not commit `target/` or `Cargo.lock` (library crates only)
-- **NEVER bump version** (VERSION, Cargo.toml) unless the user explicitly says to
+- Do not commit `build/`, `target/`, or `lib/` (vendored stdlib)
+- **NEVER bump version** (VERSION, cyrius.toml) unless the user explicitly says to
 
 ## Documentation Structure
 

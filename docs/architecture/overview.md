@@ -7,37 +7,32 @@
 ```
 itihas/
 ├── src/
-│   ├── lib.rs            — public API, module re-exports
-│   ├── error.rs          — ItihasError enum (non_exhaustive)
-│   ├── era.rs            — historical periods, date ranges, era categories
+│   ├── main.cyr          — entry point, test harness, module includes
+│   ├── error.cyr         — ItihasError enum (integer error codes)
+│   ├── era.cyr           — historical periods, date ranges, era categories
 │   │                       25 eras (8 global + 17 regional), temporal/scope lookups
-│   ├── civilization.rs   — major civilizations, geographic extent, traits
+│   ├── civilization.cyr  — major civilizations, geographic extent, traits
 │   │                       53 civilizations, by_region/active_at/by_name
-│   ├── event.rs          — structured historical events, categories, significance
-│   │                       105 events, timeline slicing, category/significance filters
-│   ├── causality.rs      — causal links between events, strength ratings
-│   │                       chain traversal: causes_of/effects_of/chain
-│   ├── interaction.rs    — civilization interaction graph, influence scoring
-│   │                       trade/war/diplomacy, region proximity
-│   ├── calendar.rs       — calendar system metadata (type, epoch, months)
+│   ├── event.cyr         — structured historical events, categories, significance
+│   │                       105 events, category/significance filters
+│   ├── causality.cyr     — causal links between events, strength ratings
+│   │                       chain traversal: causes_of/effects_of
+│   ├── interaction.cyr   — civilization interaction graph, influence scoring
+│   │                       trade/war/diplomacy
+│   ├── calendar.cyr      — calendar system metadata (type, epoch, months)
 │   │                       8 pre-built calendar systems
-│   ├── figure.rs         — historical figures, domain classification
+│   ├── figure.cyr        — historical figures, domain classification
 │   │                       52 figures across 8 domains
-│   ├── campaign.rs       — military campaigns, battles, commanders
+│   ├── campaign.cyr      — military campaigns, battles, commanders
 │   │                       14 campaigns with belligerents and outcomes
-│   ├── site.rs           — archaeological sites, location, discovery metadata
+│   ├── site.cyr          — archaeological sites, location, discovery metadata
 │   │                       32 sites with period and type classification
-│   ├── trade.rs          — historical trade routes, endpoints, commodities
-│   │                       15 trade routes with civilization context
-│   ├── hoosh.rs          — query types and data-driven answers (feature-gated)
-│   ├── mcp.rs            — MCP tool definitions and handlers (feature-gated)
-│   └── logging.rs        — optional ITIHAS_LOG env-based tracing init
-├── benches/
-│   └── benchmarks.rs     — criterion benchmarks (28 benchmarks)
+│   └── trade.cyr         — historical trade routes, endpoints, commodities
+│                           15 trade routes with civilization context
 ├── tests/
-│   └── integration.rs    — cross-module integration tests (89 tests)
-└── examples/
-    └── basic.rs          — runnable usage example
+│   ├── test.sh           — basic build + run test
+│   └── test_itihas.sh    — full build + test suite runner
+└── rust-old/             — preserved Rust v1.5.0 source (reference)
 ```
 
 ## Data Flow
@@ -45,16 +40,16 @@ itihas/
 ```
 Year / region query
   │
-  ├─→ era           — eras_containing(year), by_scope(), by_region()
-  ├─→ civilization   — active_at(year), by_region(region), by_name()
-  ├─→ event         — events_between(start, end), by_category(), by_significance()
-  ├─→ causality     — causes_of(event), effects_of(event), chain(event, depth)
-  ├─→ interaction   — interactions_for(civ), between(a, b), influence_score()
-  ├─→ calendar      — all_calendars(), by_name()
-  ├─→ figure        — by_domain(), by_name()
-  ├─→ campaign      — all_campaigns(), by_name(), by_era()
-  ├─→ site          — all_sites(), by_type(), by_region()
-  └─→ trade         — all_routes(), by_commodity(), by_civilization()
+  ├─→ era           — eras_containing(year), eras_by_scope(), eras_by_region()
+  ├─→ civilization   — civs_active_at(year), civs_by_region(region), civ_by_name()
+  ├─→ event         — events_by_category(), event_by_name()
+  ├─→ causality     — causes_of(event), effects_of(event)
+  ├─→ interaction   — interactions_for(civ), interactions_between(a, b), influence_score()
+  ├─→ calendar      — all_calendars(), calendar_by_name()
+  ├─→ figure        — figures_by_domain(), figure_by_name()
+  ├─→ campaign      — all_campaigns(), campaign_by_name()
+  ├─→ site          — all_sites(), site_by_name()
+  └─→ trade         — all_routes(), route_by_name(), routes_by_commodity()
 ```
 
 ## Pre-built Data
@@ -65,22 +60,21 @@ Year / region query
 | Civilizations | 53 | Mesopotamia, Mali Empire, Khmer Empire, Inca Empire |
 | Events | 105 | Invention of Writing, Fall of Rome, Moon Landing |
 | Causalities | 13 | Writing → Hammurabi, Printing Press → French Revolution |
-| Interactions | 22 | Egypt ↔ Hittite (War/Diplomacy), Rome ↔ China (Trade) |
+| Interactions | 21 | Egypt ↔ Hittite (War/Diplomacy), Rome ↔ China (Trade) |
 | Calendars | 8 | Gregorian, Julian, Islamic, Hebrew, Chinese, Hindu, Maya, Egyptian |
 | Figures | 52 | Hammurabi, Confucius, Hypatia, Mansa Musa, Ada Lovelace |
 | Campaigns | 14 | Alexander's Conquests, Punic Wars, Mongol Invasions |
-| Sites | 32 | Pompeii, Machu Picchu, Angkor Wat, Troy |
+| Sites | 32 | Pompeii, Machu Picchu, Angkor Wat, Gobekli Tepe |
 | Trade Routes | 15 | Silk Road, Trans-Saharan, Amber Road |
 
-## Dependency Stack
+## Heap Structure
 
-```
-itihas (this crate)
-  │
-  ├── serde      — serialization for all types
-  ├── thiserror  — error derivation
-  └── tracing    — structured logging
-```
+Each module uses heap-allocated records via `alloc()` + `store64`/`load64`.
+Field offsets defined as enum constants (e.g., `ERA_NAME=0; ERA_START=8;`).
+Accessor functions provide read access (e.g., `fn era_name(p) { return load64(p+ERA_NAME); }`).
+
+Data is initialized lazily on first access and cached in a global pointer.
+Subsequent calls return the cached vec.
 
 ## Downstream Consumers
 
@@ -97,11 +91,9 @@ itihas
 
 ## Design Principles
 
-- **Data-driven**: Historical data as structured Rust types, not embedded strings
+- **Data-driven**: Historical data as structured heap records with typed accessors
 - **Queryable**: Every dataset supports lookup, filtering by year/region/category
-- **Composable**: Each module is independent — consumers pull only what they need
-- **Serializable**: All types implement Serialize + Deserialize for data exchange
-- **Extensible**: `#[non_exhaustive]` on all public enums and structs
-- **Zero-alloc statics**: `Cow<'static, str>` + `LazyLock` for sub-nanosecond data access
+- **Composable**: Each module is independent — consumers include only what they need
+- **Zero external deps**: Vendored Cyrius stdlib only
 - **Graph-ready**: Causality chains and interaction graphs for relational queries
-- **`no_std` compatible**: All modules use `alloc`/`core` imports; `std` feature adds caching
+- **Compact**: 117KB static ELF binary with all 297 entities

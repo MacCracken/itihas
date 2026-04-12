@@ -1,6 +1,6 @@
 name = "itihas"
-version = "0.1.0"
+version = "2.0.0"
 license = "GPL-3.0-only"
 entry = "src/main.cyr"
 output = "itihas"
-description = "itihas — Cyrius port"
+description = "Itihas — structured world history: civilizations, eras, events, figures, campaigns, sites, trade routes, calendars"

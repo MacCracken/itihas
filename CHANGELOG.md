@@ -7,6 +7,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.0.0] - 2026-04-12
+
+### Changed
+
+- **Language port**: Ported entire codebase from Rust to Cyrius (cc3 v3.6.3)
+- **era** — 25 eras, `eras_containing()`, `eras_by_scope()`, `eras_by_region()`, `era_by_name()` lookups
+- **civilization** — 53 civilizations, `civs_active_at()`, `civs_by_region()`, `civ_by_name()` lookups
+- **event** — 105 events, `events_by_category()`, `event_by_name()` lookups
+- **figure** — 52 figures, `figures_by_domain()`, `figure_by_name()` lookups
+- **causality** — 13 causal links, `causes_of()`, `effects_of()` traversal
+- **interaction** — 21 interactions, `interactions_for()`, `interactions_between()`, `influence_score()`
+- **calendar** — 8 calendar systems, `calendar_by_name()` lookup
+- **campaign** — 14 campaigns with 40+ battles, `campaign_by_name()` lookup
+- **site** — 32 archaeological sites, `site_by_name()` lookup
+- **trade** — 15 trade routes, `route_by_name()`, `routes_by_commodity()` lookups
+- **error** — Integer error code enum (ERR_UNKNOWN_ERA through ERR_CAMPAIGN_NOT_FOUND)
+- Heap-allocated structs via `store64`/`load64` with offset enum constants
+- Lazy initialization with global pointer caching (same pattern as Rust `LazyLock`)
+- Str auto-coercion for string parameters (Cyrius v3.6.0)
+- 26-assertion test suite covering all module counts, name lookups, and filter queries
+- 117KB static ELF binary (x86_64), no external dependencies
+
+### Removed
+
+- **Rust toolchain** — Cargo.toml, rust-toolchain.toml, deny.toml, codecov.yml moved to `rust-old/`
+- **serde** — JSON serialization/deserialization (no Cyrius equivalent yet)
+- **thiserror** — Error derive (replaced with integer error enum)
+- **tracing** — Structured logging (will use sakshi dep when available)
+- **hoosh** — LLM query module (deferred, needs hoosh Cyrius dep)
+- **mcp** — MCP tool handlers (deferred, needs bote Cyrius dep)
+- **logging** — Tracing init (deferred, needs sakshi dep)
+- **Description fields** — Stripped from event, figure, campaign, site, trade modules to fit 32KB string data compiler limit. Names, dates, enums, and all lookup functions preserved. Descriptions can be loaded from external data file in future release.
+
+### Breaking
+
+- All public types changed from Rust structs to Cyrius heap records accessed via accessor functions
+- `by_name()` returns pointer (0 on not found) instead of `Result<T, ItihasError>`
+- Filter functions return Cyrius vec instead of `Vec<T>`
+- Civilization `traits` and `language_codes` stored as semicolon-delimited Str instead of `Vec<Cow<str>>`
+- Trade route `regions`, `civilizations`, `commodities` stored as semicolon-delimited Str
+- Case-sensitive name lookups (Rust was case-insensitive via `to_lowercase()`)
+- No `Display`, `Ord`, `Serialize`, `Deserialize` trait impls
+
 ## [1.5.0] - 2026-04-03
 
 ### Added
@@ -99,7 +142,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `no_std` support via `alloc`/`core`; `std` feature adds `LazyLock` caching
 - All public types: `Display` impls, `Cow<'static, str>` for zero-alloc statics, full serde roundtrip, `#[non_exhaustive]` on all enums and structs, `#[must_use]` on all pure functions
 
-[Unreleased]: https://github.com/MacCracken/itihas/compare/v1.5.0...HEAD
+[Unreleased]: https://github.com/MacCracken/itihas/compare/v2.0.0...HEAD
+[2.0.0]: https://github.com/MacCracken/itihas/compare/v1.5.0...v2.0.0
 [1.5.0]: https://github.com/MacCracken/itihas/compare/v1.0.1...v1.5.0
 [1.0.1]: https://github.com/MacCracken/itihas/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/MacCracken/itihas/releases/tag/v1.0.0

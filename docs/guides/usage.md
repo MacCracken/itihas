@@ -1,24 +1,31 @@
 # Usage Guide
 
-> **Itihas** (Sanskrit: "thus it was") — structured world history as Rust types
+> **Itihas** (Sanskrit: "thus it was") — structured world history as Cyrius types
 
 ## Philosophy
 
-Itihas provides **queryable historical data**, not historical computation. It answers "what existed when and where" — calendar math, simulation, and AI queries belong in downstream crates (sankhya, avatara, hoosh).
+Itihas provides **queryable historical data**, not historical computation. It answers "what existed when and where" — calendar math, simulation, and AI queries belong in downstream projects (sankhya, avatara, hoosh).
 
-All data is static and cached via `LazyLock`. The first call builds the dataset; subsequent calls return `&'static [T]` references at sub-nanosecond cost.
+All data is initialized lazily on first call and cached in a global pointer. Subsequent calls return the cached vec.
 
 ## Quick Start
 
-```rust
-use itihas::era;
-use itihas::civilization;
-use itihas::event;
+```cyrius
+include "lib/string.cyr"
+include "lib/alloc.cyr"
+include "lib/vec.cyr"
+include "lib/str.cyr"
 
-// What was happening in 500 BCE?
-let eras = era::eras_containing(-500);
-let civs = civilization::active_at(-500);
-let events = event::events_between(-600, -400);
+include "src/era.cyr"
+include "src/civilization.cyr"
+include "src/event.cyr"
+
+alloc_init();
+
+# What eras span 500 BCE?
+var eras = eras_containing((0-500));
+# Which civilizations were active in 500 BCE?
+var civs = civs_active_at((0-500));
 ```
 
 ## Modules
@@ -27,208 +34,153 @@ let events = event::events_between(-600, -400);
 
 25 eras: 8 global periodizations + 17 regional (Chinese dynasties, Indian periods, Mesoamerican periods).
 
-```rust
-use itihas::era::{self, EraScope};
+```cyrius
+# All eras
+var all = all_eras();           # returns vec
+var count = era_count();        # 25
 
-// All eras
-let all = era::all_eras(); // &'static [Era]
+# Filter by scope
+var global = eras_by_scope(SCOPE_GLOBAL);
+var regional = eras_by_scope(SCOPE_REGIONAL);
 
-// Filter by scope
-let global = era::by_scope(&EraScope::Global);   // Bronze Age, Classical Antiquity, etc.
-let regional = era::by_scope(&EraScope::Regional); // Tang Dynasty, Vedic Period, etc.
+# Filter by region
+var east_asia = eras_by_region("East Asia");
 
-// Filter by region
-let east_asia = era::by_region("East Asia"); // Chinese dynasties
+# Temporal lookup
+var eras_500bce = eras_containing((0-500));
 
-// Temporal lookup
-let eras_500bce = era::eras_containing(-500);
+# Name lookup (returns pointer or 0)
+var bronze = era_by_name("Bronze Age");
 
-// Name lookup (case-insensitive, returns Result)
-let bronze = era::by_name("bronze age")?;
-
-// Chronological sorting
-let mut sorted = era::all_eras().to_vec();
-sorted.sort(); // Ord impl sorts by start_year
+# Access fields
+var name = era_name(bronze);    # Str
+var start = era_start(bronze);  # i64 (year)
 ```
 
 ### Civilizations
 
-52 civilizations spanning all inhabited continents.
+53 civilizations spanning all inhabited continents.
 
-```rust
-use itihas::civilization;
+```cyrius
+var all = all_civilizations();
+var count = civ_count();         # 53
 
-// All civilizations
-let all = civilization::all_civilizations(); // &'static [Civilization]
+# Region search
+var near_east = civs_by_region("Near East");
 
-// Region search (case-insensitive substring match)
-let near_east = civilization::by_region("Near East");
+# Active at a given year
+var active = civs_active_at((0-500));
 
-// Active at a given year
-let active_500bce = civilization::active_at(-500);
-
-// Name lookup
-let rome = civilization::by_name("Roman Empire")?;
-
-// Access fields
-println!("{} — script: {}, peak era: {}", rome.name, rome.script, rome.peak_era);
-for trait_name in &rome.traits {
-    println!("  - {trait_name}");
-}
+# Name lookup
+var rome = civ_by_name("Roman Empire");
+var name = civ_name(rome);
+var region = civ_region(rome);
 ```
 
 ### Events
 
-105 events with category, significance, and timeline slicing.
+105 events with category and significance classification.
 
-```rust
-use itihas::event::{self, EventCategory, EventSignificance};
+```cyrius
+var all = all_events();
+var count = event_count();       # 105
 
-// Filter by category
-let wars = event::by_category(&EventCategory::War);
-let inventions = event::by_category(&EventCategory::Invention);
+# Filter by category
+var wars = events_by_category(CAT_WAR);
+var inventions = events_by_category(CAT_INVENTION);
 
-// Filter by significance
-let global = event::by_significance(&EventSignificance::Global);
-
-// Exact year
-let events_476 = event::at_year(476);
-
-// Timeline slice (inclusive, sorted chronologically)
-let classical = event::events_between(-800, 476);
-
-// Name lookup
-let marathon = event::by_name("Battle of Marathon")?;
+# Name lookup
+var fr = event_by_name("French Revolution");
+var year = evt_year(fr);         # 1789
 ```
 
 ### Causality
 
 Causal chains linking events with strength ratings.
 
-```rust
-use itihas::causality;
+```cyrius
+var count = causality_count();   # 13
 
-// What caused the French Revolution?
-let causes = causality::causes_of("French Revolution");
-for c in &causes {
-    println!("{} → French Revolution ({})", c.cause, c.strength);
-}
+# What caused the French Revolution?
+var causes = causes_of("French Revolution");
 
-// What did the invention of writing lead to?
-let effects = causality::effects_of("Invention of Writing");
-
-// Follow causal chains forward up to 3 steps
-let chain = causality::chain("Invention of Writing", 3);
-for (event_name, depth) in &chain {
-    println!("  depth {depth}: {event_name}");
-}
+# What did the invention of writing lead to?
+var effects = effects_of("Invention of Writing");
 ```
 
 ### Interactions
 
 Civilization interaction graph with influence scoring.
 
-```rust
-use itihas::interaction::{self, InteractionType};
+```cyrius
+var count = interaction_count(); # 21
 
-// All interactions involving Rome
-let rome = interaction::interactions_for("Roman Empire");
+# All interactions involving Rome
+var rome_int = interactions_for("Roman Empire");
 
-// Filter by type
-let wars = interaction::by_type(&InteractionType::War);
-let trade = interaction::by_type(&InteractionType::Trade);
+# Between two civilizations
+var btw = interactions_between("Ancient Egypt", "Hittite Empire");
 
-// Between two specific civilizations (order-independent)
-let egypt_hittite = interaction::between("Ancient Egypt", "Hittite Empire");
-
-// Who interacted with Rome?
-let neighbors = interaction::neighbors("Roman Empire");
-
-// Influence score (weighted by interaction type)
-let score = interaction::influence_score("Ancient Egypt", "Hittite Empire");
-
-// Geographic proximity (0-100 based on region overlap)
-let proximity = interaction::region_proximity("Roman Empire", "Ancient Greece");
+# Influence score (weighted by interaction type)
+var score = influence_score("Ancient Egypt", "Hittite Empire");
 ```
 
 ### Calendar Systems
 
 8 calendar systems with metadata (computation belongs in sankhya).
 
-```rust
-use itihas::calendar;
-
-let all = calendar::all_calendars();
-let gregorian = calendar::by_name("gregorian")?;
-println!("{} — {} months, epoch year {}", gregorian.name, gregorian.months, gregorian.epoch_year);
+```cyrius
+var count = calendar_count();    # 8
+var greg = calendar_by_name("Gregorian");
+var months = cal_months(greg);   # 12
 ```
 
-### Historical Figures
+### Figures
 
 52 figures across 8 domains.
 
-```rust
-use itihas::figure::{self, FigureDomain};
-
-let scientists = figure::by_domain(&FigureDomain::Scientist);
-let aristotle = figure::by_name("Aristotle")?;
-println!("{}", aristotle); // "Aristotle (-384 – -322)"
+```cyrius
+var count = figure_count();      # 52
+var rulers = figures_by_domain(DOM_RULER);
+var aristotle = figure_by_name("Aristotle");
 ```
 
-### Error Handling
+### Campaigns
 
-All `by_name()` lookups return `Result<T, ItihasError>`. Filter functions return `Vec<T>` (empty if no matches).
+14 military campaigns with 40+ battles.
 
-```rust
-use itihas::ItihasError;
+```cyrius
+var count = campaign_count();    # 14
+var nap = campaign_by_name("Napoleonic Wars");
+```
 
-match itihas::era::by_name("Space Age") {
-    Ok(era) => println!("Found: {era}"),
-    Err(ItihasError::UnknownEra(name)) => println!("No era named '{name}'"),
-    Err(e) => println!("Error: {e}"),
-}
+### Sites
+
+32 archaeological sites.
+
+```cyrius
+var count = site_count();        # 32
+var mp = site_by_name("Machu Picchu");
+```
+
+### Trade Routes
+
+15 historical trade routes.
+
+```cyrius
+var count = route_count();       # 15
+var silk = route_by_name("Silk Road");
+var silk_routes = routes_by_commodity("silk");
 ```
 
 ## Year Conventions
 
 All years use **astronomical year numbering**:
-- Negative = BCE (e.g., `-500` = 500 BCE)
-- Positive = CE (e.g., `476` = 476 CE)
-- Year 0 exists (= 1 BCE in historical convention)
-- `i32::MAX` = ongoing (displayed as "present")
+- Negative = BCE: use `(0 - 500)` for 500 BCE
+- Positive = CE: `476` = 476 CE
+- `2147483647` = ongoing (i64 max, equivalent to "present")
 
-## Feature Flags
+## Error Handling
 
-| Feature | Default | Description |
-|---------|---------|-------------|
-| `std` | Yes | Enables `LazyLock` caching (sub-ns `all_*()` calls) |
-| `logging` | No | Enables `ITIHAS_LOG` env-based tracing initialization |
-| `full` | No | Enables `std` + `logging` |
-
-Without `std`, `all_*()` functions rebuild data each call (still fast, but allocates).
-
-## Display Formatting
-
-All public types implement `Display`:
-
-```rust
-let era = itihas::era::by_name("Information Age").unwrap();
-println!("{era}"); // "Information Age (1970 – present)"
-
-let event = itihas::event::by_name("French Revolution").unwrap();
-println!("{event}"); // "French Revolution (1789)"
-
-let fig = itihas::figure::by_name("Aristotle").unwrap();
-println!("{fig}"); // "Aristotle (-384 – -322)"
-```
-
-## Serialization
-
-All types derive `Serialize` and `Deserialize` (serde). Roundtrip-tested.
-
-```rust
-let era = itihas::era::by_name("Bronze Age").unwrap();
-let json = serde_json::to_string(&era).unwrap();
-let back: itihas::era::Era = serde_json::from_str(&json).unwrap();
-assert_eq!(era, back);
-```
+All `by_name()` lookups return a pointer (nonzero on success, 0 on not found).
+Filter functions return vecs (empty if no matches, check with `vec_len()`).

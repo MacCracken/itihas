@@ -2,7 +2,7 @@
 
 > **Itihas** (Sanskrit: इतिहास — "thus it was", history, chronicle) — structured world history for AGNOS
 
-Civilizations, eras, events, historical figures, campaigns, sites, trade routes, and calendar system metadata as queryable Rust types.
+Civilizations, eras, events, historical figures, campaigns, sites, trade routes, and calendar system metadata as queryable Cyrius types.
 
 Used by [sankhya](https://github.com/MacCracken/sankhya) (ancient math), [avatara](https://github.com/MacCracken/avatara) (simulation), [kiran](https://github.com/MacCracken/kiran) (game engine), [joshua](https://github.com/MacCracken/joshua) (strategy), [jnana](https://github.com/MacCracken/jnana) (knowledge), [lipi](https://github.com/MacCracken/lipi) (linguistics), and [vidya](https://github.com/MacCracken/vidya) (programming reference).
 
@@ -20,43 +20,37 @@ Used by [sankhya](https://github.com/MacCracken/sankhya) (ancient math), [avatar
 | `campaign` | Military campaigns with battles, commanders, belligerents, and outcomes |
 | `site` | Archaeological sites with location, period, type, and discovery metadata |
 | `trade` | Historical trade routes with endpoints, commodities, and civilization context |
-| `error` | `ItihasError` with variants for unknown entities and invalid lookups |
+| `error` | Error code enum for unknown entities and invalid lookups |
 
-## Features
+## Pre-built Data
 
-| Feature | Default | Description |
-|---------|---------|-------------|
-| `std` | yes | Standard library support |
-| `logging` | no | Structured logging via `ITIHAS_LOG` env var |
-| `hoosh` | no | Query types and data-driven answer resolution |
-| `hoosh-llm` | no | Natural language queries via hoosh LLM inference |
-| `mcp` | no | MCP tool definitions and handlers via bote |
-| `daimon` | no | Daimon agent orchestrator integration (registers tools on `McpHostRegistry`) |
-| `full` | -- | Enables all features |
+| Module | Count |
+|--------|-------|
+| Eras | 25 (8 global + 17 regional) |
+| Civilizations | 53 |
+| Events | 105 |
+| Causal links | 13 |
+| Interactions | 21 |
+| Calendars | 8 |
+| Figures | 52 |
+| Campaigns | 14 (40+ battles) |
+| Sites | 32 |
+| Trade routes | 15 |
 
 ## Quick Start
 
-```toml
-[dependencies]
-itihas = "1"
+```sh
+# Build
+cat src/main.cyr | cc3 > build/itihas && chmod +x build/itihas
+
+# Run tests
+./build/itihas
+
+# Or use cyrius tooling
+cyrius build src/main.cyr -o build/itihas
 ```
 
-```rust
-use itihas::era;
-use itihas::civilization;
-
-// What eras span 500 BCE?
-let eras = era::eras_containing(-500);
-for e in &eras {
-    println!("{}: {} to {}", e.name, e.start_year, e.end_year);
-}
-
-// Which civilizations were active in 500 BCE?
-let civs = civilization::active_at(-500);
-for c in &civs {
-    println!("{} ({})", c.name, c.region);
-}
-```
+Requires Cyrius >= 3.6.3 (`cyriusly install 3.6.3`).
 
 ## Architecture
 
@@ -80,11 +74,14 @@ Also feeds:
 ## Development
 
 ```bash
-make check     # fmt + clippy + test + audit
-make bench     # Run benchmarks with history tracking
-make coverage  # Generate coverage report
-make doc       # Build documentation
+sh tests/test_itihas.sh    # Build + run test suite
 ```
+
+## Port History
+
+Ported from Rust v1.5.0 (8,846 lines) to Cyrius v0.1.0 (1,033 lines) on 2026-04-12.
+Previous Rust source preserved in `rust-old/` for reference.
+See [benchmarks-rust-v-cyrius.md](benchmarks-rust-v-cyrius.md) for comparison.
 
 ## License
 

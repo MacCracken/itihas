@@ -1,11 +1,11 @@
-# Benchmarks: Rust v1.5.0 vs Cyrius v0.1.0
+# Benchmarks: Rust v1.5.0 vs Cyrius v2.0.0
 
 Last Rust run: **2026-04-03T23:06:50Z** (commit `3d1bed9`, criterion 0.5)
 Cyrius port: **2026-04-12** (cc3 v3.6.3, 117KB binary)
 
 ## Port Summary
 
-| Metric | Rust v1.5.0 | Cyrius v0.1.0 |
+| Metric | Rust v1.5.0 | Cyrius v2.0.0 |
 |--------|-------------|---------------|
 | Source lines | 8,846 | 1,033 |
 | Binary | library crate | 117KB static ELF |

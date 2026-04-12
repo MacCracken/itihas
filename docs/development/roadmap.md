@@ -1,8 +1,30 @@
 # Development Roadmap
 
-> **Status**: 1.x | **Current**: 1.5.0
+> **Status**: Cyrius port | **Current**: 2.0.0
 
 Completed items are in [CHANGELOG.md](../../CHANGELOG.md).
+
+## Completed in 2.0.0
+
+- [x] Port all 10 data modules from Rust to Cyrius
+- [x] 297 historical entities (25 eras, 53 civs, 105 events, 52 figures, 13 links, 21 interactions, 8 calendars, 14 campaigns, 32 sites, 15 routes)
+- [x] 26-assertion test suite
+- [x] 117KB static ELF binary
+- [x] Rust source preserved in `rust-old/`
+
+## v2.1.0 — Data Completeness
+
+- [ ] Restore description fields (load from external data file or wait for cc3 str_data limit bump)
+- [ ] Add case-insensitive name lookups (needs `str_lower` in Cyrius stdlib)
+- [ ] Port remaining Rust integration tests (55 tests in `rust-old/tests/integration.rs`)
+- [ ] Write `.bcyr` benchmark harness for Cyrius-native timing
+
+## v2.2.0 — Deps Integration
+
+- [ ] sakshi integration for structured logging
+- [ ] argonaut integration for JSON serialization
+- [ ] hoosh module port (LLM query resolution)
+- [ ] mcp module port (bote tool handlers)
 
 ## Future (demand-gated)
 
@@ -10,11 +32,5 @@ Completed items are in [CHANGELOG.md](../../CHANGELOG.md).
 - Cultural diffusion tracking
 - Historical population estimates
 - Historical climate data correlation
-
-## v2.0 Criteria
-
-- [ ] All future data modules consumers have requested
-- [ ] MCP tool coverage for site, trade, and campaign modules
-- [ ] Full hoosh-llm multi-turn conversation support
-- [ ] 90%+ test coverage
-- [ ] API frozen — no breaking changes to existing types
+- `events_between()` with chronological sort
+- `region_proximity()` (needs string split)
