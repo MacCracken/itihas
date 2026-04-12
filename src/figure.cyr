@@ -1,0 +1,98 @@
+# itihas — historical figures (52)
+
+enum FigureDomain { DOM_RULER; DOM_PHILOSOPHER; DOM_SCIENTIST; DOM_ARTIST; DOM_MILITARY; DOM_RELIGIOUS; DOM_EXPLORER; DOM_INVENTOR; }
+enum FigOff { FIG_NAME=0; FIG_BIRTH=8; FIG_DEATH=16; FIG_CIV=24; FIG_DOM=32; FIG_DESC=40; FIG_SIZE=48; }
+
+var fig_vec = 0;
+var fig_init_done = 0;
+
+fn fig_new(name: Str, by, dy, civ: Str, dom, desc: Str) {
+    var p = alloc(FIG_SIZE);
+    store64(p+FIG_NAME,name); store64(p+FIG_BIRTH,by); store64(p+FIG_DEATH,dy);
+    store64(p+FIG_CIV,civ); store64(p+FIG_DOM,dom); store64(p+FIG_DESC,desc);
+    return p;
+}
+fn fig_name(p) { return load64(p+FIG_NAME); }
+fn fig_domain(p) { return load64(p+FIG_DOM); }
+
+fn build_figs() {
+    var v = vec_new();
+    vec_push(v, fig_new("Hammurabi",(0-1810),(0-1750),"Mesopotamia",DOM_RULER,""));
+    vec_push(v, fig_new("Aristotle",(0-384),(0-322),"Ancient Greece",DOM_PHILOSOPHER,""));
+    vec_push(v, fig_new("Ashoka",(0-304),(0-232),"Maurya Empire",DOM_RULER,""));
+    vec_push(v, fig_new("Julius Caesar",(0-100),(0-44),"Roman Republic",DOM_MILITARY,""));
+    vec_push(v, fig_new("Hypatia",360,415,"Roman Empire",DOM_SCIENTIST,""));
+    vec_push(v, fig_new("Genghis Khan",1162,1227,"Mongol Empire",DOM_MILITARY,""));
+    vec_push(v, fig_new("Johannes Gutenberg",1400,1468,"Holy Roman Empire",DOM_INVENTOR,""));
+    vec_push(v, fig_new("Leonardo da Vinci",1452,1519,"Italian city-states",DOM_ARTIST,""));
+    vec_push(v, fig_new("Isaac Newton",1643,1727,"Kingdom of England",DOM_SCIENTIST,""));
+    vec_push(v, fig_new("Ada Lovelace",1815,1852,"British Empire",DOM_SCIENTIST,""));
+    vec_push(v, fig_new("Ramesses II",(0-1303),(0-1213),"Ancient Egypt",DOM_RULER,""));
+    vec_push(v, fig_new("Mansa Musa",1280,1337,"Mali Empire",DOM_RULER,""));
+    vec_push(v, fig_new("Pachacuti",1418,1471,"Inca Empire",DOM_RULER,""));
+    vec_push(v, fig_new("Suleiman the Magnificent",1494,1566,"Ottoman Empire",DOM_RULER,""));
+    vec_push(v, fig_new("Montezuma II",1466,1520,"Aztec Empire",DOM_RULER,""));
+    vec_push(v, fig_new("Sundiata Keita",1217,1255,"Mali Empire",DOM_RULER,""));
+    vec_push(v, fig_new("Confucius",(0-551),(0-479),"Ancient China",DOM_PHILOSOPHER,""));
+    vec_push(v, fig_new("Chanakya",(0-375),(0-283),"Maurya Empire",DOM_PHILOSOPHER,""));
+    vec_push(v, fig_new("Socrates",(0-470),(0-399),"Ancient Greece",DOM_PHILOSOPHER,""));
+    vec_push(v, fig_new("Nagarjuna",150,250,"Satavahana Dynasty",DOM_PHILOSOPHER,""));
+    vec_push(v, fig_new("Ibn Rushd",1126,1198,"Almohad Caliphate",DOM_PHILOSOPHER,""));
+    vec_push(v, fig_new("Zera Yacob",1599,1692,"Ethiopian Empire",DOM_PHILOSOPHER,""));
+    vec_push(v, fig_new("Aryabhata",476,550,"Gupta Empire",DOM_SCIENTIST,""));
+    vec_push(v, fig_new("Al-Khwarizmi",780,850,"Abbasid Caliphate",DOM_SCIENTIST,""));
+    vec_push(v, fig_new("Avicenna",980,1037,"Samanid Empire",DOM_SCIENTIST,""));
+    vec_push(v, fig_new("Galileo Galilei",1564,1642,"Italian city-states",DOM_SCIENTIST,""));
+    vec_push(v, fig_new("Seki Takakazu",1642,1708,"Tokugawa Shogunate",DOM_SCIENTIST,""));
+    vec_push(v, fig_new("Jagadish Chandra Bose",1858,1937,"British Empire",DOM_SCIENTIST,""));
+    vec_push(v, fig_new("Murasaki Shikibu",978,1014,"Heian Japan",DOM_ARTIST,""));
+    vec_push(v, fig_new("Rumi",1207,1273,"Seljuk Sultanate of Rum",DOM_ARTIST,""));
+    vec_push(v, fig_new("Michelangelo",1475,1564,"Italian city-states",DOM_ARTIST,""));
+    vec_push(v, fig_new("William Shakespeare",1564,1616,"Kingdom of England",DOM_ARTIST,""));
+    vec_push(v, fig_new("Hokusai",1760,1849,"Tokugawa Shogunate",DOM_ARTIST,""));
+    vec_push(v, fig_new("Sun Tzu",(0-544),(0-496),"Ancient China",DOM_MILITARY,""));
+    vec_push(v, fig_new("Hannibal Barca",(0-247),(0-183),"Carthage",DOM_MILITARY,""));
+    vec_push(v, fig_new("Saladin",1137,1193,"Ayyubid Sultanate",DOM_MILITARY,""));
+    vec_push(v, fig_new("Yi Sun-sin",1545,1598,"Joseon Dynasty",DOM_MILITARY,""));
+    vec_push(v, fig_new("Shaka Zulu",1787,1828,"Zulu Kingdom",DOM_MILITARY,""));
+    vec_push(v, fig_new("Siddhartha Gautama",(0-563),(0-483),"Shakya Republic",DOM_RELIGIOUS,""));
+    vec_push(v, fig_new("Jesus of Nazareth",(0-4),30,"Roman Empire",DOM_RELIGIOUS,""));
+    vec_push(v, fig_new("Muhammad",570,632,"Quraysh",DOM_RELIGIOUS,""));
+    vec_push(v, fig_new("Guru Nanak",1469,1539,"Lodhi Sultanate",DOM_RELIGIOUS,""));
+    vec_push(v, fig_new("Martin Luther",1483,1546,"Holy Roman Empire",DOM_RELIGIOUS,""));
+    vec_push(v, fig_new("Leif Erikson",970,1020,"Viking/Norse",DOM_EXPLORER,""));
+    vec_push(v, fig_new("Ibn Battuta",1304,1369,"Marinid Sultanate",DOM_EXPLORER,""));
+    vec_push(v, fig_new("Zheng He",1371,1433,"Ming China",DOM_EXPLORER,""));
+    vec_push(v, fig_new("Vasco da Gama",1469,1524,"Portuguese Empire",DOM_EXPLORER,""));
+    vec_push(v, fig_new("Ranald MacDonald",1824,1894,"United States",DOM_EXPLORER,""));
+    vec_push(v, fig_new("Cai Lun",50,121,"Ancient China",DOM_INVENTOR,""));
+    vec_push(v, fig_new("Ismail al-Jazari",1136,1206,"Artuqid Dynasty",DOM_INVENTOR,""));
+    vec_push(v, fig_new("James Watt",1736,1819,"British Empire",DOM_INVENTOR,""));
+    vec_push(v, fig_new("Nikola Tesla",1856,1943,"United States",DOM_INVENTOR,""));
+    return v;
+}
+
+fn all_figures() {
+    if (fig_init_done == 0) { fig_vec = build_figs(); fig_init_done = 1; }
+    return fig_vec;
+}
+fn figure_count() { return vec_len(all_figures()); }
+
+fn figures_by_domain(dom) {
+    var result = vec_new();
+    var v = all_figures(); var n = vec_len(v);
+    for (var i = 0; i < n; i = i + 1) {
+        var p = vec_get(v, i);
+        if (fig_domain(p) == dom) { vec_push(result, p); }
+    }
+    return result;
+}
+
+fn figure_by_name(name: Str) {
+    var v = all_figures(); var n = vec_len(v);
+    for (var i = 0; i < n; i = i + 1) {
+        var p = vec_get(v, i);
+        if (str_eq(fig_name(p), name) == 1) { return p; }
+    }
+    return 0;
+}

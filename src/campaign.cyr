@@ -1,0 +1,113 @@
+# itihas — military campaigns (14 campaigns, 40+ battles)
+
+enum CampaignOutcome { OUT_VICTORY; OUT_DEFEAT; OUT_STALEMATE; OUT_TREATY; OUT_INCONCLUSIVE; }
+enum CampOff { CAMP_NAME=0; CAMP_REGION=8; CAMP_START=16; CAMP_END=24; CAMP_BELLA=32; CAMP_BELLB=40; CAMP_CMDS=48; CAMP_BATTLES=56; CAMP_OUT=64; CAMP_DESC=72; CAMP_SIZE=80; }
+enum BatOff { BAT_NAME=0; BAT_YEAR=8; BAT_LOC=16; BAT_DESC=24; BAT_SIZE=32; }
+
+var camp_vec = 0;
+var camp_init_done = 0;
+
+fn camp_new(name: Str, region: Str, sy, ey, ba: Str, bb: Str, cmds: Str, out, desc: Str) {
+    var p = alloc(CAMP_SIZE);
+    store64(p+CAMP_NAME,name); store64(p+CAMP_REGION,region);
+    store64(p+CAMP_START,sy); store64(p+CAMP_END,ey);
+    store64(p+CAMP_BELLA,ba); store64(p+CAMP_BELLB,bb); store64(p+CAMP_CMDS,cmds);
+    store64(p+CAMP_BATTLES,vec_new()); store64(p+CAMP_OUT,out); store64(p+CAMP_DESC,desc);
+    return p;
+}
+fn camp_name(p) { return load64(p+CAMP_NAME); }
+fn camp_region(p) { return load64(p+CAMP_REGION); }
+fn camp_out(p) { return load64(p+CAMP_OUT); }
+fn camp_cmds(p) { return load64(p+CAMP_CMDS); }
+fn camp_bella(p) { return load64(p+CAMP_BELLA); }
+fn camp_bellb(p) { return load64(p+CAMP_BELLB); }
+
+fn bat_add(camp, name: Str, year, loc: Str, desc: Str) {
+    var b = alloc(BAT_SIZE);
+    store64(b+BAT_NAME,name); store64(b+BAT_YEAR,year);
+    store64(b+BAT_LOC,loc); store64(b+BAT_DESC,desc);
+    vec_push(load64(camp+CAMP_BATTLES), b);
+}
+
+fn build_campaigns() {
+    var v = vec_new();
+    var c = camp_new("Greco-Persian Wars","Mediterranean",(0-499),(0-449),"Persian Empire","Ancient Greece","Darius I;Xerxes I;Themistocles;Leonidas I",OUT_DEFEAT,"");
+    bat_add(c,"Battle of Marathon",(0-490),"Marathon, Greece","");
+    bat_add(c,"Battle of Thermopylae",(0-480),"Thermopylae, Greece","");
+    bat_add(c,"Battle of Salamis",(0-480),"Salamis, Greece","");
+    bat_add(c,"Battle of Plataea",(0-479),"Plataea, Greece","");
+    vec_push(v, c);
+    c = camp_new("Campaigns of Alexander the Great","Near East",(0-334),(0-323),"Macedon","Persian Empire","Alexander the Great;Darius III",OUT_VICTORY,"");
+    bat_add(c,"Battle of Granicus",(0-334),"Granicus River, Anatolia","");
+    bat_add(c,"Battle of Issus",(0-333),"Issus, Cilicia","");
+    bat_add(c,"Battle of Gaugamela",(0-331),"Gaugamela, Mesopotamia","");
+    bat_add(c,"Battle of the Hydaspes",(0-326),"Hydaspes River, Punjab","");
+    vec_push(v, c);
+    c = camp_new("Second Punic War","Mediterranean",(0-218),(0-201),"Carthage","Roman Republic","Hannibal Barca;Scipio Africanus",OUT_DEFEAT,"");
+    bat_add(c,"Battle of Cannae",(0-216),"Cannae, Italy","");
+    bat_add(c,"Battle of Zama",(0-202),"Zama, North Africa","");
+    vec_push(v, c);
+    c = camp_new("Gallic Wars","Europe",(0-58),(0-50),"Roman Republic","Gaul","Julius Caesar;Vercingetorix",OUT_VICTORY,"");
+    bat_add(c,"Battle of Alesia",(0-52),"Alesia, Gaul","");
+    vec_push(v, c);
+    c = camp_new("Muslim Conquest of Iberia","Europe",711,718,"Arab Caliphates","Visigothic Kingdom","Tariq ibn Ziyad;Musa ibn Nusayr;Roderic",OUT_VICTORY,"");
+    bat_add(c,"Battle of Guadalete",711,"Guadalete, Iberia","");
+    bat_add(c,"Battle of Covadonga",718,"Covadonga, Asturias","");
+    vec_push(v, c);
+    c = camp_new("Mongol Invasion of Khwarezmia","Central Asia",1219,1221,"Mongol Empire","Khwarezmian Empire","Genghis Khan;Muhammad II of Khwarezm",OUT_VICTORY,"");
+    bat_add(c,"Siege of Bukhara",1220,"Bukhara, Central Asia","");
+    bat_add(c,"Siege of Samarkand",1220,"Samarkand, Central Asia","");
+    vec_push(v, c);
+    c = camp_new("Hundred Years' War","Europe",1337,1453,"Kingdom of England","Kingdom of France","Edward III;Henry V;Joan of Arc",OUT_DEFEAT,"");
+    bat_add(c,"Battle of Crecy",1346,"Crecy, France","");
+    bat_add(c,"Battle of Agincourt",1415,"Agincourt, France","");
+    bat_add(c,"Siege of Orleans",1429,"Orleans, France","");
+    vec_push(v, c);
+    c = camp_new("Ottoman Conquest of Constantinople","Near East",1453,1453,"Ottoman Empire","Byzantine Empire","Mehmed II;Constantine XI",OUT_VICTORY,"");
+    bat_add(c,"Siege of Constantinople",1453,"Constantinople","");
+    vec_push(v, c);
+    c = camp_new("Spanish Conquest of the Aztec Empire","Mesoamerica",1519,1521,"Spanish Empire","Aztec Empire","Hernan Cortes;Montezuma II;Cuauhtemoc",OUT_VICTORY,"");
+    bat_add(c,"La Noche Triste",1520,"Tenochtitlan, Mexico","");
+    bat_add(c,"Siege of Tenochtitlan",1521,"Tenochtitlan, Mexico","");
+    vec_push(v, c);
+    c = camp_new("Thirty Years' War","Europe",1618,1648,"Holy Roman Empire;Spanish Empire","Kingdom of France;Sweden","Gustavus Adolphus;Albrecht von Wallenstein;Cardinal Richelieu",OUT_TREATY,"");
+    bat_add(c,"Battle of Breitenfeld",1631,"Breitenfeld, Saxony","");
+    bat_add(c,"Battle of Lutzen",1632,"Lutzen, Saxony","");
+    bat_add(c,"Battle of Rocroi",1643,"Rocroi, France","");
+    vec_push(v, c);
+    c = camp_new("Napoleonic Wars","Europe",1803,1815,"French Empire","British Empire;Russian Empire;Austrian Empire","Napoleon Bonaparte;Duke of Wellington;Mikhail Kutuzov",OUT_DEFEAT,"");
+    bat_add(c,"Battle of Austerlitz",1805,"Austerlitz, Moravia","");
+    bat_add(c,"Battle of Trafalgar",1805,"Cape Trafalgar, Spain","");
+    bat_add(c,"Battle of Borodino",1812,"Borodino, Russia","");
+    bat_add(c,"Battle of Waterloo",1815,"Waterloo, Belgium","");
+    vec_push(v, c);
+    c = camp_new("American Civil War","North America",1861,1865,"United States (Union)","Confederate States","Ulysses S. Grant;William T. Sherman;Robert E. Lee;Stonewall Jackson",OUT_VICTORY,"");
+    bat_add(c,"Battle of Gettysburg",1863,"Gettysburg, Pennsylvania","");
+    bat_add(c,"Siege of Vicksburg",1863,"Vicksburg, Mississippi","");
+    vec_push(v, c);
+    c = camp_new("Zulu War","Sub-Saharan Africa",1879,1879,"British Empire","Zulu Kingdom","Lord Chelmsford;Cetshwayo kaMpande",OUT_VICTORY,"");
+    bat_add(c,"Battle of Isandlwana",1879,"Isandlwana, Zululand","");
+    bat_add(c,"Battle of Rorke's Drift",1879,"Rorke's Drift, Zululand","");
+    bat_add(c,"Battle of Ulundi",1879,"Ulundi, Zululand","");
+    vec_push(v, c);
+    c = camp_new("Russo-Japanese War","East Asia",1904,1905,"Japan","Russian Empire","Togo Heihachiro;Nogi Maresuke;Aleksei Kuropatkin",OUT_VICTORY,"");
+    bat_add(c,"Siege of Port Arthur",1904,"Port Arthur, Manchuria","");
+    bat_add(c,"Battle of Tsushima",1905,"Tsushima Strait","");
+    vec_push(v, c);
+    return v;
+}
+
+fn all_campaigns() {
+    if (camp_init_done == 0) { camp_vec = build_campaigns(); camp_init_done = 1; }
+    return camp_vec;
+}
+fn campaign_count() { return vec_len(all_campaigns()); }
+
+fn campaign_by_name(name: Str) {
+    var v = all_campaigns(); var n = vec_len(v);
+    for (var i = 0; i < n; i = i + 1) {
+        var p = vec_get(v, i);
+        if (str_eq(camp_name(p), name) == 1) { return p; }
+    }
+    return 0;
+}

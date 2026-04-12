@@ -1,0 +1,14 @@
+# itihas — error codes
+
+enum ItihasError {
+    ERR_NONE = 0;
+    ERR_UNKNOWN_ERA = 1;
+    ERR_UNKNOWN_CIVILIZATION = 2;
+    ERR_UNKNOWN_CALENDAR = 3;
+    ERR_INVALID_YEAR = 4;
+    ERR_EVENT_NOT_FOUND = 5;
+    ERR_FIGURE_NOT_FOUND = 6;
+    ERR_SITE_NOT_FOUND = 7;
+    ERR_ROUTE_NOT_FOUND = 8;
+    ERR_CAMPAIGN_NOT_FOUND = 9;
+}

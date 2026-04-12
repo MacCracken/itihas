@@ -1,0 +1,52 @@
+# itihas — calendar system metadata (8 systems)
+
+enum CalendarType { CAL_SOLAR; CAL_LUNAR; CAL_LUNISOLAR; CAL_FIXED; }
+
+enum CalOff { CAL_NAME = 0; CAL_TYPE = 8; CAL_EPOCH = 16; CAL_MONTHS = 24; CAL_LEAP = 32; CAL_SIZE = 40; }
+
+var calendar_vec = 0;
+var calendar_init_done = 0;
+
+fn cal_new(name: Str, ctype, epoch, months, leap: Str) {
+    var p = alloc(CAL_SIZE);
+    store64(p + CAL_NAME, name);
+    store64(p + CAL_TYPE, ctype);
+    store64(p + CAL_EPOCH, epoch);
+    store64(p + CAL_MONTHS, months);
+    store64(p + CAL_LEAP, leap);
+    return p;
+}
+
+fn cal_name(p) { return load64(p + CAL_NAME); }
+fn cal_type(p) { return load64(p + CAL_TYPE); }
+fn cal_epoch(p) { return load64(p + CAL_EPOCH); }
+fn cal_months(p) { return load64(p + CAL_MONTHS); }
+
+fn build_calendars() {
+    var v = vec_new();
+    vec_push(v, cal_new("Gregorian", CAL_SOLAR, 1, 12, "Divisible by 4, except centuries unless divisible by 400"));
+    vec_push(v, cal_new("Julian", CAL_SOLAR, 1, 12, "Every 4th year without exception"));
+    vec_push(v, cal_new("Islamic (Hijri)", CAL_LUNAR, 622, 12, "11 leap years in a 30-year cycle"));
+    vec_push(v, cal_new("Hebrew", CAL_LUNISOLAR, (0-3760), 12, "7 leap years in a 19-year Metonic cycle"));
+    vec_push(v, cal_new("Chinese", CAL_LUNISOLAR, (0-2697), 12, "7 intercalary months in 19-year cycle"));
+    vec_push(v, cal_new("Hindu (Vikram Samvat)", CAL_LUNISOLAR, (0-57), 12, "Intercalary month when two new moons in same solar month"));
+    vec_push(v, cal_new("Maya (Long Count)", CAL_FIXED, (0-3114), 18, "No leap correction; 18x20 + 5 Wayeb = 365"));
+    vec_push(v, cal_new("Egyptian (Civil)", CAL_FIXED, (0-2781), 12, "No leap days; 12x30 + 5 epagomenal = 365"));
+    return v;
+}
+
+fn all_calendars() {
+    if (calendar_init_done == 0) { calendar_vec = build_calendars(); calendar_init_done = 1; }
+    return calendar_vec;
+}
+fn calendar_count() { return vec_len(all_calendars()); }
+
+fn calendar_by_name(name: Str) {
+    var v = all_calendars();
+    var n = vec_len(v);
+    for (var i = 0; i < n; i = i + 1) {
+        var p = vec_get(v, i);
+        if (str_contains(cal_name(p), name) == 1) { return p; }
+    }
+    return 0;
+}

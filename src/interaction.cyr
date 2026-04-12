@@ -1,0 +1,88 @@
+# itihas — civilization interactions (22)
+
+enum InteractionType { INT_TRADE; INT_WAR; INT_CULTURAL; INT_ALLIANCE; INT_CONQUEST; INT_DIPLOMACY; }
+enum IntOff { INT_CIVA=0; INT_CIVB=8; INT_TYPE=16; INT_START=24; INT_END=32; INT_DESC=40; INT_SIZE=48; }
+
+var int_vec = 0;
+var int_init_done = 0;
+
+fn int_new(ca: Str, cb: Str, itype, sy, ey, desc: Str) {
+    var p = alloc(INT_SIZE);
+    store64(p+INT_CIVA,ca); store64(p+INT_CIVB,cb); store64(p+INT_TYPE,itype);
+    store64(p+INT_START,sy); store64(p+INT_END,ey); store64(p+INT_DESC,desc);
+    return p;
+}
+fn int_civa(p) { return load64(p+INT_CIVA); }
+fn int_civb(p) { return load64(p+INT_CIVB); }
+fn int_type(p) { return load64(p+INT_TYPE); }
+
+fn build_interactions() {
+    var v = vec_new();
+    vec_push(v, int_new("Mesopotamia","Ancient Egypt",INT_TRADE,(0-3000),(0-1200),"Trade in lapis lazuli, copper, grain"));
+    vec_push(v, int_new("Mesopotamia","Indus Valley",INT_TRADE,(0-2600),(0-1900),"Maritime trade via Persian Gulf"));
+    vec_push(v, int_new("Ancient Egypt","Hittite Empire",INT_WAR,(0-1400),(0-1259),"Battle of Kadesh and first peace treaty"));
+    vec_push(v, int_new("Ancient Egypt","Hittite Empire",INT_DIPLOMACY,(0-1259),(0-1178),"Peace treaty and royal marriages"));
+    vec_push(v, int_new("Ancient Greece","Persian Empire",INT_WAR,(0-499),(0-449),"Greco-Persian Wars"));
+    vec_push(v, int_new("Ancient Greece","Ancient Egypt",INT_CULTURAL,(0-650),(0-30),"Greek adoption of Egyptian knowledge"));
+    vec_push(v, int_new("Roman Empire","Ancient China",INT_TRADE,(0-130),200,"Silk Road trade"));
+    vec_push(v, int_new("Roman Empire","Ancient Greece",INT_CONQUEST,(0-146),(0-146),"Roman conquest of Greece"));
+    vec_push(v, int_new("Roman Empire","Phoenicia",INT_CONQUEST,(0-264),(0-146),"Punic Wars"));
+    vec_push(v, int_new("Byzantine Empire","Ottoman Empire",INT_WAR,1299,1453,"Fall of Constantinople"));
+    vec_push(v, int_new("Mongol Empire","Ancient China",INT_CONQUEST,1211,1279,"Mongol conquest establishing Yuan"));
+    vec_push(v, int_new("Mongol Empire","Persian Empire",INT_CONQUEST,1219,1258,"Sack of Baghdad"));
+    vec_push(v, int_new("Mali Empire","Arab Caliphates",INT_TRADE,1235,1500,"Trans-Saharan gold and salt trade"));
+    vec_push(v, int_new("Viking/Norse","Byzantine Empire",INT_TRADE,800,1100,"Varangian trade routes"));
+    vec_push(v, int_new("Khmer Empire","Ancient China",INT_CULTURAL,802,1431,"Chinese cultural influence"));
+    vec_push(v, int_new("Chola Dynasty","Srivijaya",INT_WAR,1025,1025,"Chola naval raids"));
+    vec_push(v, int_new("Spanish Empire","Aztec Empire",INT_CONQUEST,1519,1521,"Spanish conquest under Cortes"));
+    vec_push(v, int_new("Spanish Empire","Inca Empire",INT_CONQUEST,1532,1572,"Spanish conquest under Pizarro"));
+    vec_push(v, int_new("Portuguese Empire","Kingdom of Kongo",INT_TRADE,1483,1700,"Ivory, copper trade"));
+    vec_push(v, int_new("Ottoman Empire","Republic of Venice",INT_TRADE,1400,1700,"Mediterranean spice trade"));
+    vec_push(v, int_new("Ancient Egypt","Hittite Empire",INT_ALLIANCE,(0-1259),(0-1178),"Alliance after Treaty of Kadesh"));
+    return v;
+}
+
+fn all_interactions() {
+    if (int_init_done == 0) { int_vec = build_interactions(); int_init_done = 1; }
+    return int_vec;
+}
+fn interaction_count() { return vec_len(all_interactions()); }
+
+fn interactions_for(civ: Str) {
+    var result = vec_new();
+    var v = all_interactions(); var n = vec_len(v);
+    for (var i = 0; i < n; i = i + 1) {
+        var p = vec_get(v, i);
+        if (str_eq(int_civa(p), civ) == 1 || str_eq(int_civb(p), civ) == 1) { vec_push(result, p); }
+    }
+    return result;
+}
+
+fn interactions_between(ca: Str, cb: Str) {
+    var result = vec_new();
+    var v = all_interactions(); var n = vec_len(v);
+    for (var i = 0; i < n; i = i + 1) {
+        var p = vec_get(v, i);
+        if ((str_eq(int_civa(p),ca)==1 && str_eq(int_civb(p),cb)==1) || (str_eq(int_civa(p),cb)==1 && str_eq(int_civb(p),ca)==1)) {
+            vec_push(result, p);
+        }
+    }
+    return result;
+}
+
+fn influence_score(ca: Str, cb: Str) {
+    var btw = interactions_between(ca, cb);
+    var score = 0;
+    var n = vec_len(btw);
+    for (var i = 0; i < n; i = i + 1) {
+        var p = vec_get(btw, i);
+        var t = int_type(p);
+        if (t == INT_CONQUEST) { score = score + 4; }
+        elif (t == INT_WAR) { score = score + 3; }
+        elif (t == INT_ALLIANCE) { score = score + 3; }
+        elif (t == INT_TRADE) { score = score + 2; }
+        elif (t == INT_CULTURAL) { score = score + 2; }
+        elif (t == INT_DIPLOMACY) { score = score + 1; }
+    }
+    return score;
+}

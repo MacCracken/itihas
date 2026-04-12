@@ -1,0 +1,60 @@
+# itihas — causal links (13)
+
+enum CausalStrength { STRENGTH_WEAK; STRENGTH_MODERATE; STRENGTH_STRONG; STRENGTH_DIRECT; }
+enum CausOff { CAUS_CAUSE=0; CAUS_EFFECT=8; CAUS_STR=16; CAUS_DESC=24; CAUS_SIZE=32; }
+
+var caus_vec = 0;
+var caus_init_done = 0;
+
+fn caus_new(cause: Str, effect: Str, str, desc: Str) {
+    var p = alloc(CAUS_SIZE);
+    store64(p+CAUS_CAUSE,cause); store64(p+CAUS_EFFECT,effect);
+    store64(p+CAUS_STR,str); store64(p+CAUS_DESC,desc);
+    return p;
+}
+fn caus_cause(p) { return load64(p+CAUS_CAUSE); }
+fn caus_effect(p) { return load64(p+CAUS_EFFECT); }
+
+fn build_causalities() {
+    var v = vec_new();
+    vec_push(v, caus_new("Invention of Writing","Code of Hammurabi",STRENGTH_STRONG,"Written law codes required writing systems"));
+    vec_push(v, caus_new("Bronze Age Collapse","Founding of Rome",STRENGTH_MODERATE,"Power vacuum allowed new Mediterranean polities"));
+    vec_push(v, caus_new("Battle of Marathon","Conquests of Alexander the Great",STRENGTH_MODERATE,"Greek survival enabled rise of Macedon"));
+    vec_push(v, caus_new("Conquests of Alexander the Great","Maurya Empire under Ashoka",STRENGTH_MODERATE,"Alexander destabilized the Nanda dynasty"));
+    vec_push(v, caus_new("Fall of the Western Roman Empire","Rise of Islam",STRENGTH_WEAK,"Byzantine-Sassanid exhaustion enabled Islam's expansion"));
+    vec_push(v, caus_new("Rise of Islam","Mongol Conquests",STRENGTH_WEAK,"Islamic caliphates drew Mongol expansion westward"));
+    vec_push(v, caus_new("Mongol Conquests","Fall of Constantinople",STRENGTH_MODERATE,"Mongol disruption empowered Ottoman Turks"));
+    vec_push(v, caus_new("Fall of Constantinople","French Revolution",STRENGTH_WEAK,"Accelerated Renaissance and Enlightenment ideals"));
+    vec_push(v, caus_new("Gutenberg Printing Press","French Revolution",STRENGTH_STRONG,"Mass printing spread Enlightenment ideas"));
+    vec_push(v, caus_new("French Revolution","Invention of the World Wide Web",STRENGTH_WEAK,"Open knowledge ideals influenced info-sharing tech"));
+    vec_push(v, caus_new("Invention of Writing","Gutenberg Printing Press",STRENGTH_STRONG,"Printing mechanized written text reproduction"));
+    vec_push(v, caus_new("Code of Hammurabi","Founding of Rome",STRENGTH_WEAK,"Legal code traditions influenced Roman law"));
+    vec_push(v, caus_new("Gutenberg Printing Press","Invention of the World Wide Web",STRENGTH_STRONG,"Printing democratized information; web is successor"));
+    return v;
+}
+
+fn all_causalities() {
+    if (caus_init_done == 0) { caus_vec = build_causalities(); caus_init_done = 1; }
+    return caus_vec;
+}
+fn causality_count() { return vec_len(all_causalities()); }
+
+fn causes_of(event_name: Str) {
+    var result = vec_new();
+    var v = all_causalities(); var n = vec_len(v);
+    for (var i = 0; i < n; i = i + 1) {
+        var p = vec_get(v, i);
+        if (str_eq(caus_effect(p), event_name) == 1) { vec_push(result, p); }
+    }
+    return result;
+}
+
+fn effects_of(event_name: Str) {
+    var result = vec_new();
+    var v = all_causalities(); var n = vec_len(v);
+    for (var i = 0; i < n; i = i + 1) {
+        var p = vec_get(v, i);
+        if (str_eq(caus_cause(p), event_name) == 1) { vec_push(result, p); }
+    }
+    return result;
+}

@@ -1,0 +1,62 @@
+# itihas — trade routes (15)
+
+enum RouteType { RT_LAND; RT_MARITIME; RT_RIVER; RT_MIXED; }
+enum RouteOff { RT_NAME=0; RT_REGIONS=8; RT_TYPE=16; RT_CIVS=24; RT_COMM=32; RT_START=40; RT_END=48; RT_DESC=56; RT_SIZE=64; }
+
+var route_vec = 0;
+var route_init_done = 0;
+
+fn rt_new(name: Str, regions: Str, rtype, civs: Str, comm: Str, sy, ey, desc: Str) {
+    var p = alloc(RT_SIZE);
+    store64(p+RT_NAME,name); store64(p+RT_REGIONS,regions); store64(p+RT_TYPE,rtype);
+    store64(p+RT_CIVS,civs); store64(p+RT_COMM,comm);
+    store64(p+RT_START,sy); store64(p+RT_END,ey); store64(p+RT_DESC,desc);
+    return p;
+}
+fn rt_name(p) { return load64(p+RT_NAME); }
+fn rt_comm(p) { return load64(p+RT_COMM); }
+
+fn build_routes() {
+    var v = vec_new();
+    vec_push(v, rt_new("Silk Road","East Asia;Central Asia;Near East;Mediterranean",RT_LAND,"Ancient China;Persian Empire;Roman Empire;Mongol Empire","silk;spices;jade;glass;paper",(0-130),1453,""));
+    vec_push(v, rt_new("Maritime Silk Road","East Asia;Southeast Asia;South Asia;Near East;East Africa",RT_MARITIME,"Ancient China;Gupta Empire;Khmer Empire;Arab Caliphates","silk;porcelain;spices;incense;ivory",(0-200),1500,""));
+    vec_push(v, rt_new("Incense Route","Arabian Peninsula;Near East;Mediterranean",RT_LAND,"Nabataean Kingdom;Kingdom of Saba","frankincense;myrrh;spices",(0-1000),200,""));
+    vec_push(v, rt_new("Amber Road","Europe;Mediterranean",RT_LAND,"Roman Empire;Germanic Tribes","amber;furs;salt",(0-1600),500,""));
+    vec_push(v, rt_new("Trans-Saharan Trade","North Africa;Sub-Saharan Africa",RT_LAND,"Ghana Empire;Mali Empire;Songhai Empire;Arab Caliphates","gold;salt;slaves;ivory;textiles",300,1600,""));
+    vec_push(v, rt_new("Spice Route","Southeast Asia;South Asia;Near East;Mediterranean;Europe",RT_MARITIME,"Gupta Empire;Arab Caliphates;Portuguese Empire;Dutch Republic","pepper;cinnamon;cloves;nutmeg;cardamom",(0-300),1800,""));
+    vec_push(v, rt_new("Tin Route","Europe;Mediterranean",RT_MIXED,"Phoenicia;Ancient Greece;Roman Empire","tin;copper;bronze goods",(0-2500),(0-100),""));
+    vec_push(v, rt_new("Via Maris","Near East;North Africa",RT_LAND,"Ancient Egypt;Mesopotamia;Persian Empire","grain;olive oil;textiles;metals",(0-2000),(0-300),""));
+    vec_push(v, rt_new("Hanseatic Trade Network","Europe",RT_MARITIME,"Hanseatic League","herring;timber;furs;grain;wool",1200,1669,""));
+    vec_push(v, rt_new("Nile Trade Route","North Africa;Sub-Saharan Africa",RT_RIVER,"Ancient Egypt;Kingdom of Kush","gold;ivory;ebony;grain;papyrus",(0-3100),640,""));
+    vec_push(v, rt_new("Grand Trunk Road","South Asia;Central Asia",RT_LAND,"Maurya Empire;Gupta Empire;Mughal Empire","textiles;spices;gemstones;horses",(0-300),2147483647,""));
+    vec_push(v, rt_new("Austronesian Maritime Network","Southeast Asia;Oceania;East Africa",RT_MARITIME,"Austronesian Peoples","obsidian;pottery;cinnamon;coconut",(0-3000),1500,""));
+    vec_push(v, rt_new("Varangian Trade Routes","Europe;Near East",RT_RIVER,"Viking Civilization;Byzantine Empire;Arab Caliphates","furs;slaves;amber;silver;swords",750,1100,""));
+    vec_push(v, rt_new("Triangular Trade","Europe;West Africa;Americas",RT_MARITIME,"British Empire;Portuguese Empire;Spanish Empire","slaves;sugar;rum;cotton;manufactured goods",1500,1867,""));
+    vec_push(v, rt_new("Tea-Horse Road","East Asia;South Asia",RT_LAND,"Ancient China;Tibet","tea;horses;salt;medicinal herbs",600,1950,""));
+    return v;
+}
+
+fn all_routes() {
+    if (route_init_done == 0) { route_vec = build_routes(); route_init_done = 1; }
+    return route_vec;
+}
+fn route_count() { return vec_len(all_routes()); }
+
+fn route_by_name(name: Str) {
+    var v = all_routes(); var n = vec_len(v);
+    for (var i = 0; i < n; i = i + 1) {
+        var p = vec_get(v, i);
+        if (str_eq(rt_name(p), name) == 1) { return p; }
+    }
+    return 0;
+}
+
+fn routes_by_commodity(comm: Str) {
+    var result = vec_new();
+    var v = all_routes(); var n = vec_len(v);
+    for (var i = 0; i < n; i = i + 1) {
+        var p = vec_get(v, i);
+        if (str_contains(rt_comm(p), comm) == 1) { vec_push(result, p); }
+    }
+    return result;
+}

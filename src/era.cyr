@@ -1,0 +1,114 @@
+# itihas — historical eras (25 eras)
+# Heap structs via store64/load64
+
+enum EraCategory { ANCIENT; CLASSICAL; MEDIEVAL; EARLY_MODERN; MODERN; CONTEMPORARY; }
+enum EraScope { SCOPE_GLOBAL; SCOPE_REGIONAL; }
+
+# Era field offsets: name(0) start_year(8) end_year(16) region(24) description(32) category(40) scope(48) = 56 bytes
+enum EraOff { ERA_NAME = 0; ERA_START = 8; ERA_END = 16; ERA_REGION = 24; ERA_DESC = 32; ERA_CAT = 40; ERA_SCOPE = 48; ERA_SIZE = 56; }
+
+var era_vec = 0;
+var era_init_done = 0;
+
+fn era_new(name: Str, sy, ey, region: Str, desc: Str, cat, scope) {
+    var p = alloc(ERA_SIZE);
+    store64(p + ERA_NAME, name);
+    store64(p + ERA_START, sy);
+    store64(p + ERA_END, ey);
+    store64(p + ERA_REGION, region);
+    store64(p + ERA_DESC, desc);
+    store64(p + ERA_CAT, cat);
+    store64(p + ERA_SCOPE, scope);
+    return p;
+}
+
+fn era_name(p) { return load64(p + ERA_NAME); }
+fn era_start(p) { return load64(p + ERA_START); }
+fn era_end(p) { return load64(p + ERA_END); }
+fn era_region(p) { return load64(p + ERA_REGION); }
+fn era_cat(p) { return load64(p + ERA_CAT); }
+fn era_scope(p) { return load64(p + ERA_SCOPE); }
+
+fn build_eras() {
+    var v = vec_new();
+    # Global
+    vec_push(v, era_new("Bronze Age", (0-3500), (0-1100), "Near East, Mediterranean, South Asia", "Emergence of bronze metallurgy, early writing systems, and first cities", ANCIENT, SCOPE_GLOBAL));
+    vec_push(v, era_new("Iron Age", (0-1200), (0-550), "Near East, Mediterranean, South Asia", "Widespread iron smelting, alphabetic writing, rise of empires", ANCIENT, SCOPE_GLOBAL));
+    vec_push(v, era_new("Classical Antiquity", (0-800), 476, "Mediterranean, Europe", "Greek and Roman civilization, philosophy, democracy, republic", CLASSICAL, SCOPE_GLOBAL));
+    vec_push(v, era_new("Middle Ages", 476, 1453, "Europe, Near East", "Feudalism, monasticism, Islamic Golden Age, Crusades", MEDIEVAL, SCOPE_GLOBAL));
+    vec_push(v, era_new("Renaissance", 1400, 1610, "Europe", "Revival of classical learning, art, science, and exploration", EARLY_MODERN, SCOPE_GLOBAL));
+    vec_push(v, era_new("Age of Enlightenment", 1648, 1789, "Europe", "Rationalism, empiricism, natural rights, social contract theory", EARLY_MODERN, SCOPE_GLOBAL));
+    vec_push(v, era_new("Industrial Age", 1760, 1970, "Global", "Mechanization, mass production, urbanization, world wars", MODERN, SCOPE_GLOBAL));
+    vec_push(v, era_new("Information Age", 1970, 2147483647, "Global", "Digital revolution, internet, AI, globalization", CONTEMPORARY, SCOPE_GLOBAL));
+    # Chinese dynasties
+    vec_push(v, era_new("Xia Dynasty", (0-2070), (0-1600), "East Asia", "", ANCIENT, SCOPE_REGIONAL));
+    vec_push(v, era_new("Shang Dynasty", (0-1600), (0-1046), "East Asia", "", ANCIENT, SCOPE_REGIONAL));
+    vec_push(v, era_new("Zhou Dynasty", (0-1046), (0-256), "East Asia", "", ANCIENT, SCOPE_REGIONAL));
+    vec_push(v, era_new("Qin Dynasty", (0-221), (0-206), "East Asia", "", CLASSICAL, SCOPE_REGIONAL));
+    vec_push(v, era_new("Han Dynasty", (0-206), 220, "East Asia", "", CLASSICAL, SCOPE_REGIONAL));
+    vec_push(v, era_new("Tang Dynasty", 618, 907, "East Asia", "", MEDIEVAL, SCOPE_REGIONAL));
+    vec_push(v, era_new("Song Dynasty", 960, 1279, "East Asia", "", MEDIEVAL, SCOPE_REGIONAL));
+    vec_push(v, era_new("Ming Dynasty", 1368, 1644, "East Asia", "", EARLY_MODERN, SCOPE_REGIONAL));
+    vec_push(v, era_new("Qing Dynasty", 1644, 1912, "East Asia", "", EARLY_MODERN, SCOPE_REGIONAL));
+    # Indian
+    vec_push(v, era_new("Vedic Period", (0-1500), (0-500), "South Asia", "", ANCIENT, SCOPE_REGIONAL));
+    vec_push(v, era_new("Maurya Period", (0-322), (0-185), "South Asia", "", CLASSICAL, SCOPE_REGIONAL));
+    vec_push(v, era_new("Gupta Period", 320, 550, "South Asia", "", CLASSICAL, SCOPE_REGIONAL));
+    vec_push(v, era_new("Delhi Sultanate", 1206, 1526, "South Asia", "", MEDIEVAL, SCOPE_REGIONAL));
+    vec_push(v, era_new("Mughal Period", 1526, 1857, "South Asia", "", EARLY_MODERN, SCOPE_REGIONAL));
+    # Mesoamerican
+    vec_push(v, era_new("Mesoamerican Preclassic", (0-2000), 250, "Mesoamerica", "", ANCIENT, SCOPE_REGIONAL));
+    vec_push(v, era_new("Mesoamerican Classic", 250, 900, "Mesoamerica", "", MEDIEVAL, SCOPE_REGIONAL));
+    vec_push(v, era_new("Mesoamerican Postclassic", 900, 1521, "Mesoamerica", "", MEDIEVAL, SCOPE_REGIONAL));
+    return v;
+}
+
+fn all_eras() {
+    if (era_init_done == 0) { era_vec = build_eras(); era_init_done = 1; }
+    return era_vec;
+}
+fn era_count() { return vec_len(all_eras()); }
+fn era_get(idx) { return vec_get(all_eras(), idx); }
+
+fn eras_containing(year) {
+    var result = vec_new();
+    var v = all_eras();
+    var n = vec_len(v);
+    for (var i = 0; i < n; i = i + 1) {
+        var p = vec_get(v, i);
+        if (year >= era_start(p) && year <= era_end(p)) { vec_push(result, p); }
+    }
+    return result;
+}
+
+fn eras_by_scope(scope) {
+    var result = vec_new();
+    var v = all_eras();
+    var n = vec_len(v);
+    for (var i = 0; i < n; i = i + 1) {
+        var p = vec_get(v, i);
+        if (era_scope(p) == scope) { vec_push(result, p); }
+    }
+    return result;
+}
+
+fn eras_by_region(region: Str) {
+    var result = vec_new();
+    var v = all_eras();
+    var n = vec_len(v);
+    for (var i = 0; i < n; i = i + 1) {
+        var p = vec_get(v, i);
+        if (str_contains(era_region(p), region) == 1) { vec_push(result, p); }
+    }
+    return result;
+}
+
+fn era_by_name(name: Str) {
+    var v = all_eras();
+    var n = vec_len(v);
+    for (var i = 0; i < n; i = i + 1) {
+        var p = vec_get(v, i);
+        if (str_eq(era_name(p), name) == 1) { return p; }
+    }
+    return 0;
+}

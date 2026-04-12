@@ -1,0 +1,69 @@
+# itihas — archaeological sites (32)
+
+enum SiteType { ST_SETTLEMENT; ST_TEMPLE; ST_BURIAL; ST_FORTRESS; ST_MONUMENT; ST_PALACE; ST_WORKSHOP; ST_CAVE; ST_PORT; }
+enum SiteOff { SITE_NAME=0; SITE_LOC=8; SITE_REG=16; SITE_TYPE=24; SITE_CIV=32; SITE_START=40; SITE_END=48; SITE_DISC=56; SITE_DESC=64; SITE_SIZE=72; }
+
+var site_vec = 0;
+var site_init_done = 0;
+
+fn site_new(name: Str, loc: Str, reg: Str, st, civ: Str, sy, ey, disc, desc: Str) {
+    var p = alloc(SITE_SIZE);
+    store64(p+SITE_NAME,name); store64(p+SITE_LOC,loc); store64(p+SITE_REG,reg);
+    store64(p+SITE_TYPE,st); store64(p+SITE_CIV,civ);
+    store64(p+SITE_START,sy); store64(p+SITE_END,ey); store64(p+SITE_DISC,disc); store64(p+SITE_DESC,desc);
+    return p;
+}
+fn site_name(p) { return load64(p+SITE_NAME); }
+fn site_region(p) { return load64(p+SITE_REG); }
+
+fn build_sites() {
+    var v = vec_new();
+    vec_push(v, site_new("Gobekli Tepe","Turkey","Near East",ST_TEMPLE,"Pre-Pottery Neolithic",(0-9500),(0-8000),1963,""));
+    vec_push(v, site_new("Catalhoyuk","Turkey","Near East",ST_SETTLEMENT,"Neolithic Anatolia",(0-7500),(0-5700),1958,""));
+    vec_push(v, site_new("Ur","Iraq","Near East",ST_SETTLEMENT,"Mesopotamia",(0-3800),(0-500),1853,""));
+    vec_push(v, site_new("Babylon","Iraq","Near East",ST_SETTLEMENT,"Mesopotamia",(0-2300),(0-275),1899,""));
+    vec_push(v, site_new("Persepolis","Iran","Near East",ST_PALACE,"Persian Empire",(0-518),(0-330),1620,""));
+    vec_push(v, site_new("Petra","Jordan","Near East",ST_SETTLEMENT,"Nabataean Kingdom",(0-312),663,1812,""));
+    vec_push(v, site_new("Giza","Egypt","North Africa",ST_MONUMENT,"Ancient Egypt",(0-2580),(0-2510),0,""));
+    vec_push(v, site_new("Valley of the Kings","Egypt","North Africa",ST_BURIAL,"Ancient Egypt",(0-1539),(0-1075),1738,""));
+    vec_push(v, site_new("Carthage","Tunisia","North Africa",ST_PORT,"Phoenicia",(0-814),(0-146),1830,""));
+    vec_push(v, site_new("Leptis Magna","Libya","North Africa",ST_SETTLEMENT,"Roman Empire",(0-1000),647,1920,""));
+    vec_push(v, site_new("Knossos","Greece","Mediterranean",ST_PALACE,"Minoan Civilization",(0-2000),(0-1375),1878,""));
+    vec_push(v, site_new("Mycenae","Greece","Mediterranean",ST_FORTRESS,"Mycenaean Civilization",(0-1600),(0-1100),1876,""));
+    vec_push(v, site_new("Pompeii","Italy","Mediterranean",ST_SETTLEMENT,"Roman Empire",(0-600),79,1748,""));
+    vec_push(v, site_new("Mohenjo-daro","Pakistan","South Asia",ST_SETTLEMENT,"Indus Valley",(0-2500),(0-1900),1922,""));
+    vec_push(v, site_new("Harappa","Pakistan","South Asia",ST_SETTLEMENT,"Indus Valley",(0-2600),(0-1900),1826,""));
+    vec_push(v, site_new("Sanchi","India","South Asia",ST_TEMPLE,"Maurya Empire",(0-300),1200,1818,""));
+    vec_push(v, site_new("Ajanta Caves","India","South Asia",ST_CAVE,"Gupta Empire",(0-200),650,1819,""));
+    vec_push(v, site_new("Terracotta Army","China","East Asia",ST_BURIAL,"Ancient China",(0-246),(0-208),1974,""));
+    vec_push(v, site_new("Longmen Grottoes","China","East Asia",ST_TEMPLE,"Ancient China",493,1127,0,""));
+    vec_push(v, site_new("Nara Heijo Palace","Japan","East Asia",ST_PALACE,"Japan",710,784,1852,""));
+    vec_push(v, site_new("Angkor Wat","Cambodia","Southeast Asia",ST_TEMPLE,"Khmer Empire",1113,1431,1860,""));
+    vec_push(v, site_new("Borobudur","Indonesia","Southeast Asia",ST_TEMPLE,"Sailendra Dynasty",780,1006,1814,""));
+    vec_push(v, site_new("Teotihuacan","Mexico","Mesoamerica",ST_SETTLEMENT,"Teotihuacan Civilization",(0-200),550,0,""));
+    vec_push(v, site_new("Tikal","Guatemala","Mesoamerica",ST_SETTLEMENT,"Maya",(0-600),900,1848,""));
+    vec_push(v, site_new("Chichen Itza","Mexico","Mesoamerica",ST_TEMPLE,"Maya",600,1200,1843,""));
+    vec_push(v, site_new("Machu Picchu","Peru","South America",ST_SETTLEMENT,"Inca Empire",1450,1572,1911,""));
+    vec_push(v, site_new("Great Zimbabwe","Zimbabwe","Sub-Saharan Africa",ST_SETTLEMENT,"Kingdom of Zimbabwe",1100,1450,1871,""));
+    vec_push(v, site_new("Lalibela","Ethiopia","Sub-Saharan Africa",ST_TEMPLE,"Zagwe Dynasty",1181,1221,1520,""));
+    vec_push(v, site_new("Stonehenge","England","Europe",ST_MONUMENT,"Neolithic Britain",(0-3000),(0-1500),0,""));
+    vec_push(v, site_new("Lascaux","France","Europe",ST_CAVE,"Upper Paleolithic",(0-17000),(0-15000),1940,""));
+    vec_push(v, site_new("Altamira","Spain","Europe",ST_CAVE,"Upper Paleolithic",(0-36000),(0-13000),1868,""));
+    vec_push(v, site_new("Newgrange","Ireland","Europe",ST_BURIAL,"Neolithic Ireland",(0-3200),(0-2900),1699,""));
+    return v;
+}
+
+fn all_sites() {
+    if (site_init_done == 0) { site_vec = build_sites(); site_init_done = 1; }
+    return site_vec;
+}
+fn site_count() { return vec_len(all_sites()); }
+
+fn site_by_name(name: Str) {
+    var v = all_sites(); var n = vec_len(v);
+    for (var i = 0; i < n; i = i + 1) {
+        var p = vec_get(v, i);
+        if (str_eq(site_name(p), name) == 1) { return p; }
+    }
+    return 0;
+}

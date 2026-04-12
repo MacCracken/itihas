@@ -1,0 +1,112 @@
+# itihas — civilizations (53)
+
+enum CivOff { CIV_NAME=0; CIV_REGION=8; CIV_PEAK=16; CIV_FOUND=24; CIV_END=32; CIV_TRAITS=40; CIV_SCRIPT=48; CIV_LANG=56; CIV_SIZE=64; }
+
+var civ_vec = 0;
+var civ_init_done = 0;
+
+fn civ_new(name: Str, region: Str, peak: Str, fy, ey, traits: Str, script: Str, lang: Str) {
+    var p = alloc(CIV_SIZE);
+    store64(p+CIV_NAME, name); store64(p+CIV_REGION, region); store64(p+CIV_PEAK, peak);
+    store64(p+CIV_FOUND, fy); store64(p+CIV_END, ey);
+    store64(p+CIV_TRAITS, traits); store64(p+CIV_SCRIPT, script); store64(p+CIV_LANG, lang);
+    return p;
+}
+fn civ_name(p) { return load64(p+CIV_NAME); }
+fn civ_region(p) { return load64(p+CIV_REGION); }
+fn civ_found(p) { return load64(p+CIV_FOUND); }
+fn civ_end(p) { return load64(p+CIV_END); }
+
+fn build_civs() {
+    var v = vec_new();
+    vec_push(v, civ_new("Mesopotamia","Near East","Bronze Age",(0-3500),(0-539),"cuneiform writing;irrigation;law codes;astronomy","Cuneiform","akk;sux"));
+    vec_push(v, civ_new("Ancient Egypt","North Africa","Bronze Age",(0-3100),(0-30),"hieroglyphic writing;pyramid construction;mummification;astronomy","Hieroglyphic","egy"));
+    vec_push(v, civ_new("Indus Valley","South Asia","Bronze Age",(0-3300),(0-1300),"urban planning;standardized weights;drainage systems;trade networks","Indus script",""));
+    vec_push(v, civ_new("Ancient China","East Asia","Classical Antiquity",(0-2070),1912,"paper;gunpowder;compass;printing","Chinese characters","zh"));
+    vec_push(v, civ_new("Ancient Greece","Mediterranean","Classical Antiquity",(0-800),(0-146),"democracy;philosophy;theater;mathematics","Greek alphabet","grc"));
+    vec_push(v, civ_new("Roman Empire","Mediterranean, Europe","Classical Antiquity",(0-753),476,"engineering;law;roads;aqueducts","Latin alphabet","la"));
+    vec_push(v, civ_new("Maya","Mesoamerica","Mesoamerican Classic",(0-2000),1500,"hieroglyphic writing;calendar systems;astronomy;pyramids","Maya script","yua"));
+    vec_push(v, civ_new("Persian Empire","Near East, Central Asia","Classical Antiquity",(0-550),(0-330),"postal system;road network;religious tolerance;administration","Old Persian cuneiform","peo"));
+    vec_push(v, civ_new("Mongol Empire","Central Asia, East Asia, Europe","Middle Ages",1206,1368,"cavalry warfare;Silk Road trade;religious tolerance;postal relay","Mongolian script","mn"));
+    vec_push(v, civ_new("Ottoman Empire","Near East, Southeast Europe, North Africa","Renaissance",1299,1922,"millet system;architecture;military innovation;trade networks","Ottoman Turkish script","ota"));
+    vec_push(v, civ_new("Kingdom of Kush","East Africa","Iron Age",(0-1070),350,"iron smelting;pyramid construction;archery;gold trade","Meroitic script",""));
+    vec_push(v, civ_new("Aksumite Empire","East Africa","Classical Antiquity",100,940,"monumental stelae;coinage;Red Sea trade;early Christianity","Ge'ez script","gez"));
+    vec_push(v, civ_new("Ghana Empire","West Africa","Middle Ages",300,1200,"gold trade;trans-Saharan commerce;ironworking;centralized governance","Arabic script","snk"));
+    vec_push(v, civ_new("Mali Empire","West Africa","Middle Ages",1235,1600,"Islamic scholarship;Timbuktu universities;gold trade;oral tradition","Arabic script","bm"));
+    vec_push(v, civ_new("Songhai Empire","West Africa","Renaissance",1430,1591,"riverine trade;Islamic jurisprudence;bureaucratic administration","Arabic script","son"));
+    vec_push(v, civ_new("Great Zimbabwe","Southern Africa","Middle Ages",1100,1450,"stone architecture;cattle herding;gold mining;Indian Ocean trade","oral tradition","sn"));
+    vec_push(v, civ_new("Kingdom of Kongo","Central Africa","Renaissance",1390,1914,"textile production;metalworking;diplomacy;agriculture","Latin alphabet","kg"));
+    vec_push(v, civ_new("Ethiopian Empire","East Africa","Middle Ages",1270,1974,"rock-hewn churches;Solomonic dynasty;coffee cultivation;manuscript tradition","Ge'ez script","am"));
+    vec_push(v, civ_new("Khmer Empire","Southeast Asia","Middle Ages",802,1431,"temple architecture;hydraulic engineering;rice agriculture;Hindu-Buddhist syncretism","Khmer script","km"));
+    vec_push(v, civ_new("Srivijaya","Southeast Asia","Middle Ages",650,1377,"maritime trade;Buddhist scholarship;thalassocracy","Pallava script","ms"));
+    vec_push(v, civ_new("Majapahit","Southeast Asia","Middle Ages",1293,1527,"maritime empire;literature;Hindu-Buddhist culture;spice trade","Kawi script","jv"));
+    vec_push(v, civ_new("Pagan Kingdom","Southeast Asia","Middle Ages",849,1297,"pagoda construction;Theravada Buddhism;irrigation systems","Burmese script","my"));
+    vec_push(v, civ_new("Dai Viet","Southeast Asia","Middle Ages",968,1802,"rice cultivation;Confucian bureaucracy;military resistance;poetry","Chu Nom script","vi"));
+    vec_push(v, civ_new("Ayutthaya Kingdom","Southeast Asia","Renaissance",1351,1767,"diplomacy;international trade;Buddhist art;hydraulic management","Thai script","th"));
+    vec_push(v, civ_new("Tonga Empire","Oceania","Middle Ages",950,1865,"ocean navigation;tapa cloth;chieftain hierarchy","oral tradition","to"));
+    vec_push(v, civ_new("Hawaiian Kingdom","Oceania","Industrial Age",1795,1893,"ahupuaa land management;wayfinding navigation;featherwork","Latin alphabet","haw"));
+    vec_push(v, civ_new("Olmec","Mesoamerica","Mesoamerican Preclassic",(0-1500),(0-400),"colossal stone heads;ceremonial centers;rubber processing;jaguar worship","Olmec script",""));
+    vec_push(v, civ_new("Aztec Empire","Mesoamerica","Mesoamerican Postclassic",1428,1521,"chinampas agriculture;tribute system;monumental architecture;calendar systems","Aztec pictographs","nah"));
+    vec_push(v, civ_new("Inca Empire","South America","Renaissance",1438,1533,"road network;terrace farming;quipu record-keeping;masonry","Quipu","qu"));
+    vec_push(v, civ_new("Mississippian Culture","North America","Middle Ages",800,1600,"mound building;maize agriculture;chiefdom organization;shell trade","oral tradition",""));
+    vec_push(v, civ_new("Muisca Confederation","South America","Middle Ages",600,1541,"goldworking;emerald mining;salt trade","oral tradition",""));
+    vec_push(v, civ_new("Tiwanaku","South America","Middle Ages",550,1000,"raised-field agriculture;monolithic architecture;high-altitude adaptation","oral tradition","ay"));
+    vec_push(v, civ_new("Byzantine Empire","Mediterranean, Europe","Middle Ages",330,1453,"Roman law codification;Orthodox Christianity;mosaic art;Greek fire","Greek alphabet","grc"));
+    vec_push(v, civ_new("Viking/Norse","Northern Europe","Middle Ages",793,1066,"longship navigation;Norse mythology;exploration;saga literature","Runic/Futhark","non"));
+    vec_push(v, civ_new("Carolingian Empire","Europe","Middle Ages",751,888,"Carolingian Renaissance;feudalism;manuscript production","Latin alphabet","la"));
+    vec_push(v, civ_new("Kingdom of France","Europe","Age of Enlightenment",843,1792,"Gothic architecture;Enlightenment philosophy;courtly culture;centralized monarchy","Latin alphabet","fr"));
+    vec_push(v, civ_new("Holy Roman Empire","Central Europe","Middle Ages",800,1806,"imperial governance;printing press;Hanseatic trade;Reformation","Latin alphabet","de"));
+    vec_push(v, civ_new("Republic of Venice","Mediterranean","Renaissance",697,1797,"maritime trade;glassmaking;republican governance;Renaissance art","Latin alphabet","vec"));
+    vec_push(v, civ_new("Spanish Empire","Europe, Americas","Renaissance",1469,1975,"colonial expansion;silver trade;Reconquista;Catholic missions","Latin alphabet","es"));
+    vec_push(v, civ_new("Portuguese Empire","Europe, Africa, Asia","Renaissance",1415,1999,"maritime exploration;cartography;spice trade;colonial administration","Latin alphabet","pt"));
+    vec_push(v, civ_new("Hittite Empire","Near East","Bronze Age",(0-1600),(0-1178),"iron metallurgy;chariot warfare;treaty diplomacy;bilingual governance","Cuneiform/Hieroglyphic Luwian","hit"));
+    vec_push(v, civ_new("Assyrian Empire","Near East","Iron Age",(0-2500),(0-609),"military engineering;library of Ashurbanipal;siege warfare;imperial roads","Cuneiform","akk"));
+    vec_push(v, civ_new("Phoenicia","Near East, Mediterranean","Iron Age",(0-1500),(0-300),"alphabet invention;maritime trade;purple dye production;colonization","Phoenician alphabet","phn"));
+    vec_push(v, civ_new("Parthian Empire","Near East, Central Asia","Classical Antiquity",(0-247),224,"horse archery;Silk Road trade;feudal governance;Hellenistic synthesis","Aramaic script","xpr"));
+    vec_push(v, civ_new("Sassanid Empire","Near East","Classical Antiquity",224,651,"Zoroastrian state religion;academy of Gondishapur;rock reliefs;heavy cavalry","Pahlavi script","pal"));
+    vec_push(v, civ_new("Arab Caliphates","Near East","Middle Ages",632,1517,"Islamic scholarship;algebra and optics;trade networks;architectural innovation","Arabic script","ar"));
+    vec_push(v, civ_new("Timurid Empire","Central Asia","Middle Ages",1370,1507,"Timurid Renaissance;astronomical observatories;miniature painting;Persian literature","Persian/Arabic script","fa"));
+    vec_push(v, civ_new("Chola Dynasty","South Asia","Middle Ages",300,1279,"naval power;bronze sculpture;temple architecture;maritime trade","Tamil script","ta"));
+    vec_push(v, civ_new("Vijayanagara Empire","South Asia","Middle Ages",1336,1646,"Hindu patronage;Hampi architecture;diamond trade;irrigation systems","Kannada script","kn"));
+    vec_push(v, civ_new("Maratha Empire","South Asia","Age of Enlightenment",1674,1818,"guerrilla warfare;naval innovation;decentralized governance","Modi script","mr"));
+    vec_push(v, civ_new("Sikh Empire","South Asia","Industrial Age",1799,1849,"military modernization;religious pluralism;Khalsa governance","Gurmukhi script","pa"));
+    vec_push(v, civ_new("Goryeo Dynasty","East Asia","Middle Ages",918,1392,"celadon pottery;movable type printing;Buddhist scholarship;civil service examinations","Hanja/Korean","ko"));
+    vec_push(v, civ_new("Tokugawa Shogunate","East Asia","Age of Enlightenment",1603,1868,"sakoku isolationism;ukiyo-e art;bushido culture;urbanization","Japanese script","ja"));
+    return v;
+}
+
+fn all_civilizations() {
+    if (civ_init_done == 0) { civ_vec = build_civs(); civ_init_done = 1; }
+    return civ_vec;
+}
+fn civ_count() { return vec_len(all_civilizations()); }
+fn civ_get(idx) { return vec_get(all_civilizations(), idx); }
+
+fn civs_by_region(region: Str) {
+    var result = vec_new();
+    var v = all_civilizations(); var n = vec_len(v);
+    for (var i = 0; i < n; i = i + 1) {
+        var p = vec_get(v, i);
+        if (str_contains(civ_region(p), region) == 1) { vec_push(result, p); }
+    }
+    return result;
+}
+
+fn civs_active_at(year) {
+    var result = vec_new();
+    var v = all_civilizations(); var n = vec_len(v);
+    for (var i = 0; i < n; i = i + 1) {
+        var p = vec_get(v, i);
+        if (year >= civ_found(p) && year <= civ_end(p)) { vec_push(result, p); }
+    }
+    return result;
+}
+
+fn civ_by_name(name: Str) {
+    var v = all_civilizations(); var n = vec_len(v);
+    for (var i = 0; i < n; i = i + 1) {
+        var p = vec_get(v, i);
+        if (str_eq(civ_name(p), name) == 1) { return p; }
+    }
+    return 0;
+}

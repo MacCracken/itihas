@@ -1,0 +1,97 @@
+# itihas — Structured World History (Cyrius port)
+# 10 modules, 8846 lines of Rust → Cyrius
+
+include "lib/string.cyr"
+include "lib/fmt.cyr"
+include "lib/alloc.cyr"
+include "lib/vec.cyr"
+include "lib/str.cyr"
+include "lib/syscalls.cyr"
+
+include "src/error.cyr"
+include "src/era.cyr"
+include "src/calendar.cyr"
+include "src/civilization.cyr"
+include "src/figure.cyr"
+include "src/event.cyr"
+include "src/causality.cyr"
+include "src/interaction.cyr"
+include "src/campaign.cyr"
+include "src/site.cyr"
+include "src/trade.cyr"
+
+var tp = 0;
+var tf = 0;
+
+fn check(val, expected, name) {
+    if (val == expected) { tp = tp + 1; }
+    else {
+        tf = tf + 1;
+        syscall(SYS_WRITE, 2, "FAIL: ", 6);
+        syscall(SYS_WRITE, 2, name, strlen(name));
+        syscall(SYS_WRITE, 2, "\n", 1);
+    }
+    return 0;
+}
+
+fn ok(val, name) {
+    if (val != 0) { tp = tp + 1; }
+    else {
+        tf = tf + 1;
+        syscall(SYS_WRITE, 2, "FAIL: ", 6);
+        syscall(SYS_WRITE, 2, name, strlen(name));
+        syscall(SYS_WRITE, 2, "\n", 1);
+    }
+    return 0;
+}
+
+alloc_init();
+println("=== itihas test suite ===");
+
+check(era_count(), 25, "era_count=25");
+ok(era_by_name("Bronze Age"), "era Bronze Age");
+ok(vec_len(eras_containing(2025)) > 0, "eras containing 2025");
+
+check(calendar_count(), 8, "calendar_count=8");
+ok(calendar_by_name("Gregorian"), "cal Gregorian");
+
+check(civ_count(), 53, "civ_count=53");
+ok(civ_by_name("Mesopotamia"), "civ Mesopotamia");
+ok(vec_len(civs_active_at((0-500))) > 0, "civs active -500");
+
+check(figure_count(), 52, "figure_count=52");
+ok(figure_by_name("Aristotle"), "fig Aristotle");
+ok(vec_len(figures_by_domain(DOM_RULER)) > 0, "fig domain Ruler");
+
+check(event_count(), 105, "event_count=105");
+ok(event_by_name("French Revolution"), "evt French Revolution");
+ok(vec_len(events_by_category(CAT_WAR)) > 0, "evt cat War");
+
+check(causality_count(), 13, "causality_count=13");
+ok(vec_len(causes_of("French Revolution")) > 0, "causes of French Rev");
+
+check(interaction_count(), 21, "interaction_count=21");
+ok(vec_len(interactions_for("Roman Empire")) > 0, "int for Rome");
+ok(influence_score("Ancient Egypt", "Hittite Empire") > 0, "inf score Egypt-Hittite");
+
+check(campaign_count(), 14, "campaign_count=14");
+ok(campaign_by_name("Napoleonic Wars"), "camp Napoleonic");
+
+check(site_count(), 32, "site_count=32");
+ok(site_by_name("Machu Picchu"), "site Machu Picchu");
+
+check(route_count(), 15, "route_count=15");
+ok(route_by_name("Silk Road"), "route Silk Road");
+ok(vec_len(routes_by_commodity("silk")) > 0, "routes commodity silk");
+
+println("");
+syscall(SYS_WRITE, 1, "passed: ", 8);
+print_num(tp);
+println("");
+syscall(SYS_WRITE, 1, "failed: ", 8);
+print_num(tf);
+println("");
+
+if (tf > 0) { syscall(SYS_EXIT, 1); }
+println("=== all tests passed ===");
+syscall(SYS_EXIT, 0);
