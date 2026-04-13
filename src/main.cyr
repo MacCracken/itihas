@@ -1,12 +1,7 @@
 # itihas — Structured World History v2.0.0
 # 10 modules, 297 entities, ported from 8846 lines of Rust
 
-include "lib/string.cyr"
-include "lib/fmt.cyr"
-include "lib/alloc.cyr"
-include "lib/vec.cyr"
-include "lib/str.cyr"
-include "lib/syscalls.cyr"
+# Stdlib auto-included via cyrius.toml
 
 include "src/error.cyr"
 include "src/era.cyr"

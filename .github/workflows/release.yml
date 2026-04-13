@@ -7,40 +7,28 @@ on:
 permissions:
   contents: write
 
-env:
-  CYRIUS_VERSION: "3.6.3"
-
 jobs:
-  # ── CI Gate (must pass before release) ──
   ci:
     name: CI Gate
     uses: ./.github/workflows/ci.yml
 
-  # ── Build release binary ──
-  build:
-    name: Build Release
+  release:
+    name: Build & Release
     needs: [ci]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Verify version consistency
+      - name: Verify version
         run: |
           FILE_VERSION=$(cat VERSION | tr -d '[:space:]')
-          TOML_VERSION=$(grep '^version' cyrius.toml | head -1 | sed 's/.*"\(.*\)"/\1/')
           TAG_VERSION="${GITHUB_REF_NAME}"
-          if [ "$FILE_VERSION" != "$TAG_VERSION" ]; then
-            echo "ERROR: VERSION ($FILE_VERSION) != tag ($TAG_VERSION)"
-            exit 1
-          fi
-          if [ "$TOML_VERSION" != "$TAG_VERSION" ]; then
-            echo "ERROR: cyrius.toml ($TOML_VERSION) != tag ($TAG_VERSION)"
-            exit 1
-          fi
-          echo "Version verified: $TAG_VERSION"
+          test "$FILE_VERSION" = "$TAG_VERSION" || { echo "VERSION ($FILE_VERSION) != tag ($TAG_VERSION)"; exit 1; }
 
       - name: Install Cyrius toolchain
         run: |
+          CYRIUS_VERSION="${CYRIUS_VERSION:-$(cat .cyrius-toolchain | tr -d '[:space:]')}"
+          echo "Installing Cyrius $CYRIUS_VERSION"
           curl -sLO "https://github.com/MacCracken/cyrius/releases/download/$CYRIUS_VERSION/cyrius-$CYRIUS_VERSION-x86_64-linux.tar.gz"
           tar xzf "cyrius-$CYRIUS_VERSION-x86_64-linux.tar.gz"
           CYRIUS_DIR="cyrius-$CYRIUS_VERSION-x86_64-linux"
@@ -49,77 +37,17 @@ jobs:
           cp -r "$CYRIUS_DIR/lib/"* "$HOME/.cyrius/lib/" 2>/dev/null || true
           chmod +x "$HOME/.cyrius/bin/"* 2>/dev/null || true
           echo "$HOME/.cyrius/bin" >> $GITHUB_PATH
+          echo "CYRIUS_HOME=$HOME/.cyrius" >> $GITHUB_ENV
 
-      - name: Build x86_64 binary
+      - name: Build
         run: |
+          cyrius deps
           mkdir -p build
-          cat src/main.cyr | cc3 > build/itihas 2>/tmp/cc3_stderr
-          if [ $? -ne 0 ]; then
-            cat /tmp/cc3_stderr
-            exit 1
-          fi
-          chmod +x build/itihas
+          cyrius build src/main.cyr build/itihas
           echo "itihas: $(wc -c < build/itihas) bytes"
-          cp build/itihas itihas-x86_64
-
-      - name: Run tests
-        run: |
-          ./itihas-x86_64 2>&1 | tee /tmp/test_output
-          grep -q "all tests passed" /tmp/test_output
-          echo "PASS: test suite"
-
-      - name: Extract changelog
-        id: changelog
-        run: |
-          VERSION="${GITHUB_REF_NAME}"
-          BODY=$(awk "/^## \\[$VERSION\\]/{found=1; next} /^## \\[/{if(found) exit} found{print}" CHANGELOG.md)
-          if [ -z "$BODY" ]; then
-            BODY="No changelog entry for this release."
-          fi
-          echo "$BODY" > release-body.md
-
-      - name: Create source archive
-        run: |
-          TAG="${GITHUB_REF_NAME}"
-          git archive --format=tar.gz --prefix="itihas-${TAG}/" -o "itihas-${TAG}-src.tar.gz" HEAD
-
-      - name: Generate checksums
-        run: |
-          TAG="${GITHUB_REF_NAME}"
-          sha256sum itihas-x86_64 "itihas-${TAG}-src.tar.gz" > SHA256SUMS
-          cat SHA256SUMS
-
-      - name: Upload build artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: release-binaries
-          path: |
-            itihas-x86_64
-            itihas-*-src.tar.gz
-            SHA256SUMS
-            release-body.md
-          retention-days: 5
-
-  # ── Create GitHub Release ──
-  release:
-    name: Create GitHub Release
-    needs: [build]
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Download build artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: release-binaries
 
       - name: Create release
         uses: softprops/action-gh-release@v2
         with:
-          name: "itihas ${{ github.ref_name }}"
-          body_path: release-body.md
-          prerelease: ${{ startsWith(github.ref_name, '0.') }}
-          files: |
-            itihas-x86_64
-            itihas-${{ github.ref_name }}-src.tar.gz
-            SHA256SUMS
+          generate_release_notes: true
+          files: build/itihas

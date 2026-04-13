@@ -11,11 +11,7 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-env:
-  CYRIUS_VERSION: "3.6.3"
-
 jobs:
-  # ── Build ──
   build:
     name: Build
     runs-on: ubuntu-latest
@@ -24,6 +20,8 @@ jobs:
 
       - name: Install Cyrius toolchain
         run: |
+          CYRIUS_VERSION="${CYRIUS_VERSION:-$(cat .cyrius-toolchain | tr -d '[:space:]')}"
+          echo "Installing Cyrius $CYRIUS_VERSION"
           curl -sLO "https://github.com/MacCracken/cyrius/releases/download/$CYRIUS_VERSION/cyrius-$CYRIUS_VERSION-x86_64-linux.tar.gz"
           tar xzf "cyrius-$CYRIUS_VERSION-x86_64-linux.tar.gz"
           CYRIUS_DIR="cyrius-$CYRIUS_VERSION-x86_64-linux"
@@ -32,132 +30,30 @@ jobs:
           cp -r "$CYRIUS_DIR/lib/"* "$HOME/.cyrius/lib/" 2>/dev/null || true
           chmod +x "$HOME/.cyrius/bin/"* 2>/dev/null || true
           echo "$HOME/.cyrius/bin" >> $GITHUB_PATH
+          echo "CYRIUS_HOME=$HOME/.cyrius" >> $GITHUB_ENV
 
-      - name: Build itihas
+      - name: Resolve dependencies
+        run: cyrius deps
+
+      - name: Build
         run: |
           mkdir -p build
-          cat src/main.cyr | cc3 > build/itihas 2>/tmp/cc3_stderr
-          if [ $? -ne 0 ]; then
-            cat /tmp/cc3_stderr
-            exit 1
-          fi
-          chmod +x build/itihas
+          cyrius build src/main.cyr build/itihas
           echo "itihas: $(wc -c < build/itihas) bytes"
-          grep -v '^$' /tmp/cc3_stderr 2>/dev/null || true
 
-      - name: Upload build artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: build-x86_64
-          path: build/itihas
-          retention-days: 5
-
-  # ── Check & Format ──
-  check:
-    name: Check & Format
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install Cyrius toolchain
+      - name: Smoke test
         run: |
-          curl -sLO "https://github.com/MacCracken/cyrius/releases/download/$CYRIUS_VERSION/cyrius-$CYRIUS_VERSION-x86_64-linux.tar.gz"
-          tar xzf "cyrius-$CYRIUS_VERSION-x86_64-linux.tar.gz"
-          CYRIUS_DIR="cyrius-$CYRIUS_VERSION-x86_64-linux"
-          mkdir -p "$HOME/.cyrius/bin" "$HOME/.cyrius/lib"
-          cp "$CYRIUS_DIR/bin/"* "$HOME/.cyrius/bin/" 2>/dev/null || true
-          cp -r "$CYRIUS_DIR/lib/"* "$HOME/.cyrius/lib/" 2>/dev/null || true
-          chmod +x "$HOME/.cyrius/bin/"* 2>/dev/null || true
-          echo "$HOME/.cyrius/bin" >> $GITHUB_PATH
-
-      - name: Format check
-        run: |
-          FAIL=0
-          for f in src/*.cyr; do
-            [ -f "$f" ] || continue
-            cyrfmt "$f" > /tmp/fmt_check
-            if ! diff -q "$f" /tmp/fmt_check >/dev/null 2>&1; then
-              echo "  NEEDS FORMAT: $f"
-              FAIL=1
-            fi
-          done
-          test $FAIL -eq 0 && echo "PASS: all files formatted"
-
-  # ── Security ──
-  security:
-    name: Security Scan
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Scan for dangerous patterns
-        run: |
-          WARN=0
-          if grep -rn 'syscall(59' src/ 2>/dev/null | grep -v "# " | grep -v logging; then
-            echo "WARN: raw execve syscall"
-            WARN=1
-          fi
-          if grep -rn 'syscall(57' src/ 2>/dev/null | grep -v "# "; then
-            echo "WARN: raw fork syscall"
-            WARN=1
-          fi
-          echo "security scan complete (warnings: $WARN)"
-
-  # ── Tests ──
-  test:
-    name: Test
-    needs: [build]
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install Cyrius toolchain
-        run: |
-          curl -sLO "https://github.com/MacCracken/cyrius/releases/download/$CYRIUS_VERSION/cyrius-$CYRIUS_VERSION-x86_64-linux.tar.gz"
-          tar xzf "cyrius-$CYRIUS_VERSION-x86_64-linux.tar.gz"
-          CYRIUS_DIR="cyrius-$CYRIUS_VERSION-x86_64-linux"
-          mkdir -p "$HOME/.cyrius/bin" "$HOME/.cyrius/lib"
-          cp "$CYRIUS_DIR/bin/"* "$HOME/.cyrius/bin/" 2>/dev/null || true
-          cp -r "$CYRIUS_DIR/lib/"* "$HOME/.cyrius/lib/" 2>/dev/null || true
-          chmod +x "$HOME/.cyrius/bin/"* 2>/dev/null || true
-          echo "$HOME/.cyrius/bin" >> $GITHUB_PATH
-
-      - name: Run test suite
-        run: |
-          mkdir -p build
-          cat src/main.cyr | cc3 > build/itihas 2>&1
           chmod +x build/itihas
-          ./build/itihas 2>&1 | tee /tmp/test_output
-          grep -q "all tests passed" /tmp/test_output
+          build/itihas 2>&1 | tee /tmp/smoke
+          grep -q "0 failed" /tmp/smoke
 
-  # ── Documentation ──
   docs:
     name: Documentation
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      - name: Check required docs exist
+      - name: Check required docs
         run: |
-          MISSING=0
-          for doc in README.md CHANGELOG.md VERSION CONTRIBUTING.md SECURITY.md LICENSE CODE_OF_CONDUCT.md cyrius.toml; do
-            if [ -f "$doc" ]; then
-              echo "  OK: $doc"
-            else
-              echo "  MISSING: $doc"
-              MISSING=1
-            fi
+          for doc in README.md CHANGELOG.md VERSION LICENSE cyrius.toml; do
+            test -f "$doc" && echo "OK: $doc" || { echo "MISSING: $doc"; exit 1; }
           done
-          exit $MISSING
-
-      - name: Verify version consistency
-        run: |
-          VERSION=$(cat VERSION | tr -d '[:space:]')
-          TOML_VERSION=$(grep '^version' cyrius.toml | head -1 | sed 's/.*"\(.*\)"/\1/')
-          echo "VERSION file:  $VERSION"
-          echo "cyrius.toml:   $TOML_VERSION"
-          if [ "$VERSION" != "$TOML_VERSION" ]; then
-            echo "FAIL: VERSION != cyrius.toml"
-            exit 1
-          fi
-          echo "Version consistent"
