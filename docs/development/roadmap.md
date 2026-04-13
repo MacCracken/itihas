@@ -32,7 +32,7 @@ Rust benchmark baseline in [benchmarks-rust-v-cyrius.md](../../benchmarks-rust-v
 - [x] hoosh module: `answer_from_data()`, `llm_answer()`, `parse_tool_call()`, `resolve_era_lookup()`, 6 tool definitions, HTTP POST client
 - [x] 30 new tests (153 total)
 
-## v2.3.0 — Tool Integration
+## v2.3.0 — Tool Integration (blocked on bote)
 
 | # | Item | Blocked on | Details |
 |---|------|-----------|---------|
