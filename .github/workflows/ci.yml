@@ -45,7 +45,7 @@ jobs:
         run: |
           chmod +x build/itihas
           build/itihas 2>&1 | tee /tmp/smoke
-          grep -q "0 failed" /tmp/smoke
+          grep -q "failed: 0" /tmp/smoke
 
   docs:
     name: Documentation
