@@ -92,6 +92,8 @@ fn civs_by_region(region: Str) {
     return result;
 }
 
+fn _cmp_civ_found(a, b) { return load64(a+CIV_FOUND) - load64(b+CIV_FOUND); }
+
 fn civs_active_at(year) {
     var result = vec_new();
     var v = all_civilizations(); var n = vec_len(v);
@@ -99,6 +101,7 @@ fn civs_active_at(year) {
         var p = vec_get(v, i);
         if (year >= civ_found(p) && year <= civ_end(p)) { vec_push(result, p); }
     }
+    vec_sort(result, &_cmp_civ_found);
     return result;
 }
 
@@ -106,7 +109,7 @@ fn civ_by_name(name: Str) {
     var v = all_civilizations(); var n = vec_len(v);
     for (var i = 0; i < n; i = i + 1) {
         var p = vec_get(v, i);
-        if (str_eq(civ_name(p), name) == 1) { return p; }
+        if (str_eq_lower(civ_name(p), name) == 1) { return p; }
     }
     return 0;
 }

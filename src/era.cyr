@@ -41,25 +41,25 @@ fn build_eras() {
     vec_push(v, era_new("Industrial Age", 1760, 1970, "Global", "Mechanization, mass production, urbanization, world wars", MODERN, SCOPE_GLOBAL));
     vec_push(v, era_new("Information Age", 1970, 2147483647, "Global", "Digital revolution, internet, AI, globalization", CONTEMPORARY, SCOPE_GLOBAL));
     # Chinese dynasties
-    vec_push(v, era_new("Xia Dynasty", (0-2070), (0-1600), "East Asia", "", ANCIENT, SCOPE_REGIONAL));
-    vec_push(v, era_new("Shang Dynasty", (0-1600), (0-1046), "East Asia", "", ANCIENT, SCOPE_REGIONAL));
-    vec_push(v, era_new("Zhou Dynasty", (0-1046), (0-256), "East Asia", "", ANCIENT, SCOPE_REGIONAL));
-    vec_push(v, era_new("Qin Dynasty", (0-221), (0-206), "East Asia", "", CLASSICAL, SCOPE_REGIONAL));
-    vec_push(v, era_new("Han Dynasty", (0-206), 220, "East Asia", "", CLASSICAL, SCOPE_REGIONAL));
-    vec_push(v, era_new("Tang Dynasty", 618, 907, "East Asia", "", MEDIEVAL, SCOPE_REGIONAL));
-    vec_push(v, era_new("Song Dynasty", 960, 1279, "East Asia", "", MEDIEVAL, SCOPE_REGIONAL));
-    vec_push(v, era_new("Ming Dynasty", 1368, 1644, "East Asia", "", EARLY_MODERN, SCOPE_REGIONAL));
-    vec_push(v, era_new("Qing Dynasty", 1644, 1912, "East Asia", "", EARLY_MODERN, SCOPE_REGIONAL));
+    vec_push(v, era_new("Xia Dynasty", (0-2070), (0-1600), "East Asia", "Semi-legendary first dynasty of China, Yellow River valley", ANCIENT, SCOPE_REGIONAL));
+    vec_push(v, era_new("Shang Dynasty", (0-1600), (0-1046), "East Asia", "Oracle bones, bronze casting, earliest Chinese writing", ANCIENT, SCOPE_REGIONAL));
+    vec_push(v, era_new("Zhou Dynasty", (0-1046), (0-256), "East Asia", "Mandate of Heaven, Confucius, Laozi, Hundred Schools of Thought", ANCIENT, SCOPE_REGIONAL));
+    vec_push(v, era_new("Qin Dynasty", (0-221), (0-206), "East Asia", "First unification of China, Great Wall begun, Legalism, terracotta army", CLASSICAL, SCOPE_REGIONAL));
+    vec_push(v, era_new("Han Dynasty", (0-206), 220, "East Asia", "Silk Road, Confucian state, paper invention, civil service exams", CLASSICAL, SCOPE_REGIONAL));
+    vec_push(v, era_new("Tang Dynasty", 618, 907, "East Asia", "Golden age of Chinese poetry, cosmopolitan culture, woodblock printing", MEDIEVAL, SCOPE_REGIONAL));
+    vec_push(v, era_new("Song Dynasty", 960, 1279, "East Asia", "Movable type, gunpowder weapons, compass navigation, Neo-Confucianism", MEDIEVAL, SCOPE_REGIONAL));
+    vec_push(v, era_new("Ming Dynasty", 1368, 1644, "East Asia", "Great Wall reconstruction, Forbidden City, Zheng He voyages, porcelain", EARLY_MODERN, SCOPE_REGIONAL));
+    vec_push(v, era_new("Qing Dynasty", 1644, 1912, "East Asia", "Last imperial dynasty, Manchu rule, territorial expansion, Opium Wars", EARLY_MODERN, SCOPE_REGIONAL));
     # Indian
-    vec_push(v, era_new("Vedic Period", (0-1500), (0-500), "South Asia", "", ANCIENT, SCOPE_REGIONAL));
-    vec_push(v, era_new("Maurya Period", (0-322), (0-185), "South Asia", "", CLASSICAL, SCOPE_REGIONAL));
-    vec_push(v, era_new("Gupta Period", 320, 550, "South Asia", "", CLASSICAL, SCOPE_REGIONAL));
-    vec_push(v, era_new("Delhi Sultanate", 1206, 1526, "South Asia", "", MEDIEVAL, SCOPE_REGIONAL));
-    vec_push(v, era_new("Mughal Period", 1526, 1857, "South Asia", "", EARLY_MODERN, SCOPE_REGIONAL));
+    vec_push(v, era_new("Vedic Period", (0-1500), (0-500), "South Asia", "Composition of the Vedas, varna system, early Hinduism, Sanskrit literature", ANCIENT, SCOPE_REGIONAL));
+    vec_push(v, era_new("Maurya Period", (0-322), (0-185), "South Asia", "First pan-Indian empire under Chandragupta and Ashoka, spread of Buddhism", CLASSICAL, SCOPE_REGIONAL));
+    vec_push(v, era_new("Gupta Period", 320, 550, "South Asia", "Golden age of India: zero, decimal system, Kalidasa, Aryabhata, Nalanda", CLASSICAL, SCOPE_REGIONAL));
+    vec_push(v, era_new("Delhi Sultanate", 1206, 1526, "South Asia", "Turkic and Afghan Muslim rule in northern India, Indo-Islamic architecture", MEDIEVAL, SCOPE_REGIONAL));
+    vec_push(v, era_new("Mughal Period", 1526, 1857, "South Asia", "Babur to Bahadur Shah, Taj Mahal, Akbar's religious tolerance, Urdu synthesis", EARLY_MODERN, SCOPE_REGIONAL));
     # Mesoamerican
-    vec_push(v, era_new("Mesoamerican Preclassic", (0-2000), 250, "Mesoamerica", "", ANCIENT, SCOPE_REGIONAL));
-    vec_push(v, era_new("Mesoamerican Classic", 250, 900, "Mesoamerica", "", MEDIEVAL, SCOPE_REGIONAL));
-    vec_push(v, era_new("Mesoamerican Postclassic", 900, 1521, "Mesoamerica", "", MEDIEVAL, SCOPE_REGIONAL));
+    vec_push(v, era_new("Mesoamerican Preclassic", (0-2000), 250, "Mesoamerica", "Olmec civilization, early Maya settlements, development of writing and calendars", ANCIENT, SCOPE_REGIONAL));
+    vec_push(v, era_new("Mesoamerican Classic", 250, 900, "Mesoamerica", "Maya golden age, Teotihuacan, Zapotec, monumental architecture and astronomy", MEDIEVAL, SCOPE_REGIONAL));
+    vec_push(v, era_new("Mesoamerican Postclassic", 900, 1521, "Mesoamerica", "Toltec and Aztec empires, Chichen Itza, Tenochtitlan, Spanish contact", MEDIEVAL, SCOPE_REGIONAL));
     return v;
 }
 
@@ -70,6 +70,8 @@ fn all_eras() {
 fn era_count() { return vec_len(all_eras()); }
 fn era_get(idx) { return vec_get(all_eras(), idx); }
 
+fn _cmp_era_start(a, b) { return load64(a+ERA_START) - load64(b+ERA_START); }
+
 fn eras_containing(year) {
     var result = vec_new();
     var v = all_eras();
@@ -78,6 +80,7 @@ fn eras_containing(year) {
         var p = vec_get(v, i);
         if (year >= era_start(p) && year <= era_end(p)) { vec_push(result, p); }
     }
+    vec_sort(result, &_cmp_era_start);
     return result;
 }
 
@@ -108,7 +111,7 @@ fn era_by_name(name: Str) {
     var n = vec_len(v);
     for (var i = 0; i < n; i = i + 1) {
         var p = vec_get(v, i);
-        if (str_eq(era_name(p), name) == 1) { return p; }
+        if (str_eq_lower(era_name(p), name) == 1) { return p; }
     }
     return 0;
 }

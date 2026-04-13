@@ -17,27 +17,26 @@ Rust benchmark baseline in [benchmarks-rust-v-cyrius.md](../../benchmarks-rust-v
 - [x] 141KB static ELF binary, no external dependencies
 - [x] Rust v1.5.0 source preserved in `rust-old/`
 
-## v2.1.0 — Data & Quality
+## v2.1.0 — Data, Quality & Serialization
 
 | # | Item | Effort | Details |
 |---|------|--------|---------|
-| 1 | **Restore description fields** | Medium | cc3 str_data limit is 32KB; itihas needs ~50KB. Either load from external `.toml` data file at runtime, or wait for cc3 str_data expansion. |
-| 2 | **Case-insensitive lookups** | Low | Needs `str_lower()` in Cyrius stdlib. Rust used `to_lowercase()` on all `by_name` queries. |
-| 3 | **`.bcyr` benchmark harness** | Medium | Port 28 criterion benchmarks to Cyrius bench format. Enables direct Rust-vs-Cyrius timing comparison. |
-| 4 | **Chronological sort** | Low | `events_between()` should return results sorted by year. Needs vec sort or insertion-order guarantee. |
+| 1 | **Restore description fields** | Medium | cc3 v4.0.0 raised str_data to 256KB (was 32KB). Restore inline descriptions to all 10 data modules from Rust source. |
+| 2 | **Case-insensitive lookups** | Low | Add `str_lower()` to lib/str.cyr, update all `by_name()` functions. |
+| 3 | **Chronological sort** | Low | Add `vec_sort()` to lib/vec.cyr, apply to `events_between()` and other range queries. |
+| 4 | **argonaut integration** | Medium | JSON serialization for all types. argonaut v1.2.0 is ported; needs itihas struct integration. |
+| 5 | **`.bcyr` benchmark harness** | Medium | Port 28 criterion benchmarks to Cyrius bench format. Enables direct Rust-vs-Cyrius timing comparison. |
 
-## v2.2.0 — Serialization
-
-| # | Item | Blocked on | Details |
-|---|------|-----------|---------|
-| 5 | **argonaut integration** | argonaut Cyrius port | JSON serialization for all types. `#derive(Serialize)` on structs. Enables serde roundtrip tests. |
-| 6 | **TOML data loading** | lib/toml.cyr (in stdlib) | Load description fields from `data/*.toml` at runtime, bypassing str_data limit. |
-
-## v2.3.0 — AI & Tool Integration
+## v2.2.0 — AI Integration
 
 | # | Item | Blocked on | Details |
 |---|------|-----------|---------|
-| 7 | **hoosh module** | hoosh Cyrius port | `answer_from_data()`, `free_form()`, `civilizations_at()`, `events_in_range()`, `figure_lookup()`, `resolve_era_lookup()`. Natural language historical queries via LLM inference. |
+| 7 | **hoosh module** | — | `answer_from_data()`, `free_form()`, `civilizations_at()`, `events_in_range()`, `figure_lookup()`, `resolve_era_lookup()`. Natural language historical queries via LLM inference. hoosh Cyrius port complete. |
+
+## v2.3.0 — Tool Integration
+
+| # | Item | Blocked on | Details |
+|---|------|-----------|---------|
 | 8 | **mcp module** | bote Cyrius port | `tool_definitions()`, `register_handlers()`, `register_all()`. 5 MCP tool handlers: `itihas_era`, `itihas_civilization`, `itihas_event`, `itihas_figure`, `itihas_timeline`. |
 | 9 | **daimon module** | bote Cyrius port | `register_tools()`, `host_tool_descriptions()`, `invoke()`. Agent orchestrator integration via McpHostRegistry. |
 
@@ -47,9 +46,9 @@ These Cyrius ports must happen in other repos before itihas can integrate:
 
 | Dependency | Repo | Blocks | Status |
 |-----------|------|--------|--------|
-| **hoosh** | MacCracken/hoosh | v2.3.0 #7 | Not started |
+| **hoosh** | MacCracken/hoosh | v2.2.0 #7 | Ported |
 | **bote** | MacCracken/bote | v2.3.0 #8, #9 | Not started |
-| **argonaut** (itihas integration) | MacCracken/argonaut | v2.2.0 #5 | argonaut itself is ported (424 tests), but itihas struct integration not done |
+| **argonaut** (itihas integration) | MacCracken/argonaut | v2.1.0 #3 | argonaut itself is ported (424 tests), but itihas struct integration not done |
 
 ## Future (demand-gated)
 

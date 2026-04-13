@@ -46,7 +46,7 @@ fn calendar_by_name(name: Str) {
     var n = vec_len(v);
     for (var i = 0; i < n; i = i + 1) {
         var p = vec_get(v, i);
-        if (str_contains(cal_name(p), name) == 1) { return p; }
+        if (str_eq_lower(cal_name(p), name) == 1) { return p; }
     }
     return 0;
 }

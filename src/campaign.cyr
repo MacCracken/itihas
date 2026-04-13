@@ -31,68 +31,68 @@ fn bat_add(camp, name: Str, year, loc: Str, desc: Str) {
 
 fn build_campaigns() {
     var v = vec_new();
-    var c = camp_new("Greco-Persian Wars","Mediterranean",(0-499),(0-449),"Persian Empire","Ancient Greece","Darius I;Xerxes I;Themistocles;Leonidas I",OUT_DEFEAT,"");
-    bat_add(c,"Battle of Marathon",(0-490),"Marathon, Greece","");
-    bat_add(c,"Battle of Thermopylae",(0-480),"Thermopylae, Greece","");
-    bat_add(c,"Battle of Salamis",(0-480),"Salamis, Greece","");
-    bat_add(c,"Battle of Plataea",(0-479),"Plataea, Greece","");
+    var c = camp_new("Greco-Persian Wars","Mediterranean",(0-499),(0-449),"Persian Empire","Ancient Greece","Darius I;Xerxes I;Themistocles;Leonidas I",OUT_DEFEAT,"Persian attempts to conquer Greece repelled; secured Greek independence and Classical golden age");
+    bat_add(c,"Battle of Marathon",(0-490),"Marathon, Greece","Athenian hoplites defeat Persian invasion force on the plain of Marathon");
+    bat_add(c,"Battle of Thermopylae",(0-480),"Thermopylae, Greece","Leonidas and 300 Spartans delay Xerxes' army at the narrow pass");
+    bat_add(c,"Battle of Salamis",(0-480),"Salamis, Greece","Greek fleet destroys Persian navy in the straits; turning point of the war");
+    bat_add(c,"Battle of Plataea",(0-479),"Plataea, Greece","Combined Greek army defeats Persian land forces, ending the invasion");
     vec_push(v, c);
-    c = camp_new("Campaigns of Alexander the Great","Near East",(0-334),(0-323),"Macedon","Persian Empire","Alexander the Great;Darius III",OUT_VICTORY,"");
-    bat_add(c,"Battle of Granicus",(0-334),"Granicus River, Anatolia","");
-    bat_add(c,"Battle of Issus",(0-333),"Issus, Cilicia","");
-    bat_add(c,"Battle of Gaugamela",(0-331),"Gaugamela, Mesopotamia","");
-    bat_add(c,"Battle of the Hydaspes",(0-326),"Hydaspes River, Punjab","");
+    c = camp_new("Campaigns of Alexander the Great","Near East",(0-334),(0-323),"Macedon","Persian Empire","Alexander the Great;Darius III",OUT_VICTORY,"Macedonian conquest of the Persian Empire; created Hellenistic world from Greece to India");
+    bat_add(c,"Battle of Granicus",(0-334),"Granicus River, Anatolia","Alexander's first major victory; opens Anatolia to Macedonian conquest");
+    bat_add(c,"Battle of Issus",(0-333),"Issus, Cilicia","Alexander defeats Darius III; captures the Persian royal family");
+    bat_add(c,"Battle of Gaugamela",(0-331),"Gaugamela, Mesopotamia","Decisive defeat of Darius III; Alexander becomes master of the Persian Empire");
+    bat_add(c,"Battle of the Hydaspes",(0-326),"Hydaspes River, Punjab","Alexander defeats King Porus; easternmost extent of the campaign");
     vec_push(v, c);
-    c = camp_new("Second Punic War","Mediterranean",(0-218),(0-201),"Carthage","Roman Republic","Hannibal Barca;Scipio Africanus",OUT_DEFEAT,"");
-    bat_add(c,"Battle of Cannae",(0-216),"Cannae, Italy","");
-    bat_add(c,"Battle of Zama",(0-202),"Zama, North Africa","");
+    c = camp_new("Second Punic War","Mediterranean",(0-218),(0-201),"Carthage","Roman Republic","Hannibal Barca;Scipio Africanus",OUT_DEFEAT,"Hannibal's invasion of Italy via the Alps; despite tactical genius, Carthage ultimately lost to Roman strategic depth");
+    bat_add(c,"Battle of Cannae",(0-216),"Cannae, Italy","Hannibal's double envelopment destroys 8 Roman legions; worst Roman defeat");
+    bat_add(c,"Battle of Zama",(0-202),"Zama, North Africa","Scipio defeats Hannibal in Africa; ends the war and Carthaginian power");
     vec_push(v, c);
-    c = camp_new("Gallic Wars","Europe",(0-58),(0-50),"Roman Republic","Gaul","Julius Caesar;Vercingetorix",OUT_VICTORY,"");
-    bat_add(c,"Battle of Alesia",(0-52),"Alesia, Gaul","");
+    c = camp_new("Gallic Wars","Europe",(0-58),(0-50),"Roman Republic","Gaul","Julius Caesar;Vercingetorix",OUT_VICTORY,"Roman conquest of Gaul; extended Roman territory to the Rhine and English Channel");
+    bat_add(c,"Battle of Alesia",(0-52),"Alesia, Gaul","Caesar's double circumvallation traps Vercingetorix; Gaul surrenders");
     vec_push(v, c);
-    c = camp_new("Muslim Conquest of Iberia","Europe",711,718,"Arab Caliphates","Visigothic Kingdom","Tariq ibn Ziyad;Musa ibn Nusayr;Roderic",OUT_VICTORY,"");
-    bat_add(c,"Battle of Guadalete",711,"Guadalete, Iberia","");
-    bat_add(c,"Battle of Covadonga",718,"Covadonga, Asturias","");
+    c = camp_new("Muslim Conquest of Iberia","Europe",711,718,"Arab Caliphates","Visigothic Kingdom","Tariq ibn Ziyad;Musa ibn Nusayr;Roderic",OUT_VICTORY,"Umayyad conquest of Visigothic Iberia; established Al-Andalus for nearly 800 years");
+    bat_add(c,"Battle of Guadalete",711,"Guadalete, Iberia","Umayyad forces defeat Visigothic King Roderic; opens Iberia to Muslim rule");
+    bat_add(c,"Battle of Covadonga",718,"Covadonga, Asturias","Pelayo's victory; seeds of the Reconquista and the Kingdom of Asturias");
     vec_push(v, c);
-    c = camp_new("Mongol Invasion of Khwarezmia","Central Asia",1219,1221,"Mongol Empire","Khwarezmian Empire","Genghis Khan;Muhammad II of Khwarezm",OUT_VICTORY,"");
-    bat_add(c,"Siege of Bukhara",1220,"Bukhara, Central Asia","");
-    bat_add(c,"Siege of Samarkand",1220,"Samarkand, Central Asia","");
+    c = camp_new("Mongol Invasion of Khwarezmia","Central Asia",1219,1221,"Mongol Empire","Khwarezmian Empire","Genghis Khan;Muhammad II of Khwarezm",OUT_VICTORY,"Mongol destruction of the Khwarezmian Empire; opened Central Asia and Persia to Mongol rule");
+    bat_add(c,"Siege of Bukhara",1220,"Bukhara, Central Asia","Mongols capture and sack Bukhara; demonstrates speed of Mongol advance");
+    bat_add(c,"Siege of Samarkand",1220,"Samarkand, Central Asia","Largest city in Khwarezmia falls; Mongol Empire expands into Islamic world");
     vec_push(v, c);
-    c = camp_new("Hundred Years' War","Europe",1337,1453,"Kingdom of England","Kingdom of France","Edward III;Henry V;Joan of Arc",OUT_DEFEAT,"");
-    bat_add(c,"Battle of Crecy",1346,"Crecy, France","");
-    bat_add(c,"Battle of Agincourt",1415,"Agincourt, France","");
-    bat_add(c,"Siege of Orleans",1429,"Orleans, France","");
+    c = camp_new("Hundred Years' War","Europe",1337,1453,"Kingdom of England","Kingdom of France","Edward III;Henry V;Joan of Arc",OUT_DEFEAT,"English dynastic claim to the French throne; ended with French victory and English expulsion from continental France");
+    bat_add(c,"Battle of Crecy",1346,"Crecy, France","English longbowmen devastate French cavalry; demonstrates ranged warfare supremacy");
+    bat_add(c,"Battle of Agincourt",1415,"Agincourt, France","Henry V's outnumbered English army defeats French; peak of English success");
+    bat_add(c,"Siege of Orleans",1429,"Orleans, France","Joan of Arc lifts the siege; turning point leading to French recovery");
     vec_push(v, c);
-    c = camp_new("Ottoman Conquest of Constantinople","Near East",1453,1453,"Ottoman Empire","Byzantine Empire","Mehmed II;Constantine XI",OUT_VICTORY,"");
-    bat_add(c,"Siege of Constantinople",1453,"Constantinople","");
+    c = camp_new("Ottoman Conquest of Constantinople","Near East",1453,1453,"Ottoman Empire","Byzantine Empire","Mehmed II;Constantine XI",OUT_VICTORY,"Ottoman capture of Constantinople; ended the Byzantine Empire and established Ottoman control of the Bosphorus");
+    bat_add(c,"Siege of Constantinople",1453,"Constantinople","53-day siege; Mehmed's massive cannons breach the Theodosian Walls; end of the Roman state");
     vec_push(v, c);
-    c = camp_new("Spanish Conquest of the Aztec Empire","Mesoamerica",1519,1521,"Spanish Empire","Aztec Empire","Hernan Cortes;Montezuma II;Cuauhtemoc",OUT_VICTORY,"");
-    bat_add(c,"La Noche Triste",1520,"Tenochtitlan, Mexico","");
-    bat_add(c,"Siege of Tenochtitlan",1521,"Tenochtitlan, Mexico","");
+    c = camp_new("Spanish Conquest of the Aztec Empire","Mesoamerica",1519,1521,"Spanish Empire","Aztec Empire","Hernan Cortes;Montezuma II;Cuauhtemoc",OUT_VICTORY,"Spanish conquest of the Aztec Empire with indigenous allies; smallpox and siege warfare destroyed Tenochtitlan");
+    bat_add(c,"La Noche Triste",1520,"Tenochtitlan, Mexico","Spanish retreat from Tenochtitlan with heavy losses; Aztec tactical victory");
+    bat_add(c,"Siege of Tenochtitlan",1521,"Tenochtitlan, Mexico","75-day siege; Spanish and indigenous allies destroy the Aztec capital");
     vec_push(v, c);
-    c = camp_new("Thirty Years' War","Europe",1618,1648,"Holy Roman Empire;Spanish Empire","Kingdom of France;Sweden","Gustavus Adolphus;Albrecht von Wallenstein;Cardinal Richelieu",OUT_TREATY,"");
-    bat_add(c,"Battle of Breitenfeld",1631,"Breitenfeld, Saxony","");
-    bat_add(c,"Battle of Lutzen",1632,"Lutzen, Saxony","");
-    bat_add(c,"Battle of Rocroi",1643,"Rocroi, France","");
+    c = camp_new("Thirty Years' War","Europe",1618,1648,"Holy Roman Empire;Spanish Empire","Kingdom of France;Sweden","Gustavus Adolphus;Albrecht von Wallenstein;Cardinal Richelieu",OUT_TREATY,"Religious and political war devastating Central Europe; ended by the Peace of Westphalia establishing state sovereignty");
+    bat_add(c,"Battle of Breitenfeld",1631,"Breitenfeld, Saxony","Gustavus Adolphus' Swedish army defeats Imperial forces; demonstrates mobile artillery tactics");
+    bat_add(c,"Battle of Lutzen",1632,"Lutzen, Saxony","Swedish victory but Gustavus Adolphus killed; shifted momentum of the war");
+    bat_add(c,"Battle of Rocroi",1643,"Rocroi, France","French victory ends Spanish military supremacy; beginning of French dominance");
     vec_push(v, c);
-    c = camp_new("Napoleonic Wars","Europe",1803,1815,"French Empire","British Empire;Russian Empire;Austrian Empire","Napoleon Bonaparte;Duke of Wellington;Mikhail Kutuzov",OUT_DEFEAT,"");
-    bat_add(c,"Battle of Austerlitz",1805,"Austerlitz, Moravia","");
-    bat_add(c,"Battle of Trafalgar",1805,"Cape Trafalgar, Spain","");
-    bat_add(c,"Battle of Borodino",1812,"Borodino, Russia","");
-    bat_add(c,"Battle of Waterloo",1815,"Waterloo, Belgium","");
+    c = camp_new("Napoleonic Wars","Europe",1803,1815,"French Empire","British Empire;Russian Empire;Austrian Empire","Napoleon Bonaparte;Duke of Wellington;Mikhail Kutuzov",OUT_DEFEAT,"French bid for European hegemony; reshaped borders, spread revolutionary ideals, ended with Napoleon's exile");
+    bat_add(c,"Battle of Austerlitz",1805,"Austerlitz, Moravia","Napoleon's masterpiece; defeats combined Austro-Russian army on the anniversary of his coronation");
+    bat_add(c,"Battle of Trafalgar",1805,"Cape Trafalgar, Spain","Nelson destroys Franco-Spanish fleet; secures British naval supremacy");
+    bat_add(c,"Battle of Borodino",1812,"Borodino, Russia","Bloodiest single day of the Napoleonic Wars; Pyrrhic French victory before Moscow");
+    bat_add(c,"Battle of Waterloo",1815,"Waterloo, Belgium","Wellington and Blucher defeat Napoleon; ends the Napoleonic era");
     vec_push(v, c);
-    c = camp_new("American Civil War","North America",1861,1865,"United States (Union)","Confederate States","Ulysses S. Grant;William T. Sherman;Robert E. Lee;Stonewall Jackson",OUT_VICTORY,"");
-    bat_add(c,"Battle of Gettysburg",1863,"Gettysburg, Pennsylvania","");
-    bat_add(c,"Siege of Vicksburg",1863,"Vicksburg, Mississippi","");
+    c = camp_new("American Civil War","North America",1861,1865,"United States (Union)","Confederate States","Ulysses S. Grant;William T. Sherman;Robert E. Lee;Stonewall Jackson",OUT_VICTORY,"Union victory preserving the United States and abolishing slavery; deadliest American conflict");
+    bat_add(c,"Battle of Gettysburg",1863,"Gettysburg, Pennsylvania","Turning point; Lee's invasion of the North repelled with massive casualties");
+    bat_add(c,"Siege of Vicksburg",1863,"Vicksburg, Mississippi","Grant captures the last Confederate stronghold on the Mississippi; splits the Confederacy");
     vec_push(v, c);
-    c = camp_new("Zulu War","Sub-Saharan Africa",1879,1879,"British Empire","Zulu Kingdom","Lord Chelmsford;Cetshwayo kaMpande",OUT_VICTORY,"");
-    bat_add(c,"Battle of Isandlwana",1879,"Isandlwana, Zululand","");
-    bat_add(c,"Battle of Rorke's Drift",1879,"Rorke's Drift, Zululand","");
-    bat_add(c,"Battle of Ulundi",1879,"Ulundi, Zululand","");
+    c = camp_new("Zulu War","Sub-Saharan Africa",1879,1879,"British Empire","Zulu Kingdom","Lord Chelmsford;Cetshwayo kaMpande",OUT_VICTORY,"British conquest of the Zulu Kingdom; ended Zulu military power despite early British defeats");
+    bat_add(c,"Battle of Isandlwana",1879,"Isandlwana, Zululand","Zulu army overruns British camp; worst British defeat against an indigenous force");
+    bat_add(c,"Battle of Rorke's Drift",1879,"Rorke's Drift, Zululand","150 British soldiers repel 3,000-4,000 Zulu warriors at a mission station");
+    bat_add(c,"Battle of Ulundi",1879,"Ulundi, Zululand","British defeat the Zulu army and burn the royal kraal; ends Zulu independence");
     vec_push(v, c);
-    c = camp_new("Russo-Japanese War","East Asia",1904,1905,"Japan","Russian Empire","Togo Heihachiro;Nogi Maresuke;Aleksei Kuropatkin",OUT_VICTORY,"");
-    bat_add(c,"Siege of Port Arthur",1904,"Port Arthur, Manchuria","");
-    bat_add(c,"Battle of Tsushima",1905,"Tsushima Strait","");
+    c = camp_new("Russo-Japanese War","East Asia",1904,1905,"Japan","Russian Empire","Togo Heihachiro;Nogi Maresuke;Aleksei Kuropatkin",OUT_VICTORY,"Decisive Japanese victory over Russia; Treaty of Portsmouth; first modern Asian victory over a European empire");
+    bat_add(c,"Siege of Port Arthur",1904,"Port Arthur, Manchuria","Prolonged Japanese siege of Russian naval base; foreshadows trench warfare");
+    bat_add(c,"Battle of Tsushima",1905,"Tsushima Strait","Japanese fleet annihilates Russian Baltic Fleet; first modern naval victory by an Asian power over a European one");
     vec_push(v, c);
     return v;
 }
@@ -107,7 +107,7 @@ fn campaign_by_name(name: Str) {
     var v = all_campaigns(); var n = vec_len(v);
     for (var i = 0; i < n; i = i + 1) {
         var p = vec_get(v, i);
-        if (str_eq(camp_name(p), name) == 1) { return p; }
+        if (str_eq_lower(camp_name(p), name) == 1) { return p; }
     }
     return 0;
 }
@@ -162,6 +162,8 @@ fn campaigns_active_at(year) {
     return result;
 }
 
+fn _cmp_camp_start(a, b) { return load64(a+CAMP_START) - load64(b+CAMP_START); }
+
 fn campaigns_between(sy, ey) {
     var result = vec_new();
     var v = all_campaigns(); var n = vec_len(v);
@@ -169,5 +171,6 @@ fn campaigns_between(sy, ey) {
         var p = vec_get(v, i);
         if (load64(p+CAMP_START) <= ey && load64(p+CAMP_END) >= sy) { vec_push(result, p); }
     }
+    vec_sort(result, &_cmp_camp_start);
     return result;
 }

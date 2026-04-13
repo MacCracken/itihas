@@ -3,6 +3,7 @@
 
 # Stdlib auto-included via cyrius.toml
 
+include "src/util.cyr"
 include "src/error.cyr"
 include "src/era.cyr"
 include "src/calendar.cyr"
@@ -15,6 +16,7 @@ include "src/campaign.cyr"
 include "src/site.cyr"
 include "src/trade.cyr"
 include "src/logging.cyr"
+include "src/serial.cyr"
 
 var tp = 0;
 var tf = 0;
@@ -95,8 +97,8 @@ check(vec_len(eras_by_region("Mesoamerica")), 3, "eras Mesoamerica=3");
 # ---------------------------------------------------------------
 println("--- calendar ---");
 ok(calendar_by_name("Gregorian"), "cal Gregorian");
-ok(calendar_by_name("Hijri"), "cal Hijri");
-ok(calendar_by_name("Maya"), "cal Maya");
+ok(calendar_by_name("Islamic (Hijri)"), "cal Hijri");
+ok(calendar_by_name("Maya (Long Count)"), "cal Maya");
 zero(calendar_by_name("Martian"), "cal Martian not found");
 
 # ---------------------------------------------------------------
@@ -294,6 +296,87 @@ for (var i = 0; i < rmn; i = i + 1) {
     if (str_eq(civ_name(vec_get(rome_civs, i)), "Roman Empire") == 1) { found_rome = 1; }
 }
 ok(found_rome, "Roman Empire active at end year 476");
+
+# ---------------------------------------------------------------
+# Case-insensitive lookups
+# ---------------------------------------------------------------
+println("--- case-insensitive ---");
+ok(era_by_name("bronze age"), "era lowercase");
+ok(era_by_name("BRONZE AGE"), "era uppercase");
+ok(era_by_name("Bronze Age"), "era mixed case");
+ok(civ_by_name("roman empire"), "civ lowercase");
+ok(civ_by_name("ROMAN EMPIRE"), "civ uppercase");
+ok(event_by_name("fall of the western roman empire"), "event lowercase");
+ok(figure_by_name("JULIUS CAESAR"), "figure uppercase");
+ok(calendar_by_name("gregorian"), "calendar lowercase");
+ok(campaign_by_name("second punic war"), "campaign lowercase");
+ok(site_by_name("POMPEII"), "site uppercase");
+ok(route_by_name("silk road"), "route lowercase");
+
+# ---------------------------------------------------------------
+# Chronological sort
+# ---------------------------------------------------------------
+println("--- sort ---");
+var sorted_events = events_between(-500, 500);
+var sort_ok = 1;
+for (var si = 1; si < vec_len(sorted_events); si = si + 1) {
+    if (evt_year(vec_get(sorted_events, si)) < evt_year(vec_get(sorted_events, si - 1))) { sort_ok = 0; }
+}
+ok(sort_ok, "events_between sorted by year");
+
+var sorted_camps = campaigns_between(-500, 500);
+var camp_sort_ok = 1;
+for (var sci = 1; sci < vec_len(sorted_camps); sci = sci + 1) {
+    if (load64(vec_get(sorted_camps, sci)+CAMP_START) < load64(vec_get(sorted_camps, sci - 1)+CAMP_START)) { camp_sort_ok = 0; }
+}
+ok(camp_sort_ok, "campaigns_between sorted by start");
+
+var sorted_eras = eras_containing(500);
+var era_sort_ok = 1;
+for (var sei = 1; sei < vec_len(sorted_eras); sei = sei + 1) {
+    if (era_start(vec_get(sorted_eras, sei)) < era_start(vec_get(sorted_eras, sei - 1))) { era_sort_ok = 0; }
+}
+ok(era_sort_ok, "eras_containing sorted by start");
+
+# ---------------------------------------------------------------
+# JSON serialization
+# ---------------------------------------------------------------
+println("--- json ---");
+var bronze = era_by_name("Bronze Age");
+var bronze_json = era_to_json(bronze);
+ok(str_contains(bronze_json, "Bronze Age"), "era json has name");
+ok(str_contains_cstr(bronze_json, "start_year"), "era json has start_year");
+
+var rome = civ_by_name("Roman Empire");
+var rome_json = civ_to_json(rome);
+ok(str_contains(rome_json, "Roman Empire"), "civ json has name");
+
+var fall = event_by_name("Fall of the Western Roman Empire");
+var fall_json = event_to_json(fall);
+ok(str_contains(fall_json, "Fall of the Western Roman Empire"), "event json has name");
+ok(str_contains_cstr(fall_json, "\"year\": 476"), "event json has year");
+
+var caesar = figure_by_name("Julius Caesar");
+var caesar_json = figure_to_json(caesar);
+ok(str_contains(caesar_json, "Julius Caesar"), "figure json has name");
+
+var greg = calendar_by_name("Gregorian");
+var greg_json = calendar_to_json(greg);
+ok(str_contains(greg_json, "Gregorian"), "calendar json has name");
+
+var punic = campaign_by_name("Second Punic War");
+var punic_json = campaign_to_json(punic);
+ok(str_contains(punic_json, "Second Punic War"), "campaign json has name");
+ok(str_contains_cstr(punic_json, "battles"), "campaign json has battles");
+ok(str_contains_cstr(punic_json, "Cannae"), "campaign json has battle name");
+
+var pomp = site_by_name("Pompeii");
+var pomp_json = site_to_json(pomp);
+ok(str_contains(pomp_json, "Pompeii"), "site json has name");
+
+var silk = route_by_name("Silk Road");
+var silk_json = route_to_json(silk);
+ok(str_contains(silk_json, "Silk Road"), "route json has name");
 
 # ---------------------------------------------------------------
 # Summary

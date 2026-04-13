@@ -1,0 +1,225 @@
+# serial.cyr — JSON serialization for all itihas types
+# Uses str_builder from stdlib. Requires json.cyr for json_pair_new/json_build.
+
+# ----------------------------------------------------------------
+# JSON string escaping helper
+# ----------------------------------------------------------------
+fn _json_str(sb, key, val: Str) {
+    str_builder_add_cstr(sb, "\"");
+    str_builder_add_cstr(sb, key);
+    str_builder_add_cstr(sb, "\": \"");
+    # Escape backslashes, quotes, newlines in val
+    var vlen = str_len(val);
+    var vd = str_data(val);
+    var ji = 0;
+    while (ji < vlen) {
+        var c = load8(vd + ji);
+        if (c == 34) { str_builder_add_cstr(sb, "\\\""); }
+        else { if (c == 92) { str_builder_add_cstr(sb, "\\\\"); }
+        else { if (c == 10) { str_builder_add_cstr(sb, "\\n"); }
+        else { str_builder_add_byte(sb, c); } } }
+        ji = ji + 1;
+    }
+    str_builder_add_cstr(sb, "\"");
+    return 0;
+}
+
+fn _json_int(sb, key, val) {
+    str_builder_add_cstr(sb, "\"");
+    str_builder_add_cstr(sb, key);
+    str_builder_add_cstr(sb, "\": ");
+    str_builder_add_int(sb, val);
+    return 0;
+}
+
+fn _json_sep(sb) { str_builder_add_cstr(sb, ", "); return 0; }
+
+# ----------------------------------------------------------------
+# Era
+# ----------------------------------------------------------------
+fn era_to_json(p) {
+    var sb = str_builder_new();
+    str_builder_add_cstr(sb, "{");
+    _json_str(sb, "name", load64(p+ERA_NAME));
+    _json_sep(sb); _json_int(sb, "start_year", load64(p+ERA_START));
+    _json_sep(sb); _json_int(sb, "end_year", load64(p+ERA_END));
+    _json_sep(sb); _json_str(sb, "region", load64(p+ERA_REGION));
+    _json_sep(sb); _json_str(sb, "description", load64(p+ERA_DESC));
+    _json_sep(sb); _json_int(sb, "category", load64(p+ERA_CAT));
+    _json_sep(sb); _json_int(sb, "scope", load64(p+ERA_SCOPE));
+    str_builder_add_cstr(sb, "}");
+    return str_builder_build(sb);
+}
+
+# ----------------------------------------------------------------
+# Civilization
+# ----------------------------------------------------------------
+fn civ_to_json(p) {
+    var sb = str_builder_new();
+    str_builder_add_cstr(sb, "{");
+    _json_str(sb, "name", load64(p+CIV_NAME));
+    _json_sep(sb); _json_str(sb, "region", load64(p+CIV_REGION));
+    _json_sep(sb); _json_str(sb, "peak_era", load64(p+CIV_PEAK));
+    _json_sep(sb); _json_int(sb, "founded", load64(p+CIV_FOUND));
+    _json_sep(sb); _json_int(sb, "ended", load64(p+CIV_END));
+    _json_sep(sb); _json_str(sb, "traits", load64(p+CIV_TRAITS));
+    _json_sep(sb); _json_str(sb, "script", load64(p+CIV_SCRIPT));
+    _json_sep(sb); _json_str(sb, "language", load64(p+CIV_LANG));
+    str_builder_add_cstr(sb, "}");
+    return str_builder_build(sb);
+}
+
+# ----------------------------------------------------------------
+# Event
+# ----------------------------------------------------------------
+fn event_to_json(p) {
+    var sb = str_builder_new();
+    str_builder_add_cstr(sb, "{");
+    _json_str(sb, "name", load64(p+EVT_NAME));
+    _json_sep(sb); _json_int(sb, "year", load64(p+EVT_YEAR));
+    _json_sep(sb); _json_str(sb, "era", load64(p+EVT_ERA));
+    _json_sep(sb); _json_int(sb, "category", load64(p+EVT_CAT));
+    _json_sep(sb); _json_str(sb, "description", load64(p+EVT_DESC));
+    _json_sep(sb); _json_str(sb, "civilizations", load64(p+EVT_CIVS));
+    _json_sep(sb); _json_int(sb, "significance", load64(p+EVT_SIG));
+    str_builder_add_cstr(sb, "}");
+    return str_builder_build(sb);
+}
+
+# ----------------------------------------------------------------
+# Figure
+# ----------------------------------------------------------------
+fn figure_to_json(p) {
+    var sb = str_builder_new();
+    str_builder_add_cstr(sb, "{");
+    _json_str(sb, "name", load64(p+FIG_NAME));
+    _json_sep(sb); _json_int(sb, "birth_year", load64(p+FIG_BIRTH));
+    _json_sep(sb); _json_int(sb, "death_year", load64(p+FIG_DEATH));
+    _json_sep(sb); _json_str(sb, "civilization", load64(p+FIG_CIV));
+    _json_sep(sb); _json_int(sb, "domain", load64(p+FIG_DOM));
+    _json_sep(sb); _json_str(sb, "description", load64(p+FIG_DESC));
+    str_builder_add_cstr(sb, "}");
+    return str_builder_build(sb);
+}
+
+# ----------------------------------------------------------------
+# Calendar
+# ----------------------------------------------------------------
+fn calendar_to_json(p) {
+    var sb = str_builder_new();
+    str_builder_add_cstr(sb, "{");
+    _json_str(sb, "name", load64(p+CAL_NAME));
+    _json_sep(sb); _json_int(sb, "type", load64(p+CAL_TYPE));
+    _json_sep(sb); _json_int(sb, "epoch", load64(p+CAL_EPOCH));
+    _json_sep(sb); _json_int(sb, "months", load64(p+CAL_MONTHS));
+    _json_sep(sb); _json_str(sb, "leap", load64(p+CAL_LEAP));
+    str_builder_add_cstr(sb, "}");
+    return str_builder_build(sb);
+}
+
+# ----------------------------------------------------------------
+# Campaign (with nested battles array)
+# ----------------------------------------------------------------
+fn battle_to_json(b) {
+    var sb = str_builder_new();
+    str_builder_add_cstr(sb, "{");
+    _json_str(sb, "name", load64(b+BAT_NAME));
+    _json_sep(sb); _json_int(sb, "year", load64(b+BAT_YEAR));
+    _json_sep(sb); _json_str(sb, "location", load64(b+BAT_LOC));
+    _json_sep(sb); _json_str(sb, "description", load64(b+BAT_DESC));
+    str_builder_add_cstr(sb, "}");
+    return str_builder_build(sb);
+}
+
+fn campaign_to_json(p) {
+    var sb = str_builder_new();
+    str_builder_add_cstr(sb, "{");
+    _json_str(sb, "name", load64(p+CAMP_NAME));
+    _json_sep(sb); _json_str(sb, "region", load64(p+CAMP_REGION));
+    _json_sep(sb); _json_int(sb, "start_year", load64(p+CAMP_START));
+    _json_sep(sb); _json_int(sb, "end_year", load64(p+CAMP_END));
+    _json_sep(sb); _json_str(sb, "belligerents_a", load64(p+CAMP_BELLA));
+    _json_sep(sb); _json_str(sb, "belligerents_b", load64(p+CAMP_BELLB));
+    _json_sep(sb); _json_str(sb, "commanders", load64(p+CAMP_CMDS));
+    _json_sep(sb); _json_int(sb, "outcome", load64(p+CAMP_OUT));
+    _json_sep(sb); _json_str(sb, "description", load64(p+CAMP_DESC));
+    # Battles array
+    _json_sep(sb);
+    str_builder_add_cstr(sb, "\"battles\": [");
+    var bats = load64(p+CAMP_BATTLES);
+    var bn = vec_len(bats);
+    for (var bi = 0; bi < bn; bi = bi + 1) {
+        if (bi > 0) { str_builder_add_cstr(sb, ", "); }
+        str_builder_add(sb, battle_to_json(vec_get(bats, bi)));
+    }
+    str_builder_add_cstr(sb, "]");
+    str_builder_add_cstr(sb, "}");
+    return str_builder_build(sb);
+}
+
+# ----------------------------------------------------------------
+# Site
+# ----------------------------------------------------------------
+fn site_to_json(p) {
+    var sb = str_builder_new();
+    str_builder_add_cstr(sb, "{");
+    _json_str(sb, "name", load64(p+SITE_NAME));
+    _json_sep(sb); _json_str(sb, "location", load64(p+SITE_LOC));
+    _json_sep(sb); _json_str(sb, "region", load64(p+SITE_REG));
+    _json_sep(sb); _json_int(sb, "type", load64(p+SITE_TYPE));
+    _json_sep(sb); _json_str(sb, "civilization", load64(p+SITE_CIV));
+    _json_sep(sb); _json_int(sb, "start_year", load64(p+SITE_START));
+    _json_sep(sb); _json_int(sb, "end_year", load64(p+SITE_END));
+    _json_sep(sb); _json_int(sb, "discovered", load64(p+SITE_DISC));
+    _json_sep(sb); _json_str(sb, "description", load64(p+SITE_DESC));
+    str_builder_add_cstr(sb, "}");
+    return str_builder_build(sb);
+}
+
+# ----------------------------------------------------------------
+# Trade Route
+# ----------------------------------------------------------------
+fn route_to_json(p) {
+    var sb = str_builder_new();
+    str_builder_add_cstr(sb, "{");
+    _json_str(sb, "name", load64(p+RT_NAME));
+    _json_sep(sb); _json_str(sb, "regions", load64(p+RT_REGIONS));
+    _json_sep(sb); _json_int(sb, "type", load64(p+RT_TYPE));
+    _json_sep(sb); _json_str(sb, "civilizations", load64(p+RT_CIVS));
+    _json_sep(sb); _json_str(sb, "commodities", load64(p+RT_COMM));
+    _json_sep(sb); _json_int(sb, "start_year", load64(p+RT_START));
+    _json_sep(sb); _json_int(sb, "end_year", load64(p+RT_END));
+    _json_sep(sb); _json_str(sb, "description", load64(p+RT_DESC));
+    str_builder_add_cstr(sb, "}");
+    return str_builder_build(sb);
+}
+
+# ----------------------------------------------------------------
+# Causality
+# ----------------------------------------------------------------
+fn causality_to_json(p) {
+    var sb = str_builder_new();
+    str_builder_add_cstr(sb, "{");
+    _json_str(sb, "cause", load64(p+CAUS_CAUSE));
+    _json_sep(sb); _json_str(sb, "effect", load64(p+CAUS_EFFECT));
+    _json_sep(sb); _json_int(sb, "strength", load64(p+CAUS_STR));
+    _json_sep(sb); _json_str(sb, "description", load64(p+CAUS_DESC));
+    str_builder_add_cstr(sb, "}");
+    return str_builder_build(sb);
+}
+
+# ----------------------------------------------------------------
+# Interaction
+# ----------------------------------------------------------------
+fn interaction_to_json(p) {
+    var sb = str_builder_new();
+    str_builder_add_cstr(sb, "{");
+    _json_str(sb, "civilization_a", load64(p+INT_CIVA));
+    _json_sep(sb); _json_str(sb, "civilization_b", load64(p+INT_CIVB));
+    _json_sep(sb); _json_int(sb, "type", load64(p+INT_TYPE));
+    _json_sep(sb); _json_int(sb, "start_year", load64(p+INT_START));
+    _json_sep(sb); _json_int(sb, "end_year", load64(p+INT_END));
+    _json_sep(sb); _json_str(sb, "description", load64(p+INT_DESC));
+    str_builder_add_cstr(sb, "}");
+    return str_builder_build(sb);
+}

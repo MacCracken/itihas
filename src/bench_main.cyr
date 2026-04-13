@@ -1,0 +1,191 @@
+# bench_main.cyr — itihas benchmarks (28 benchmarks, ported from Rust criterion)
+# Build: cyrius build src/bench_main.cyr build/itihas_bench
+# Run: ./build/itihas_bench
+
+include "src/util.cyr"
+include "src/error.cyr"
+include "src/era.cyr"
+include "src/calendar.cyr"
+include "src/civilization.cyr"
+include "src/figure.cyr"
+include "src/event.cyr"
+include "src/causality.cyr"
+include "src/interaction.cyr"
+include "src/campaign.cyr"
+include "src/site.cyr"
+include "src/trade.cyr"
+include "src/logging.cyr"
+include "src/serial.cyr"
+
+var BATCH = 10000;
+var ROUNDS = 100;
+
+# ----------------------------------------------------------------
+# Wrapper functions for fncall0 dispatch
+# ----------------------------------------------------------------
+fn _b_all_eras() { all_eras(); }
+fn _b_all_civs() { all_civilizations(); }
+fn _b_all_events() { all_events(); }
+fn _b_all_calendars() { all_calendars(); }
+fn _b_all_figures() { all_figures(); }
+fn _b_all_causalities() { all_causalities(); }
+fn _b_all_interactions() { all_interactions(); }
+fn _b_all_sites() { all_sites(); }
+fn _b_all_routes() { all_routes(); }
+fn _b_all_campaigns() { all_campaigns(); }
+fn _b_eras_containing() { eras_containing((0-500)); }
+fn _b_civs_active_at() { civs_active_at((0-500)); }
+fn _b_civs_by_region() { civs_by_region("Mediterranean"); }
+fn _b_events_cat_war() { events_by_category(CAT_WAR); }
+fn _b_events_at_476() { events_at_year(476); }
+fn _b_events_between() { events_between((0-500), 500); }
+fn _b_cal_by_name() { calendar_by_name("Gregorian"); }
+fn _b_figs_by_domain() { figures_by_domain(DOM_SCIENTIST); }
+fn _b_causes_of() { causes_of("French Revolution"); }
+fn _b_chain_writing() { causal_chain("Invention of Writing", 3); }
+fn _b_int_for_rome() { interactions_for("Roman Empire"); }
+fn _b_influence() { influence_score("Ancient Egypt", "Hittite Empire"); }
+fn _b_sites_by_region() { sites_by_region("Near East"); }
+fn _b_sites_active() { sites_active_at((0-500)); }
+fn _b_routes_by_region() { routes_by_region("East Asia"); }
+fn _b_routes_by_comm() { routes_by_commodity("silk"); }
+fn _b_camps_by_cmd() { campaigns_by_commander("Napoleon"); }
+fn _b_camps_between() { campaigns_between((0-500), 500); }
+
+# ----------------------------------------------------------------
+# Top-level execution
+# ----------------------------------------------------------------
+alloc_init();
+
+# Warm up lazy init
+all_eras(); all_civilizations(); all_events(); all_calendars();
+all_figures(); all_causalities(); all_interactions();
+all_campaigns(); all_sites(); all_routes();
+
+var benches = vec_new();
+var b = 0;
+
+# Era
+b = bench_new("all_eras");
+bench_run_batch(b, &_b_all_eras, BATCH, ROUNDS);
+vec_push(benches, b);
+
+b = bench_new("eras_containing_500bce");
+bench_run_batch(b, &_b_eras_containing, BATCH, ROUNDS);
+vec_push(benches, b);
+
+# Civilization
+b = bench_new("all_civilizations");
+bench_run_batch(b, &_b_all_civs, BATCH, ROUNDS);
+vec_push(benches, b);
+
+b = bench_new("civs_active_at_500bce");
+bench_run_batch(b, &_b_civs_active_at, BATCH, ROUNDS);
+vec_push(benches, b);
+
+b = bench_new("civs_by_region_mediterranean");
+bench_run_batch(b, &_b_civs_by_region, BATCH, ROUNDS);
+vec_push(benches, b);
+
+# Event
+b = bench_new("all_events");
+bench_run_batch(b, &_b_all_events, BATCH, ROUNDS);
+vec_push(benches, b);
+
+b = bench_new("events_by_category_war");
+bench_run_batch(b, &_b_events_cat_war, BATCH, ROUNDS);
+vec_push(benches, b);
+
+b = bench_new("events_at_year_476");
+bench_run_batch(b, &_b_events_at_476, BATCH, ROUNDS);
+vec_push(benches, b);
+
+b = bench_new("events_between_500bce_500ce");
+bench_run_batch(b, &_b_events_between, BATCH, ROUNDS);
+vec_push(benches, b);
+
+# Calendar
+b = bench_new("all_calendars");
+bench_run_batch(b, &_b_all_calendars, BATCH, ROUNDS);
+vec_push(benches, b);
+
+b = bench_new("calendar_by_name_gregorian");
+bench_run_batch(b, &_b_cal_by_name, BATCH, ROUNDS);
+vec_push(benches, b);
+
+# Figure
+b = bench_new("all_figures");
+bench_run_batch(b, &_b_all_figures, BATCH, ROUNDS);
+vec_push(benches, b);
+
+b = bench_new("figures_by_domain_scientist");
+bench_run_batch(b, &_b_figs_by_domain, BATCH, ROUNDS);
+vec_push(benches, b);
+
+# Causality
+b = bench_new("all_causalities");
+bench_run_batch(b, &_b_all_causalities, BATCH, ROUNDS);
+vec_push(benches, b);
+
+b = bench_new("causes_of_french_revolution");
+bench_run_batch(b, &_b_causes_of, BATCH, ROUNDS);
+vec_push(benches, b);
+
+b = bench_new("chain_writing_depth3");
+bench_run_batch(b, &_b_chain_writing, BATCH, ROUNDS);
+vec_push(benches, b);
+
+# Interaction
+b = bench_new("all_interactions");
+bench_run_batch(b, &_b_all_interactions, BATCH, ROUNDS);
+vec_push(benches, b);
+
+b = bench_new("interactions_for_rome");
+bench_run_batch(b, &_b_int_for_rome, BATCH, ROUNDS);
+vec_push(benches, b);
+
+b = bench_new("influence_score_egypt_hittite");
+bench_run_batch(b, &_b_influence, BATCH, ROUNDS);
+vec_push(benches, b);
+
+# Site
+b = bench_new("all_sites");
+bench_run_batch(b, &_b_all_sites, BATCH, ROUNDS);
+vec_push(benches, b);
+
+b = bench_new("sites_by_region_near_east");
+bench_run_batch(b, &_b_sites_by_region, BATCH, ROUNDS);
+vec_push(benches, b);
+
+b = bench_new("sites_active_at_500bce");
+bench_run_batch(b, &_b_sites_active, BATCH, ROUNDS);
+vec_push(benches, b);
+
+# Trade
+b = bench_new("all_routes");
+bench_run_batch(b, &_b_all_routes, BATCH, ROUNDS);
+vec_push(benches, b);
+
+b = bench_new("routes_by_region_east_asia");
+bench_run_batch(b, &_b_routes_by_region, BATCH, ROUNDS);
+vec_push(benches, b);
+
+b = bench_new("routes_by_commodity_silk");
+bench_run_batch(b, &_b_routes_by_comm, BATCH, ROUNDS);
+vec_push(benches, b);
+
+# Campaign
+b = bench_new("all_campaigns");
+bench_run_batch(b, &_b_all_campaigns, BATCH, ROUNDS);
+vec_push(benches, b);
+
+b = bench_new("campaigns_by_commander_napoleon");
+bench_run_batch(b, &_b_camps_by_cmd, BATCH, ROUNDS);
+vec_push(benches, b);
+
+b = bench_new("campaigns_between_500bce_500ce");
+bench_run_batch(b, &_b_camps_between, BATCH, ROUNDS);
+vec_push(benches, b);
+
+bench_report_all(benches);
+syscall(SYS_EXIT, 0);

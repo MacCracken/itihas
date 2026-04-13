@@ -11,4 +11,4 @@ entry = "src/main.cyr"
 output = "itihas"
 
 [deps]
-stdlib = ["string", "fmt", "alloc", "vec", "str", "syscalls", "io", "args", "assert", "hashmap", "tagged", "json", "fnptr"]
+stdlib = ["string", "fmt", "alloc", "vec", "str", "syscalls", "io", "args", "assert", "hashmap", "tagged", "json", "toml", "fnptr", "bench"]
