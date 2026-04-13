@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.1.0] - 2026-04-13
+
+### Added
+
+- **util** — `str_lower()`, `str_upper()`, `str_eq_lower()` for ASCII case conversion and case-insensitive comparison (`src/util.cyr`)
+- **util** — `vec_sort()` insertion sort with comparison function pointer for in-place sorting
+- **serial** — JSON serialization for all 10 data types: `era_to_json()`, `civ_to_json()`, `event_to_json()`, `figure_to_json()`, `calendar_to_json()`, `campaign_to_json()` (with nested battles array), `site_to_json()`, `route_to_json()`, `causality_to_json()`, `interaction_to_json()` (`src/serial.cyr`)
+- **bench** — 28-benchmark harness ported from Rust criterion using `bench.cyr` stdlib (`src/bench_main.cyr`). Cached lookups 5-6ns, filtered queries 300ns-3us
+- **descriptions** — Full description strings restored to all 10 data modules from Rust v1.5.0 source. cc3 v4.0.0 raised str_data limit to 256KB (was 32KB), enabling inline descriptions
+- 26 new test assertions (123 total): 11 case-insensitive lookups, 3 sort ordering, 12 JSON serialization roundtrips
+
+### Changed
+
+- **all modules** — All 8 `by_name()` functions now use case-insensitive matching via `str_eq_lower()` (ASCII). Matches Rust v1.5.0 behavior
+- **era** — `eras_containing()` results sorted chronologically by start year
+- **civilization** — `civs_active_at()` results sorted chronologically by founding year
+- **event** — `events_between()` results sorted chronologically by year
+- **campaign** — `campaigns_between()` results sorted chronologically by start year
+- **cyrius.toml** — Compiler version updated to cc3 4.0.0; added `bench` and `toml` to stdlib deps
+
+### Fixed
+
+- **calendar** — `calendar_by_name()` was using `str_contains` (substring match) instead of exact match. "Hijri" incorrectly matched "Islamic (Hijri)". Now uses `str_eq_lower()` for case-insensitive exact match
+- **ci** — Smoke test grep pattern `"0 failed"` did not match output format `"failed: 0"`
+
 ## [2.0.0] - 2026-04-12
 
 ### Added
@@ -146,7 +171,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `no_std` support via `alloc`/`core`; `std` feature adds `LazyLock` caching
 - All public types: `Display` impls, `Cow<'static, str>` for zero-alloc statics, full serde roundtrip, `#[non_exhaustive]` on all enums and structs, `#[must_use]` on all pure functions
 
-[Unreleased]: https://github.com/MacCracken/itihas/compare/v2.0.0...HEAD
+[Unreleased]: https://github.com/MacCracken/itihas/compare/v2.1.0...HEAD
+[2.1.0]: https://github.com/MacCracken/itihas/compare/v2.0.0...v2.1.0
 [2.0.0]: https://github.com/MacCracken/itihas/compare/v1.5.0...v2.0.0
 [1.5.0]: https://github.com/MacCracken/itihas/compare/v1.0.1...v1.5.0
 [1.0.1]: https://github.com/MacCracken/itihas/compare/v1.0.0...v1.0.1

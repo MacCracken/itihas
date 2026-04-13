@@ -1,6 +1,6 @@
 # Development Roadmap
 
-> **Status**: Cyrius port complete | **Current**: 2.0.0 | **Compiler**: cc3 3.6.3
+> **Status**: v2.1.0 released | **Current**: 2.1.0 | **Compiler**: cc3 4.0.0
 
 Completed items are in [CHANGELOG.md](../../CHANGELOG.md).
 Rust benchmark baseline in [benchmarks-rust-v-cyrius.md](../../benchmarks-rust-v-cyrius.md).

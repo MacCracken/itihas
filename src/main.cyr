@@ -1,4 +1,4 @@
-# itihas — Structured World History v2.0.0
+# itihas — Structured World History v2.1.0
 # 10 modules, 297 entities, ported from 8846 lines of Rust
 
 # Stdlib auto-included via cyrius.toml
@@ -59,7 +59,7 @@ fn zero(val, name) {
 }
 
 alloc_init();
-println("=== itihas v2.0.0 test suite ===");
+println("=== itihas v2.1.0 test suite ===");
 
 # ---------------------------------------------------------------
 # Module counts
