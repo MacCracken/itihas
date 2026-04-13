@@ -1,6 +1,6 @@
 [package]
 name = "itihas"
-version = "2.1.0"
+version = "2.2.0"
 description = "Itihas — structured world history: civilizations, eras, events, figures, campaigns, sites, trade routes, calendars"
 license = "GPL-3.0-only"
 language = "cyrius"
@@ -11,4 +11,4 @@ entry = "src/main.cyr"
 output = "itihas"
 
 [deps]
-stdlib = ["string", "fmt", "alloc", "vec", "str", "syscalls", "io", "args", "assert", "hashmap", "tagged", "json", "toml", "fnptr", "bench"]
+stdlib = ["string", "fmt", "alloc", "vec", "str", "syscalls", "io", "args", "assert", "hashmap", "tagged", "json", "toml", "fnptr", "bench", "net", "http"]

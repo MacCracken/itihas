@@ -1,4 +1,4 @@
-# itihas — Structured World History v2.1.0
+# itihas — Structured World History v2.2.0
 # 10 modules, 297 entities, ported from 8846 lines of Rust
 
 # Stdlib auto-included via cyrius.toml
@@ -17,6 +17,7 @@ include "src/site.cyr"
 include "src/trade.cyr"
 include "src/logging.cyr"
 include "src/serial.cyr"
+include "src/hoosh.cyr"
 
 var tp = 0;
 var tf = 0;
@@ -59,7 +60,7 @@ fn zero(val, name) {
 }
 
 alloc_init();
-println("=== itihas v2.1.0 test suite ===");
+println("=== itihas v2.2.0 test suite ===");
 
 # ---------------------------------------------------------------
 # Module counts
@@ -377,6 +378,105 @@ ok(str_contains(pomp_json, "Pompeii"), "site json has name");
 var silk = route_by_name("Silk Road");
 var silk_json = route_to_json(silk);
 ok(str_contains(silk_json, "Silk Road"), "route json has name");
+
+# ---------------------------------------------------------------
+# Hoosh: answer_from_data
+# ---------------------------------------------------------------
+println("--- hoosh ---");
+
+# EventsInRange — known range
+var eq = query_events_in_range((0-500), 500);
+var er = answer_from_data(eq);
+ok(er, "events_in_range returns data");
+check(resp_source(er), SRC_DATA, "events source=DATA");
+ok(str_len(resp_content(er)) > 0, "events content not empty");
+
+
+# EventsInRange — empty range
+var eq2 = query_events_in_range(9999, 9999);
+var er2 = answer_from_data(eq2);
+ok(er2, "events empty range returns resp");
+ok(str_contains_cstr(resp_content(er2), "No events"), "events empty msg");
+
+
+# CivilizationsAt
+var cq = query_civs_at((0-500));
+var cr = answer_from_data(cq);
+ok(cr, "civs_at returns data");
+ok(str_contains(resp_content(cr), "Ancient Greece"), "civs content has Greece");
+
+
+# CausesOf — known
+var caq = query_causes_of("French Revolution");
+var car = answer_from_data(caq);
+ok(car, "causes_of known returns data");
+
+# CausesOf — unknown (needs LLM)
+var caq2 = query_causes_of("Battle of Endor");
+var car2 = answer_from_data(caq2);
+check(car2, 0, "causes_of unknown returns 0");
+
+
+# InteractionsBetween — known
+var iq = query_interactions_between("Ancient Egypt", "Hittite Empire");
+var ir = answer_from_data(iq);
+ok(ir, "interactions known returns data");
+
+# FigureLookup — found
+var fq = query_figure_lookup("Aristotle");
+var fr = answer_from_data(fq);
+ok(fr, "figure found returns data");
+ok(str_contains_cstr(resp_content(fr), "philosopher"), "figure content has philosopher");
+
+# FigureLookup — not found
+var fq2 = query_figure_lookup("Gandalf");
+var fr2 = answer_from_data(fq2);
+check(fr2, 0, "figure not found returns 0");
+
+# FreeForm — always returns 0
+var ffq = query_free_form("Why did Rome fall?");
+check(answer_from_data(ffq), 0, "free_form returns 0");
+
+# Tool defs
+check(hoosh_tool_count(), 6, "tool_count=6");
+var tdefs = hoosh_tool_defs_json();
+ok(str_contains_cstr(str_from(tdefs), "events_in_range"), "tools has events_in_range");
+ok(str_contains_cstr(str_from(tdefs), "era_lookup"), "tools has era_lookup");
+
+# parse_tool_call
+var ptc1 = parse_tool_call("events_in_range", "{\"start\": -500, \"end\": 500}");
+ok(ptc1, "parse events_in_range");
+check(load64(ptc1+Q_TYPE), QT_EVENTS_IN_RANGE, "parse type=events");
+
+var ptc2 = parse_tool_call("civilizations_at", "{\"year\": -500}");
+ok(ptc2, "parse civs_at");
+check(load64(ptc2+Q_TYPE), QT_CIVS_AT, "parse type=civs");
+
+var ptc3 = parse_tool_call("causes_of", "{\"event\": \"French Revolution\"}");
+ok(ptc3, "parse causes_of");
+
+var ptc4 = parse_tool_call("interactions_between", "{\"civ_a\": \"Rome\", \"civ_b\": \"Egypt\"}");
+ok(ptc4, "parse interactions");
+
+var ptc5 = parse_tool_call("figure_lookup", "{\"name\": \"Aristotle\"}");
+ok(ptc5, "parse figure_lookup");
+
+check(parse_tool_call("unknown_tool", "{}"), 0, "parse unknown=0");
+check(parse_tool_call("events_in_range", "{}"), 0, "parse missing args=0");
+
+# resolve_era_lookup
+var era_args1 = json_parse(str_from("{\"name\": \"Bronze Age\"}"));
+var elr1 = resolve_era_lookup(era_args1);
+ok(elr1, "era lookup by name");
+ok(str_contains(resp_content(elr1), "Bronze Age"), "era content has name");
+
+var era_args2 = json_parse(str_from("{\"year\": -500}"));
+var elr2 = resolve_era_lookup(era_args2);
+ok(elr2, "era lookup by year");
+
+var era_args3 = json_parse(str_from("{\"name\": \"Space Age\"}"));
+var elr3 = resolve_era_lookup(era_args3);
+check(elr3, 0, "era lookup unknown=0");
 
 # ---------------------------------------------------------------
 # Summary

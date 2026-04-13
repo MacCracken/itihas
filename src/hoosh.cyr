@@ -1,0 +1,455 @@
+# hoosh.cyr — LLM-powered historical queries via Hoosh
+# Provides answer_from_data() for data-only queries and llm_answer()
+# for natural language questions via hoosh inference with tool calling.
+
+# ----------------------------------------------------------------
+# Query types (integer enum, matches Rust HistoryQuery variants)
+# ----------------------------------------------------------------
+enum QueryType {
+    QT_EVENTS_IN_RANGE;
+    QT_CIVS_AT;
+    QT_CAUSES_OF;
+    QT_INTERACTIONS_BETWEEN;
+    QT_FIGURE_LOOKUP;
+    QT_FREE_FORM;
+}
+
+# Query struct: { type, arg1, arg2 } — 24 bytes
+# arg1/arg2 are integers or Str pointers depending on type
+enum QueryOff { Q_TYPE=0; Q_ARG1=8; Q_ARG2=16; Q_SIZE=24; }
+
+fn query_new(qtype, a1, a2) {
+    var q = alloc(Q_SIZE);
+    store64(q+Q_TYPE, qtype);
+    store64(q+Q_ARG1, a1);
+    store64(q+Q_ARG2, a2);
+    return q;
+}
+
+fn query_events_in_range(start, end) { return query_new(QT_EVENTS_IN_RANGE, start, end); }
+fn query_civs_at(year) { return query_new(QT_CIVS_AT, year, 0); }
+fn query_causes_of(event: Str) { return query_new(QT_CAUSES_OF, event, 0); }
+fn query_interactions_between(ca: Str, cb: Str) { return query_new(QT_INTERACTIONS_BETWEEN, ca, cb); }
+fn query_figure_lookup(name: Str) { return query_new(QT_FIGURE_LOOKUP, name, 0); }
+fn query_free_form(question: Str) { return query_new(QT_FREE_FORM, question, 0); }
+
+# ----------------------------------------------------------------
+# Response types
+# ----------------------------------------------------------------
+enum RespSource { SRC_DATA; SRC_LLM; SRC_HYBRID; }
+
+# QueryResponse: { source, content: Str, data_json: Str } — 24 bytes
+enum RespOff { RESP_SRC=0; RESP_CONTENT=8; RESP_DATA=16; RESP_SIZE=24; }
+
+fn resp_new(src, content: Str, data: Str) {
+    var r = alloc(RESP_SIZE);
+    store64(r+RESP_SRC, src);
+    store64(r+RESP_CONTENT, content);
+    store64(r+RESP_DATA, data);
+    return r;
+}
+
+fn resp_source(r) { return load64(r+RESP_SRC); }
+fn resp_content(r) { return load64(r+RESP_CONTENT); }
+fn resp_data(r) { return load64(r+RESP_DATA); }
+
+# ----------------------------------------------------------------
+# answer_from_data — resolve query from itihas static data
+# Returns response pointer, or 0 if LLM needed
+# ----------------------------------------------------------------
+fn _names_from_vec(v, name_fn) {
+    var sb = str_builder_new();
+    var n = vec_len(v);
+    for (var i = 0; i < n; i = i + 1) {
+        if (i > 0) { str_builder_add_cstr(sb, ", "); }
+        str_builder_add(sb, fncall1(name_fn, vec_get(v, i)));
+    }
+    return str_builder_build(sb);
+}
+
+fn _json_array(v, to_json_fn) {
+    var sb = str_builder_new();
+    str_builder_add_cstr(sb, "[");
+    var n = vec_len(v);
+    for (var i = 0; i < n; i = i + 1) {
+        if (i > 0) { str_builder_add_cstr(sb, ", "); }
+        str_builder_add(sb, fncall1(to_json_fn, vec_get(v, i)));
+    }
+    str_builder_add_cstr(sb, "]");
+    return str_builder_build(sb);
+}
+
+fn answer_from_data(q) {
+    var qt = load64(q+Q_TYPE);
+
+    if (qt == QT_EVENTS_IN_RANGE) {
+        var events = events_between(load64(q+Q_ARG1), load64(q+Q_ARG2));
+        if (vec_len(events) == 0) {
+            return resp_new(SRC_DATA, str_from("No events found in the specified range."), str_from("[]"));
+        }
+        var names = _names_from_vec(events, &evt_name);
+        var data = _json_array(events, &event_to_json);
+        return resp_new(SRC_DATA, names, data);
+    }
+
+    if (qt == QT_CIVS_AT) {
+        var civs = civs_active_at(load64(q+Q_ARG1));
+        if (vec_len(civs) == 0) {
+            return resp_new(SRC_DATA, str_from("No civilizations found active at that year."), str_from("[]"));
+        }
+        var names = _names_from_vec(civs, &civ_name);
+        var data = _json_array(civs, &civ_to_json);
+        return resp_new(SRC_DATA, names, data);
+    }
+
+    if (qt == QT_CAUSES_OF) {
+        var causes = causes_of(load64(q+Q_ARG1));
+        if (vec_len(causes) == 0) { return 0; }
+        var sb = str_builder_new();
+        var n = vec_len(causes);
+        for (var i = 0; i < n; i = i + 1) {
+            if (i > 0) { str_builder_add_cstr(sb, "; "); }
+            str_builder_add(sb, load64(vec_get(causes, i)+CAUS_DESC));
+        }
+        var content = str_builder_build(sb);
+        var data = _json_array(causes, &causality_to_json);
+        return resp_new(SRC_DATA, content, data);
+    }
+
+    if (qt == QT_INTERACTIONS_BETWEEN) {
+        var ints = interactions_between(load64(q+Q_ARG1), load64(q+Q_ARG2));
+        if (vec_len(ints) == 0) { return 0; }
+        var sb = str_builder_new();
+        var n = vec_len(ints);
+        for (var i = 0; i < n; i = i + 1) {
+            if (i > 0) { str_builder_add_cstr(sb, "; "); }
+            str_builder_add(sb, load64(vec_get(ints, i)+INT_DESC));
+        }
+        var content = str_builder_build(sb);
+        var data = _json_array(ints, &interaction_to_json);
+        return resp_new(SRC_DATA, content, data);
+    }
+
+    if (qt == QT_FIGURE_LOOKUP) {
+        var fig = figure_by_name(load64(q+Q_ARG1));
+        if (fig == 0) { return 0; }
+        var content = load64(fig+FIG_DESC);
+        var data = figure_to_json(fig);
+        return resp_new(SRC_DATA, content, data);
+    }
+
+    # QT_FREE_FORM — always needs LLM
+    return 0;
+}
+
+# ----------------------------------------------------------------
+# resolve_era_lookup — special tool handler (not a HistoryQuery type)
+# args is a parsed JSON pairs vec from json_parse()
+# ----------------------------------------------------------------
+fn resolve_era_lookup(args) {
+    var name_val = json_get(args, str_from("name"));
+    if (name_val != 0) {
+        if (str_len(name_val) > 0) {
+            var era = era_by_name(name_val);
+            if (era == 0) { return 0; }
+            var sb = str_builder_new();
+            str_builder_add(sb, era_name(era));
+            str_builder_add_cstr(sb, " (");
+            str_builder_add_int(sb, era_start(era));
+            str_builder_add_cstr(sb, " - ");
+            str_builder_add_int(sb, era_end(era));
+            str_builder_add_cstr(sb, ")");
+            var content = str_builder_build(sb);
+            var data = era_to_json(era);
+            return resp_new(SRC_DATA, content, data);
+        }
+    }
+    var year_val = json_get(args, str_from("year"));
+    if (year_val != 0) {
+        if (str_len(year_val) > 0) {
+            var year = str_to_int(year_val);
+            var eras = eras_containing(year);
+            if (vec_len(eras) == 0) {
+                return resp_new(SRC_DATA, str_from("No eras found containing that year."), str_from("[]"));
+            }
+            var names = _names_from_vec(eras, &era_name);
+            var data = _json_array(eras, &era_to_json);
+            return resp_new(SRC_DATA, names, data);
+        }
+    }
+    return 0;
+}
+
+# ----------------------------------------------------------------
+# Tool definitions — JSON for hoosh inference request
+# ----------------------------------------------------------------
+var HOOSH_SYSTEM_PROMPT = "You are a historical data assistant. When the user asks a historical question, use the available tools to look up the answer from structured data. Use events_in_range for date-based queries, civilizations_at for what existed when questions, causes_of for causal questions, interactions_between for relationship queries, figure_lookup for people, and era_lookup for period queries. Only respond directly if no tool fits the question.";
+
+fn hoosh_tool_defs_json() {
+    return "[{\"type\":\"function\",\"function\":{\"name\":\"events_in_range\",\"description\":\"Find historical events in a year range (negative = BCE)\",\"parameters\":{\"type\":\"object\",\"properties\":{\"start\":{\"type\":\"integer\",\"description\":\"Start year\"},\"end\":{\"type\":\"integer\",\"description\":\"End year\"}},\"required\":[\"start\",\"end\"]}}},{\"type\":\"function\",\"function\":{\"name\":\"civilizations_at\",\"description\":\"Find civilizations active at a given year (negative = BCE)\",\"parameters\":{\"type\":\"object\",\"properties\":{\"year\":{\"type\":\"integer\",\"description\":\"Year to query\"}},\"required\":[\"year\"]}}},{\"type\":\"function\",\"function\":{\"name\":\"causes_of\",\"description\":\"Find causal factors of a named historical event\",\"parameters\":{\"type\":\"object\",\"properties\":{\"event\":{\"type\":\"string\",\"description\":\"Event name\"}},\"required\":[\"event\"]}}},{\"type\":\"function\",\"function\":{\"name\":\"interactions_between\",\"description\":\"Find interactions between two civilizations\",\"parameters\":{\"type\":\"object\",\"properties\":{\"civ_a\":{\"type\":\"string\",\"description\":\"First civilization\"},\"civ_b\":{\"type\":\"string\",\"description\":\"Second civilization\"}},\"required\":[\"civ_a\",\"civ_b\"]}}},{\"type\":\"function\",\"function\":{\"name\":\"figure_lookup\",\"description\":\"Look up a historical figure by name\",\"parameters\":{\"type\":\"object\",\"properties\":{\"name\":{\"type\":\"string\",\"description\":\"Figure name\"}},\"required\":[\"name\"]}}},{\"type\":\"function\",\"function\":{\"name\":\"era_lookup\",\"description\":\"Look up a historical era by name or find eras containing a year\",\"parameters\":{\"type\":\"object\",\"properties\":{\"name\":{\"type\":\"string\",\"description\":\"Era name\"},\"year\":{\"type\":\"integer\",\"description\":\"Year to find containing eras\"}}}}}]";
+}
+
+fn hoosh_tool_count() { return 6; }
+
+# ----------------------------------------------------------------
+# HTTP POST to hoosh — build inference request
+# ----------------------------------------------------------------
+fn _build_post_header(buf, path, host, body_len) {
+    var pos = 0;
+    memcpy(buf + pos, "POST ", 5); pos = pos + 5;
+    memcpy(buf + pos, path, strlen(path)); pos = pos + strlen(path);
+    memcpy(buf + pos, " HTTP/1.0", 9); pos = pos + 9;
+    store8(buf + pos, 13); store8(buf + pos + 1, 10); pos = pos + 2;
+    memcpy(buf + pos, "Host: ", 6); pos = pos + 6;
+    memcpy(buf + pos, host, strlen(host)); pos = pos + strlen(host);
+    store8(buf + pos, 13); store8(buf + pos + 1, 10); pos = pos + 2;
+    memcpy(buf + pos, "Content-Type: application/json", 29); pos = pos + 29;
+    store8(buf + pos, 13); store8(buf + pos + 1, 10); pos = pos + 2;
+    memcpy(buf + pos, "Connection: close", 17); pos = pos + 17;
+    store8(buf + pos, 13); store8(buf + pos + 1, 10); pos = pos + 2;
+    memcpy(buf + pos, "Content-Length: ", 16); pos = pos + 16;
+    var cl_buf = alloc(32);
+    var cl_len = fmt_int_buf(body_len, cl_buf);
+    memcpy(buf + pos, cl_buf, cl_len); pos = pos + cl_len;
+    store8(buf + pos, 13); store8(buf + pos + 1, 10); pos = pos + 2;
+    store8(buf + pos, 13); store8(buf + pos + 1, 10); pos = pos + 2;
+    return pos;
+}
+
+fn hoosh_post(port, body: Str) {
+    var fd = syscall(SYS_SOCKET, 2, 1, 0);
+    if (fd < 0) { return 0; }
+    var sa = sockaddr_in(0x0100007F, port);
+    var cr = syscall(SYS_CONNECT, fd, sa, 16);
+    if (cr < 0) { syscall(3, fd); return 0; }
+    var hdr = alloc(2048);
+    var body_data = str_data(body);
+    var body_len = str_len(body);
+    var hlen = _build_post_header(hdr, "/v1/chat/completions", "localhost", body_len);
+    syscall(SYS_WRITE, fd, hdr, hlen);
+    syscall(SYS_WRITE, fd, body_data, body_len);
+    var rbuf = alloc(131072);
+    var total = 0;
+    var n = 1;
+    while (n > 0) {
+        n = syscall(SYS_READ, fd, rbuf + total, 131072 - total);
+        if (n > 0) { total = total + n; }
+    }
+    syscall(3, fd);
+    if (total == 0) { return 0; }
+    return _http_parse_response(rbuf, total);
+}
+
+# ----------------------------------------------------------------
+# Build inference request JSON
+# ----------------------------------------------------------------
+fn _build_inference_request(question: Str, model: Str) {
+    var sb = str_builder_new();
+    str_builder_add_cstr(sb, "{\"model\": \"");
+    str_builder_add(sb, model);
+    str_builder_add_cstr(sb, "\", \"messages\": [{\"role\": \"system\", \"content\": \"");
+    str_builder_add_cstr(sb, HOOSH_SYSTEM_PROMPT);
+    str_builder_add_cstr(sb, "\"}, {\"role\": \"user\", \"content\": \"");
+    # Escape question text
+    var qlen = str_len(question);
+    var qd = str_data(question);
+    for (var i = 0; i < qlen; i = i + 1) {
+        var c = load8(qd + i);
+        if (c == 34) { str_builder_add_cstr(sb, "\\\""); }
+        else { if (c == 92) { str_builder_add_cstr(sb, "\\\\"); }
+        else { if (c == 10) { str_builder_add_cstr(sb, "\\n"); }
+        else { str_builder_add_byte(sb, c); } } }
+    }
+    str_builder_add_cstr(sb, "\"}], \"tools\": ");
+    str_builder_add_cstr(sb, hoosh_tool_defs_json());
+    str_builder_add_cstr(sb, ", \"tool_choice\": \"auto\", \"max_tokens\": 1024, \"temperature\": 0.0}");
+    return str_builder_build(sb);
+}
+
+# ----------------------------------------------------------------
+# Parse tool call from response JSON
+# Looks for "tool_calls" array, extracts first call's name and arguments
+# Returns {name: Str, args_json: Str} or 0 if no tool call
+# ----------------------------------------------------------------
+fn _extract_tool_call(body, body_len) {
+    var body_str = str_from_buf(body, body_len);
+    # Find "tool_calls"
+    if (str_contains_cstr(body_str, "tool_calls") == 0) { return 0; }
+    # Find "name": "..." after tool_calls
+    var name_idx = str_index_of_cstr(body_str, "\"name\"");
+    if (name_idx < 0) { return 0; }
+    # Find the value after "name": "
+    var data = str_data(body_str);
+    var slen = str_len(body_str);
+    var i = name_idx + 7;
+    # Skip whitespace and colon
+    while (i < slen) {
+        var c = load8(data + i);
+        if (c == 34) { break; }
+        i = i + 1;
+    }
+    i = i + 1; # skip opening quote
+    var name_start = i;
+    while (i < slen) {
+        if (load8(data + i) == 34) { break; }
+        i = i + 1;
+    }
+    var tool_name = str_new(data + name_start, i - name_start);
+
+    # Find "arguments" — could be string or object
+    var args_idx = str_index_of_cstr(body_str, "\"arguments\"");
+    if (args_idx < 0) { return 0; }
+    i = args_idx + 12;
+    while (i < slen) {
+        var c = load8(data + i);
+        if (c == 123) { break; }  # {
+        if (c == 34) { break; }   # " (stringified JSON)
+        i = i + 1;
+    }
+    # Extract args JSON object or string
+    var args_str = str_from("");
+    if (load8(data + i) == 123) {
+        # Object — find matching }
+        var depth = 1;
+        var start = i;
+        i = i + 1;
+        while (i < slen && depth > 0) {
+            if (load8(data + i) == 123) { depth = depth + 1; }
+            if (load8(data + i) == 125) { depth = depth - 1; }
+            i = i + 1;
+        }
+        args_str = str_new(data + start, i - start);
+    }
+    if (load8(data + i) == 34) {
+        # Stringified JSON — unescape
+        i = i + 1;
+        var start = i;
+        while (i < slen) {
+            if (load8(data + i) == 34 && load8(data + i - 1) != 92) { break; }
+            i = i + 1;
+        }
+        args_str = str_new(data + start, i - start);
+    }
+
+    # Return {name, args_str} packed in 16 bytes
+    var result = alloc(16);
+    store64(result, tool_name);
+    store64(result + 8, args_str);
+    return result;
+}
+
+# ----------------------------------------------------------------
+# Parse tool call into HistoryQuery
+# ----------------------------------------------------------------
+fn parse_tool_call(name: Str, args_json: Str) {
+    var args = json_parse(args_json);
+
+    if (str_eq_cstr(name, "events_in_range") == 1) {
+        var sv = json_get(args, str_from("start"));
+        var ev = json_get(args, str_from("end"));
+        if (sv == 0) { return 0; }
+        if (ev == 0) { return 0; }
+        return query_events_in_range(str_to_int(sv), str_to_int(ev));
+    }
+    if (str_eq_cstr(name, "civilizations_at") == 1) {
+        var yv = json_get(args, str_from("year"));
+        if (yv == 0) { return 0; }
+        return query_civs_at(str_to_int(yv));
+    }
+    if (str_eq_cstr(name, "causes_of") == 1) {
+        var ev = json_get(args, str_from("event"));
+        if (ev == 0) { return 0; }
+        return query_causes_of(ev);
+    }
+    if (str_eq_cstr(name, "interactions_between") == 1) {
+        var av = json_get(args, str_from("civ_a"));
+        var bv = json_get(args, str_from("civ_b"));
+        if (av == 0) { return 0; }
+        if (bv == 0) { return 0; }
+        return query_interactions_between(av, bv);
+    }
+    if (str_eq_cstr(name, "figure_lookup") == 1) {
+        var nv = json_get(args, str_from("name"));
+        if (nv == 0) { return 0; }
+        return query_figure_lookup(nv);
+    }
+    # era_lookup handled separately via resolve_era_lookup
+    return 0;
+}
+
+# ----------------------------------------------------------------
+# Extract LLM text content from response (when no tool call)
+# ----------------------------------------------------------------
+fn _extract_content(body, body_len) {
+    var body_str = str_from_buf(body, body_len);
+    var idx = str_index_of_cstr(body_str, "\"content\"");
+    if (idx < 0) { return str_from(""); }
+    var data = str_data(body_str);
+    var slen = str_len(body_str);
+    var i = idx + 10;
+    while (i < slen) {
+        if (load8(data + i) == 34) { break; }
+        if (load8(data + i) == 110 && load8(data + i - 1) != 92) {
+            # "null"
+            if (memeq(data + i, "null", 4) == 1) { return str_from(""); }
+        }
+        i = i + 1;
+    }
+    i = i + 1;
+    var start = i;
+    while (i < slen) {
+        if (load8(data + i) == 34 && load8(data + i - 1) != 92) { break; }
+        i = i + 1;
+    }
+    return str_new(data + start, i - start);
+}
+
+# ----------------------------------------------------------------
+# llm_answer — answer a question via hoosh LLM inference
+# port: hoosh server port (e.g. 8088)
+# question: natural language question (Str)
+# model: model name (Str, e.g. "llama3.2:1b")
+# Returns QueryResponse pointer, or 0 on error
+# ----------------------------------------------------------------
+fn llm_answer(port, question: Str, model: Str) {
+    var req_body = _build_inference_request(question, model);
+    var resp = hoosh_post(port, req_body);
+    if (resp == 0) { return 0; }
+
+    var status = load64(resp);
+    if (status != 200) { return 0; }
+
+    var body = load64(resp + 8);
+    var body_len = load64(resp + 16);
+
+    # Check for tool calls
+    var tc = _extract_tool_call(body, body_len);
+    if (tc != 0) {
+        var tool_name = load64(tc);
+        var tool_args_str = load64(tc + 8);
+
+        # era_lookup — special case
+        if (str_eq_cstr(tool_name, "era_lookup") == 1) {
+            var args = json_parse(tool_args_str);
+            var era_resp = resolve_era_lookup(args);
+            if (era_resp != 0) {
+                store64(era_resp+RESP_SRC, SRC_HYBRID);
+                return era_resp;
+            }
+        }
+
+        # Other tools — parse and resolve from data
+        var query = parse_tool_call(tool_name, tool_args_str);
+        if (query != 0) {
+            var data_resp = answer_from_data(query);
+            if (data_resp != 0) {
+                store64(data_resp+RESP_SRC, SRC_HYBRID);
+                return data_resp;
+            }
+        }
+    }
+
+    # No tool call or data insufficient — return LLM text
+    var content = _extract_content(body, body_len);
+    return resp_new(SRC_LLM, content, str_from(""));
+}

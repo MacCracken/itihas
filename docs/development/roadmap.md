@@ -1,6 +1,6 @@
 # Development Roadmap
 
-> **Status**: v2.1.0 released | **Current**: 2.1.0 | **Compiler**: cc3 4.0.0
+> **Status**: v2.2.0 released | **Current**: 2.2.0 | **Compiler**: cc3 4.0.0
 
 Completed items are in [CHANGELOG.md](../../CHANGELOG.md).
 Rust benchmark baseline in [benchmarks-rust-v-cyrius.md](../../benchmarks-rust-v-cyrius.md).
@@ -27,11 +27,10 @@ Rust benchmark baseline in [benchmarks-rust-v-cyrius.md](../../benchmarks-rust-v
 | 4 | **argonaut integration** | Medium | JSON serialization for all types. argonaut v1.2.0 is ported; needs itihas struct integration. |
 | 5 | **`.bcyr` benchmark harness** | Medium | Port 28 criterion benchmarks to Cyrius bench format. Enables direct Rust-vs-Cyrius timing comparison. |
 
-## v2.2.0 — AI Integration
+## Completed in 2.2.0
 
-| # | Item | Blocked on | Details |
-|---|------|-----------|---------|
-| 7 | **hoosh module** | — | `answer_from_data()`, `free_form()`, `civilizations_at()`, `events_in_range()`, `figure_lookup()`, `resolve_era_lookup()`. Natural language historical queries via LLM inference. hoosh Cyrius port complete. |
+- [x] hoosh module: `answer_from_data()`, `llm_answer()`, `parse_tool_call()`, `resolve_era_lookup()`, 6 tool definitions, HTTP POST client
+- [x] 30 new tests (153 total)
 
 ## v2.3.0 — Tool Integration
 

@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.2.0] - 2026-04-13
+
+### Added
+
+- **hoosh** — LLM-powered historical queries via hoosh inference gateway (`src/hoosh.cyr`). 6 query types: `EventsInRange`, `CivilizationsAt`, `CausesOf`, `InteractionsBetween`, `FigureLookup`, `FreeForm`
+- **hoosh** — `answer_from_data()` resolves queries from itihas static data without LLM inference. Returns structured `QueryResponse` with source, content, and JSON data
+- **hoosh** — `llm_answer(port, question, model)` sends natural language questions to hoosh server with 6 tool definitions, parses tool calls, dispatches to data lookups or returns LLM text
+- **hoosh** — `resolve_era_lookup()` handles era-specific queries by name or year (special case outside standard query types)
+- **hoosh** — `parse_tool_call()` converts LLM tool call name + JSON arguments into structured query
+- **hoosh** — 6 OpenAI-compatible tool definitions: `events_in_range`, `civilizations_at`, `causes_of`, `interactions_between`, `figure_lookup`, `era_lookup`
+- **hoosh** — HTTP POST client for hoosh `/v1/chat/completions` endpoint with JSON request builder and response parser
+- 30 new test assertions (153 total): answer_from_data for all 6 query types (found, not-found, empty), tool definition validation, parse_tool_call for all tools + unknown + missing args, resolve_era_lookup by name/year/unknown
+
+### Changed
+
+- **cyrius.toml** — Added `net` and `http` to stdlib deps for hoosh HTTP client
+
 ## [2.1.0] - 2026-04-13
 
 ### Added
@@ -171,7 +188,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `no_std` support via `alloc`/`core`; `std` feature adds `LazyLock` caching
 - All public types: `Display` impls, `Cow<'static, str>` for zero-alloc statics, full serde roundtrip, `#[non_exhaustive]` on all enums and structs, `#[must_use]` on all pure functions
 
-[Unreleased]: https://github.com/MacCracken/itihas/compare/v2.1.0...HEAD
+[Unreleased]: https://github.com/MacCracken/itihas/compare/v2.2.0...HEAD
+[2.2.0]: https://github.com/MacCracken/itihas/compare/v2.1.0...v2.2.0
 [2.1.0]: https://github.com/MacCracken/itihas/compare/v2.0.0...v2.1.0
 [2.0.0]: https://github.com/MacCracken/itihas/compare/v1.5.0...v2.0.0
 [1.5.0]: https://github.com/MacCracken/itihas/compare/v1.0.1...v1.5.0
