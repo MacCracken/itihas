@@ -1,4 +1,4 @@
-# itihas — Structured World History v2.3.1
+# itihas — Structured World History v2.3.2
 # 10 data modules, ported from 8846 lines of Rust
 #
 # This is the library smoke test / binary entry point. It loads every data
