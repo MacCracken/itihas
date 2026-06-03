@@ -5,6 +5,7 @@ enum CivOff { CIV_NAME=0; CIV_REGION=8; CIV_PEAK=16; CIV_FOUND=24; CIV_END=32; C
 var civ_vec = 0;
 var civ_init_done = 0;
 
+#must_use
 fn civ_new(name: Str, region: Str, peak: Str, fy, ey, traits: Str, script: Str, lang: Str) {
     var p = alloc(CIV_SIZE);
     store64(p+CIV_NAME, name); store64(p+CIV_REGION, region); store64(p+CIV_PEAK, peak);
@@ -12,9 +13,13 @@ fn civ_new(name: Str, region: Str, peak: Str, fy, ey, traits: Str, script: Str, 
     store64(p+CIV_TRAITS, traits); store64(p+CIV_SCRIPT, script); store64(p+CIV_LANG, lang);
     return p;
 }
+#must_use
 fn civ_name(p) { return load64(p+CIV_NAME); }
+#must_use
 fn civ_region(p) { return load64(p+CIV_REGION); }
+#must_use
 fn civ_found(p) { return load64(p+CIV_FOUND); }
+#must_use
 fn civ_end(p) { return load64(p+CIV_END); }
 
 fn build_civs() {
@@ -75,13 +80,17 @@ fn build_civs() {
     return v;
 }
 
+#must_use
 fn all_civilizations() {
     if (civ_init_done == 0) { civ_vec = build_civs(); civ_init_done = 1; }
     return civ_vec;
 }
+#must_use
 fn civ_count() { return vec_len(all_civilizations()); }
+#must_use
 fn civ_get(idx) { return vec_get(all_civilizations(), idx); }
 
+#must_use
 fn civs_by_region(region: Str) {
     var result = vec_new();
     var v = all_civilizations(); var n = vec_len(v);
@@ -94,6 +103,7 @@ fn civs_by_region(region: Str) {
 
 fn _cmp_civ_found(a, b) { return load64(a+CIV_FOUND) - load64(b+CIV_FOUND); }
 
+#must_use
 fn civs_active_at(year) {
     var result = vec_new();
     var v = all_civilizations(); var n = vec_len(v);
@@ -105,6 +115,7 @@ fn civs_active_at(year) {
     return result;
 }
 
+#must_use
 fn civ_by_name(name: Str) {
     var v = all_civilizations(); var n = vec_len(v);
     for (var i = 0; i < n; i = i + 1) {

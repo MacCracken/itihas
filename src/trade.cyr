@@ -6,6 +6,7 @@ enum RouteOff { RT_NAME=0; RT_REGIONS=8; RT_TYPE=16; RT_CIVS=24; RT_COMM=32; RT_
 var route_vec = 0;
 var route_init_done = 0;
 
+#must_use
 fn rt_new(name: Str, regions: Str, rtype, civs: Str, comm: Str, sy, ey, desc: Str) {
     var p = alloc(RT_SIZE);
     store64(p+RT_NAME,name); store64(p+RT_REGIONS,regions); store64(p+RT_TYPE,rtype);
@@ -13,7 +14,9 @@ fn rt_new(name: Str, regions: Str, rtype, civs: Str, comm: Str, sy, ey, desc: St
     store64(p+RT_START,sy); store64(p+RT_END,ey); store64(p+RT_DESC,desc);
     return p;
 }
+#must_use
 fn rt_name(p) { return load64(p+RT_NAME); }
+#must_use
 fn rt_comm(p) { return load64(p+RT_COMM); }
 
 fn build_routes() {
@@ -36,12 +39,15 @@ fn build_routes() {
     return v;
 }
 
+#must_use
 fn all_routes() {
     if (route_init_done == 0) { route_vec = build_routes(); route_init_done = 1; }
     return route_vec;
 }
+#must_use
 fn route_count() { return vec_len(all_routes()); }
 
+#must_use
 fn route_by_name(name: Str) {
     var v = all_routes(); var n = vec_len(v);
     for (var i = 0; i < n; i = i + 1) {
@@ -51,6 +57,7 @@ fn route_by_name(name: Str) {
     return 0;
 }
 
+#must_use
 fn routes_by_commodity(comm: Str) {
     var result = vec_new();
     var v = all_routes(); var n = vec_len(v);
@@ -61,6 +68,7 @@ fn routes_by_commodity(comm: Str) {
     return result;
 }
 
+#must_use
 fn routes_by_region(region: Str) {
     var result = vec_new();
     var v = all_routes(); var n = vec_len(v);
@@ -71,6 +79,7 @@ fn routes_by_region(region: Str) {
     return result;
 }
 
+#must_use
 fn routes_by_type(rtype) {
     var result = vec_new();
     var v = all_routes(); var n = vec_len(v);
@@ -81,6 +90,7 @@ fn routes_by_type(rtype) {
     return result;
 }
 
+#must_use
 fn routes_by_civilization(civ: Str) {
     var result = vec_new();
     var v = all_routes(); var n = vec_len(v);
@@ -91,6 +101,7 @@ fn routes_by_civilization(civ: Str) {
     return result;
 }
 
+#must_use
 fn routes_active_at(year) {
     var result = vec_new();
     var v = all_routes(); var n = vec_len(v);

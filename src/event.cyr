@@ -7,15 +7,20 @@ enum EvtOff { EVT_NAME=0; EVT_YEAR=8; EVT_ERA=16; EVT_CAT=24; EVT_DESC=32; EVT_C
 var evt_vec = 0;
 var evt_init_done = 0;
 
+#must_use
 fn evt_new(name: Str, year, era: Str, cat, desc: Str, civs: Str, sig) {
     var p = alloc(EVT_SIZE);
     store64(p+EVT_NAME,name); store64(p+EVT_YEAR,year); store64(p+EVT_ERA,era);
     store64(p+EVT_CAT,cat); store64(p+EVT_DESC,desc); store64(p+EVT_CIVS,civs); store64(p+EVT_SIG,sig);
     return p;
 }
+#must_use
 fn evt_name(p) { return load64(p+EVT_NAME); }
+#must_use
 fn evt_year(p) { return load64(p+EVT_YEAR); }
+#must_use
 fn evt_cat(p) { return load64(p+EVT_CAT); }
+#must_use
 fn evt_sig(p) { return load64(p+EVT_SIG); }
 
 fn build_events() {
@@ -128,12 +133,15 @@ fn build_events() {
     return v;
 }
 
+#must_use
 fn all_events() {
     if (evt_init_done == 0) { evt_vec = build_events(); evt_init_done = 1; }
     return evt_vec;
 }
+#must_use
 fn event_count() { return vec_len(all_events()); }
 
+#must_use
 fn events_by_category(cat) {
     var result = vec_new();
     var v = all_events(); var n = vec_len(v);
@@ -144,6 +152,7 @@ fn events_by_category(cat) {
     return result;
 }
 
+#must_use
 fn events_at_year(year) {
     var result = vec_new();
     var v = all_events(); var n = vec_len(v);
@@ -156,6 +165,7 @@ fn events_at_year(year) {
 
 fn _cmp_evt_year(a, b) { return load64(a+EVT_YEAR) - load64(b+EVT_YEAR); }
 
+#must_use
 fn events_between(sy, ey) {
     var result = vec_new();
     var v = all_events(); var n = vec_len(v);
@@ -167,6 +177,7 @@ fn events_between(sy, ey) {
     return result;
 }
 
+#must_use
 fn events_by_significance(sig) {
     var result = vec_new();
     var v = all_events(); var n = vec_len(v);
@@ -177,6 +188,7 @@ fn events_by_significance(sig) {
     return result;
 }
 
+#must_use
 fn event_by_name(name: Str) {
     var v = all_events(); var n = vec_len(v);
     for (var i = 0; i < n; i = i + 1) {

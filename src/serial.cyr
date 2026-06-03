@@ -37,6 +37,7 @@ fn _json_sep(sb) { str_builder_add_cstr(sb, ", "); return 0; }
 # ----------------------------------------------------------------
 # Era
 # ----------------------------------------------------------------
+#must_use
 fn era_to_json(p) {
     var sb = str_builder_new();
     str_builder_add_cstr(sb, "{");
@@ -54,6 +55,7 @@ fn era_to_json(p) {
 # ----------------------------------------------------------------
 # Civilization
 # ----------------------------------------------------------------
+#must_use
 fn civ_to_json(p) {
     var sb = str_builder_new();
     str_builder_add_cstr(sb, "{");
@@ -72,6 +74,7 @@ fn civ_to_json(p) {
 # ----------------------------------------------------------------
 # Event
 # ----------------------------------------------------------------
+#must_use
 fn event_to_json(p) {
     var sb = str_builder_new();
     str_builder_add_cstr(sb, "{");
@@ -89,6 +92,7 @@ fn event_to_json(p) {
 # ----------------------------------------------------------------
 # Figure
 # ----------------------------------------------------------------
+#must_use
 fn figure_to_json(p) {
     var sb = str_builder_new();
     str_builder_add_cstr(sb, "{");
@@ -105,6 +109,7 @@ fn figure_to_json(p) {
 # ----------------------------------------------------------------
 # Calendar
 # ----------------------------------------------------------------
+#must_use
 fn calendar_to_json(p) {
     var sb = str_builder_new();
     str_builder_add_cstr(sb, "{");
@@ -131,6 +136,7 @@ fn battle_to_json(b) {
     return str_builder_build(sb);
 }
 
+#must_use
 fn campaign_to_json(p) {
     var sb = str_builder_new();
     str_builder_add_cstr(sb, "{");
@@ -160,6 +166,7 @@ fn campaign_to_json(p) {
 # ----------------------------------------------------------------
 # Site
 # ----------------------------------------------------------------
+#must_use
 fn site_to_json(p) {
     var sb = str_builder_new();
     str_builder_add_cstr(sb, "{");
@@ -179,6 +186,7 @@ fn site_to_json(p) {
 # ----------------------------------------------------------------
 # Trade Route
 # ----------------------------------------------------------------
+#must_use
 fn route_to_json(p) {
     var sb = str_builder_new();
     str_builder_add_cstr(sb, "{");
@@ -197,6 +205,7 @@ fn route_to_json(p) {
 # ----------------------------------------------------------------
 # Causality
 # ----------------------------------------------------------------
+#must_use
 fn causality_to_json(p) {
     var sb = str_builder_new();
     str_builder_add_cstr(sb, "{");
@@ -211,6 +220,7 @@ fn causality_to_json(p) {
 # ----------------------------------------------------------------
 # Interaction
 # ----------------------------------------------------------------
+#must_use
 fn interaction_to_json(p) {
     var sb = str_builder_new();
     str_builder_add_cstr(sb, "{");

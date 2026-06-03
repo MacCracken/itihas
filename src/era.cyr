@@ -10,6 +10,7 @@ enum EraOff { ERA_NAME = 0; ERA_START = 8; ERA_END = 16; ERA_REGION = 24; ERA_DE
 var era_vec = 0;
 var era_init_done = 0;
 
+#must_use
 fn era_new(name: Str, sy, ey, region: Str, desc: Str, cat, scope) {
     var p = alloc(ERA_SIZE);
     store64(p + ERA_NAME, name);
@@ -22,11 +23,17 @@ fn era_new(name: Str, sy, ey, region: Str, desc: Str, cat, scope) {
     return p;
 }
 
+#must_use
 fn era_name(p) { return load64(p + ERA_NAME); }
+#must_use
 fn era_start(p) { return load64(p + ERA_START); }
+#must_use
 fn era_end(p) { return load64(p + ERA_END); }
+#must_use
 fn era_region(p) { return load64(p + ERA_REGION); }
+#must_use
 fn era_cat(p) { return load64(p + ERA_CAT); }
+#must_use
 fn era_scope(p) { return load64(p + ERA_SCOPE); }
 
 fn build_eras() {
@@ -63,15 +70,19 @@ fn build_eras() {
     return v;
 }
 
+#must_use
 fn all_eras() {
     if (era_init_done == 0) { era_vec = build_eras(); era_init_done = 1; }
     return era_vec;
 }
+#must_use
 fn era_count() { return vec_len(all_eras()); }
+#must_use
 fn era_get(idx) { return vec_get(all_eras(), idx); }
 
 fn _cmp_era_start(a, b) { return load64(a+ERA_START) - load64(b+ERA_START); }
 
+#must_use
 fn eras_containing(year) {
     var result = vec_new();
     var v = all_eras();
@@ -84,6 +95,7 @@ fn eras_containing(year) {
     return result;
 }
 
+#must_use
 fn eras_by_scope(scope) {
     var result = vec_new();
     var v = all_eras();
@@ -95,6 +107,7 @@ fn eras_by_scope(scope) {
     return result;
 }
 
+#must_use
 fn eras_by_region(region: Str) {
     var result = vec_new();
     var v = all_eras();
@@ -106,6 +119,7 @@ fn eras_by_region(region: Str) {
     return result;
 }
 
+#must_use
 fn era_by_name(name: Str) {
     var v = all_eras();
     var n = vec_len(v);

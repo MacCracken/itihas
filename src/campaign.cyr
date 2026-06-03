@@ -7,6 +7,7 @@ enum BatOff { BAT_NAME=0; BAT_YEAR=8; BAT_LOC=16; BAT_DESC=24; BAT_SIZE=32; }
 var camp_vec = 0;
 var camp_init_done = 0;
 
+#must_use
 fn camp_new(name: Str, region: Str, sy, ey, ba: Str, bb: Str, cmds: Str, out, desc: Str) {
     var p = alloc(CAMP_SIZE);
     store64(p+CAMP_NAME,name); store64(p+CAMP_REGION,region);
@@ -15,11 +16,17 @@ fn camp_new(name: Str, region: Str, sy, ey, ba: Str, bb: Str, cmds: Str, out, de
     store64(p+CAMP_BATTLES,vec_new()); store64(p+CAMP_OUT,out); store64(p+CAMP_DESC,desc);
     return p;
 }
+#must_use
 fn camp_name(p) { return load64(p+CAMP_NAME); }
+#must_use
 fn camp_region(p) { return load64(p+CAMP_REGION); }
+#must_use
 fn camp_out(p) { return load64(p+CAMP_OUT); }
+#must_use
 fn camp_cmds(p) { return load64(p+CAMP_CMDS); }
+#must_use
 fn camp_bella(p) { return load64(p+CAMP_BELLA); }
+#must_use
 fn camp_bellb(p) { return load64(p+CAMP_BELLB); }
 
 fn bat_add(camp, name: Str, year, loc: Str, desc: Str) {
@@ -97,12 +104,15 @@ fn build_campaigns() {
     return v;
 }
 
+#must_use
 fn all_campaigns() {
     if (camp_init_done == 0) { camp_vec = build_campaigns(); camp_init_done = 1; }
     return camp_vec;
 }
+#must_use
 fn campaign_count() { return vec_len(all_campaigns()); }
 
+#must_use
 fn campaign_by_name(name: Str) {
     var v = all_campaigns(); var n = vec_len(v);
     for (var i = 0; i < n; i = i + 1) {
@@ -112,6 +122,7 @@ fn campaign_by_name(name: Str) {
     return 0;
 }
 
+#must_use
 fn campaigns_by_region(region: Str) {
     var result = vec_new();
     var v = all_campaigns(); var n = vec_len(v);
@@ -122,6 +133,7 @@ fn campaigns_by_region(region: Str) {
     return result;
 }
 
+#must_use
 fn campaigns_by_outcome(outcome) {
     var result = vec_new();
     var v = all_campaigns(); var n = vec_len(v);
@@ -132,6 +144,7 @@ fn campaigns_by_outcome(outcome) {
     return result;
 }
 
+#must_use
 fn campaigns_by_commander(cmd: Str) {
     var result = vec_new();
     var v = all_campaigns(); var n = vec_len(v);
@@ -142,6 +155,7 @@ fn campaigns_by_commander(cmd: Str) {
     return result;
 }
 
+#must_use
 fn campaigns_by_civilization(civ: Str) {
     var result = vec_new();
     var v = all_campaigns(); var n = vec_len(v);
@@ -152,6 +166,7 @@ fn campaigns_by_civilization(civ: Str) {
     return result;
 }
 
+#must_use
 fn campaigns_active_at(year) {
     var result = vec_new();
     var v = all_campaigns(); var n = vec_len(v);
@@ -164,6 +179,7 @@ fn campaigns_active_at(year) {
 
 fn _cmp_camp_start(a, b) { return load64(a+CAMP_START) - load64(b+CAMP_START); }
 
+#must_use
 fn campaigns_between(sy, ey) {
     var result = vec_new();
     var v = all_campaigns(); var n = vec_len(v);

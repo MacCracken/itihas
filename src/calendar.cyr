@@ -7,6 +7,7 @@ enum CalOff { CAL_NAME = 0; CAL_TYPE = 8; CAL_EPOCH = 16; CAL_MONTHS = 24; CAL_L
 var calendar_vec = 0;
 var calendar_init_done = 0;
 
+#must_use
 fn cal_new(name: Str, ctype, epoch, months, leap: Str) {
     var p = alloc(CAL_SIZE);
     store64(p + CAL_NAME, name);
@@ -17,9 +18,13 @@ fn cal_new(name: Str, ctype, epoch, months, leap: Str) {
     return p;
 }
 
+#must_use
 fn cal_name(p) { return load64(p + CAL_NAME); }
+#must_use
 fn cal_type(p) { return load64(p + CAL_TYPE); }
+#must_use
 fn cal_epoch(p) { return load64(p + CAL_EPOCH); }
+#must_use
 fn cal_months(p) { return load64(p + CAL_MONTHS); }
 
 fn build_calendars() {
@@ -35,12 +40,15 @@ fn build_calendars() {
     return v;
 }
 
+#must_use
 fn all_calendars() {
     if (calendar_init_done == 0) { calendar_vec = build_calendars(); calendar_init_done = 1; }
     return calendar_vec;
 }
+#must_use
 fn calendar_count() { return vec_len(all_calendars()); }
 
+#must_use
 fn calendar_by_name(name: Str) {
     var v = all_calendars();
     var n = vec_len(v);

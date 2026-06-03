@@ -6,14 +6,18 @@ enum IntOff { INT_CIVA=0; INT_CIVB=8; INT_TYPE=16; INT_START=24; INT_END=32; INT
 var int_vec = 0;
 var int_init_done = 0;
 
+#must_use
 fn int_new(ca: Str, cb: Str, itype, sy, ey, desc: Str) {
     var p = alloc(INT_SIZE);
     store64(p+INT_CIVA,ca); store64(p+INT_CIVB,cb); store64(p+INT_TYPE,itype);
     store64(p+INT_START,sy); store64(p+INT_END,ey); store64(p+INT_DESC,desc);
     return p;
 }
+#must_use
 fn int_civa(p) { return load64(p+INT_CIVA); }
+#must_use
 fn int_civb(p) { return load64(p+INT_CIVB); }
+#must_use
 fn int_type(p) { return load64(p+INT_TYPE); }
 
 fn build_interactions() {
@@ -42,12 +46,15 @@ fn build_interactions() {
     return v;
 }
 
+#must_use
 fn all_interactions() {
     if (int_init_done == 0) { int_vec = build_interactions(); int_init_done = 1; }
     return int_vec;
 }
+#must_use
 fn interaction_count() { return vec_len(all_interactions()); }
 
+#must_use
 fn interactions_for(civ: Str) {
     var result = vec_new();
     var v = all_interactions(); var n = vec_len(v);
@@ -58,6 +65,7 @@ fn interactions_for(civ: Str) {
     return result;
 }
 
+#must_use
 fn interactions_between(ca: Str, cb: Str) {
     var result = vec_new();
     var v = all_interactions(); var n = vec_len(v);
@@ -70,6 +78,7 @@ fn interactions_between(ca: Str, cb: Str) {
     return result;
 }
 
+#must_use
 fn interactions_by_type(itype) {
     var result = vec_new();
     var v = all_interactions(); var n = vec_len(v);
@@ -80,6 +89,7 @@ fn interactions_by_type(itype) {
     return result;
 }
 
+#must_use
 fn interaction_neighbors(civ: Str) {
     var result = vec_new();
     var v = all_interactions(); var n = vec_len(v);
@@ -100,6 +110,7 @@ fn interaction_neighbors(civ: Str) {
     return result;
 }
 
+#must_use
 fn influence_score(ca: Str, cb: Str) {
     var btw = interactions_between(ca, cb);
     var score = 0;
@@ -119,6 +130,7 @@ fn influence_score(ca: Str, cb: Str) {
 
 # Split a ", "-delimited region string into a vec of trimmed Str parts
 # e.g. "Near East, Europe" → ["Near East", "Europe"]
+#must_use
 fn split_regions(region_str) {
     var parts = vec_new();
     var slen = str_len(region_str);
@@ -145,6 +157,7 @@ fn split_regions(region_str) {
 
 # Geographic proximity score between two civilizations (0-100)
 # 100 = identical region strings, 50-99 = shared region components, 0 = no overlap
+#must_use
 fn region_proximity(ca: Str, cb: Str) {
     var civ_a = civ_by_name(ca);
     var civ_b = civ_by_name(cb);

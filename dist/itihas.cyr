@@ -110,6 +110,7 @@ enum EraOff { ERA_NAME = 0; ERA_START = 8; ERA_END = 16; ERA_REGION = 24; ERA_DE
 var era_vec = 0;
 var era_init_done = 0;
 
+#must_use
 fn era_new(name: Str, sy, ey, region: Str, desc: Str, cat, scope) {
     var p = alloc(ERA_SIZE);
     store64(p + ERA_NAME, name);
@@ -122,11 +123,17 @@ fn era_new(name: Str, sy, ey, region: Str, desc: Str, cat, scope) {
     return p;
 }
 
+#must_use
 fn era_name(p) { return load64(p + ERA_NAME); }
+#must_use
 fn era_start(p) { return load64(p + ERA_START); }
+#must_use
 fn era_end(p) { return load64(p + ERA_END); }
+#must_use
 fn era_region(p) { return load64(p + ERA_REGION); }
+#must_use
 fn era_cat(p) { return load64(p + ERA_CAT); }
+#must_use
 fn era_scope(p) { return load64(p + ERA_SCOPE); }
 
 fn build_eras() {
@@ -163,15 +170,19 @@ fn build_eras() {
     return v;
 }
 
+#must_use
 fn all_eras() {
     if (era_init_done == 0) { era_vec = build_eras(); era_init_done = 1; }
     return era_vec;
 }
+#must_use
 fn era_count() { return vec_len(all_eras()); }
+#must_use
 fn era_get(idx) { return vec_get(all_eras(), idx); }
 
 fn _cmp_era_start(a, b) { return load64(a+ERA_START) - load64(b+ERA_START); }
 
+#must_use
 fn eras_containing(year) {
     var result = vec_new();
     var v = all_eras();
@@ -184,6 +195,7 @@ fn eras_containing(year) {
     return result;
 }
 
+#must_use
 fn eras_by_scope(scope) {
     var result = vec_new();
     var v = all_eras();
@@ -195,6 +207,7 @@ fn eras_by_scope(scope) {
     return result;
 }
 
+#must_use
 fn eras_by_region(region: Str) {
     var result = vec_new();
     var v = all_eras();
@@ -206,6 +219,7 @@ fn eras_by_region(region: Str) {
     return result;
 }
 
+#must_use
 fn era_by_name(name: Str) {
     var v = all_eras();
     var n = vec_len(v);
@@ -227,6 +241,7 @@ enum CalOff { CAL_NAME = 0; CAL_TYPE = 8; CAL_EPOCH = 16; CAL_MONTHS = 24; CAL_L
 var calendar_vec = 0;
 var calendar_init_done = 0;
 
+#must_use
 fn cal_new(name: Str, ctype, epoch, months, leap: Str) {
     var p = alloc(CAL_SIZE);
     store64(p + CAL_NAME, name);
@@ -237,9 +252,13 @@ fn cal_new(name: Str, ctype, epoch, months, leap: Str) {
     return p;
 }
 
+#must_use
 fn cal_name(p) { return load64(p + CAL_NAME); }
+#must_use
 fn cal_type(p) { return load64(p + CAL_TYPE); }
+#must_use
 fn cal_epoch(p) { return load64(p + CAL_EPOCH); }
+#must_use
 fn cal_months(p) { return load64(p + CAL_MONTHS); }
 
 fn build_calendars() {
@@ -255,12 +274,15 @@ fn build_calendars() {
     return v;
 }
 
+#must_use
 fn all_calendars() {
     if (calendar_init_done == 0) { calendar_vec = build_calendars(); calendar_init_done = 1; }
     return calendar_vec;
 }
+#must_use
 fn calendar_count() { return vec_len(all_calendars()); }
 
+#must_use
 fn calendar_by_name(name: Str) {
     var v = all_calendars();
     var n = vec_len(v);
@@ -280,6 +302,7 @@ enum CivOff { CIV_NAME=0; CIV_REGION=8; CIV_PEAK=16; CIV_FOUND=24; CIV_END=32; C
 var civ_vec = 0;
 var civ_init_done = 0;
 
+#must_use
 fn civ_new(name: Str, region: Str, peak: Str, fy, ey, traits: Str, script: Str, lang: Str) {
     var p = alloc(CIV_SIZE);
     store64(p+CIV_NAME, name); store64(p+CIV_REGION, region); store64(p+CIV_PEAK, peak);
@@ -287,9 +310,13 @@ fn civ_new(name: Str, region: Str, peak: Str, fy, ey, traits: Str, script: Str, 
     store64(p+CIV_TRAITS, traits); store64(p+CIV_SCRIPT, script); store64(p+CIV_LANG, lang);
     return p;
 }
+#must_use
 fn civ_name(p) { return load64(p+CIV_NAME); }
+#must_use
 fn civ_region(p) { return load64(p+CIV_REGION); }
+#must_use
 fn civ_found(p) { return load64(p+CIV_FOUND); }
+#must_use
 fn civ_end(p) { return load64(p+CIV_END); }
 
 fn build_civs() {
@@ -350,13 +377,17 @@ fn build_civs() {
     return v;
 }
 
+#must_use
 fn all_civilizations() {
     if (civ_init_done == 0) { civ_vec = build_civs(); civ_init_done = 1; }
     return civ_vec;
 }
+#must_use
 fn civ_count() { return vec_len(all_civilizations()); }
+#must_use
 fn civ_get(idx) { return vec_get(all_civilizations(), idx); }
 
+#must_use
 fn civs_by_region(region: Str) {
     var result = vec_new();
     var v = all_civilizations(); var n = vec_len(v);
@@ -369,6 +400,7 @@ fn civs_by_region(region: Str) {
 
 fn _cmp_civ_found(a, b) { return load64(a+CIV_FOUND) - load64(b+CIV_FOUND); }
 
+#must_use
 fn civs_active_at(year) {
     var result = vec_new();
     var v = all_civilizations(); var n = vec_len(v);
@@ -380,6 +412,7 @@ fn civs_active_at(year) {
     return result;
 }
 
+#must_use
 fn civ_by_name(name: Str) {
     var v = all_civilizations(); var n = vec_len(v);
     for (var i = 0; i < n; i = i + 1) {
@@ -399,13 +432,16 @@ enum FigOff { FIG_NAME=0; FIG_BIRTH=8; FIG_DEATH=16; FIG_CIV=24; FIG_DOM=32; FIG
 var fig_vec = 0;
 var fig_init_done = 0;
 
+#must_use
 fn fig_new(name: Str, by, dy, civ: Str, dom, desc: Str) {
     var p = alloc(FIG_SIZE);
     store64(p+FIG_NAME,name); store64(p+FIG_BIRTH,by); store64(p+FIG_DEATH,dy);
     store64(p+FIG_CIV,civ); store64(p+FIG_DOM,dom); store64(p+FIG_DESC,desc);
     return p;
 }
+#must_use
 fn fig_name(p) { return load64(p+FIG_NAME); }
+#must_use
 fn fig_domain(p) { return load64(p+FIG_DOM); }
 
 fn build_figs() {
@@ -465,12 +501,15 @@ fn build_figs() {
     return v;
 }
 
+#must_use
 fn all_figures() {
     if (fig_init_done == 0) { fig_vec = build_figs(); fig_init_done = 1; }
     return fig_vec;
 }
+#must_use
 fn figure_count() { return vec_len(all_figures()); }
 
+#must_use
 fn figures_by_domain(dom) {
     var result = vec_new();
     var v = all_figures(); var n = vec_len(v);
@@ -481,6 +520,7 @@ fn figures_by_domain(dom) {
     return result;
 }
 
+#must_use
 fn figure_by_name(name: Str) {
     var v = all_figures(); var n = vec_len(v);
     for (var i = 0; i < n; i = i + 1) {
@@ -501,15 +541,20 @@ enum EvtOff { EVT_NAME=0; EVT_YEAR=8; EVT_ERA=16; EVT_CAT=24; EVT_DESC=32; EVT_C
 var evt_vec = 0;
 var evt_init_done = 0;
 
+#must_use
 fn evt_new(name: Str, year, era: Str, cat, desc: Str, civs: Str, sig) {
     var p = alloc(EVT_SIZE);
     store64(p+EVT_NAME,name); store64(p+EVT_YEAR,year); store64(p+EVT_ERA,era);
     store64(p+EVT_CAT,cat); store64(p+EVT_DESC,desc); store64(p+EVT_CIVS,civs); store64(p+EVT_SIG,sig);
     return p;
 }
+#must_use
 fn evt_name(p) { return load64(p+EVT_NAME); }
+#must_use
 fn evt_year(p) { return load64(p+EVT_YEAR); }
+#must_use
 fn evt_cat(p) { return load64(p+EVT_CAT); }
+#must_use
 fn evt_sig(p) { return load64(p+EVT_SIG); }
 
 fn build_events() {
@@ -622,12 +667,15 @@ fn build_events() {
     return v;
 }
 
+#must_use
 fn all_events() {
     if (evt_init_done == 0) { evt_vec = build_events(); evt_init_done = 1; }
     return evt_vec;
 }
+#must_use
 fn event_count() { return vec_len(all_events()); }
 
+#must_use
 fn events_by_category(cat) {
     var result = vec_new();
     var v = all_events(); var n = vec_len(v);
@@ -638,6 +686,7 @@ fn events_by_category(cat) {
     return result;
 }
 
+#must_use
 fn events_at_year(year) {
     var result = vec_new();
     var v = all_events(); var n = vec_len(v);
@@ -650,6 +699,7 @@ fn events_at_year(year) {
 
 fn _cmp_evt_year(a, b) { return load64(a+EVT_YEAR) - load64(b+EVT_YEAR); }
 
+#must_use
 fn events_between(sy, ey) {
     var result = vec_new();
     var v = all_events(); var n = vec_len(v);
@@ -661,6 +711,7 @@ fn events_between(sy, ey) {
     return result;
 }
 
+#must_use
 fn events_by_significance(sig) {
     var result = vec_new();
     var v = all_events(); var n = vec_len(v);
@@ -671,6 +722,7 @@ fn events_by_significance(sig) {
     return result;
 }
 
+#must_use
 fn event_by_name(name: Str) {
     var v = all_events(); var n = vec_len(v);
     for (var i = 0; i < n; i = i + 1) {
@@ -690,13 +742,16 @@ enum CausOff { CAUS_CAUSE=0; CAUS_EFFECT=8; CAUS_STR=16; CAUS_DESC=24; CAUS_SIZE
 var caus_vec = 0;
 var caus_init_done = 0;
 
+#must_use
 fn caus_new(cause: Str, effect: Str, str, desc: Str) {
     var p = alloc(CAUS_SIZE);
     store64(p+CAUS_CAUSE,cause); store64(p+CAUS_EFFECT,effect);
     store64(p+CAUS_STR,str); store64(p+CAUS_DESC,desc);
     return p;
 }
+#must_use
 fn caus_cause(p) { return load64(p+CAUS_CAUSE); }
+#must_use
 fn caus_effect(p) { return load64(p+CAUS_EFFECT); }
 
 fn build_causalities() {
@@ -717,12 +772,15 @@ fn build_causalities() {
     return v;
 }
 
+#must_use
 fn all_causalities() {
     if (caus_init_done == 0) { caus_vec = build_causalities(); caus_init_done = 1; }
     return caus_vec;
 }
+#must_use
 fn causality_count() { return vec_len(all_causalities()); }
 
+#must_use
 fn causes_of(event_name: Str) {
     var result = vec_new();
     var v = all_causalities(); var n = vec_len(v);
@@ -733,6 +791,7 @@ fn causes_of(event_name: Str) {
     return result;
 }
 
+#must_use
 fn effects_of(event_name: Str) {
     var result = vec_new();
     var v = all_causalities(); var n = vec_len(v);
@@ -746,6 +805,7 @@ fn effects_of(event_name: Str) {
 # BFS causal chain: returns vec of [name_str, depth] pairs stored as 16-byte entries
 enum ChainOff { CH_NAME=0; CH_DEPTH=8; CH_SIZE=16; }
 
+#must_use
 fn causal_chain(event_name: Str, max_depth) {
     var results = vec_new();
     var visited = vec_new();
@@ -803,7 +863,9 @@ fn causal_chain(event_name: Str, max_depth) {
     return results;
 }
 
+#must_use
 fn chain_entry_name(p) { return load64(p + CH_NAME); }
+#must_use
 fn chain_entry_depth(p) { return load64(p + CH_DEPTH); }
 
 # --- interaction.cyr ---
@@ -816,14 +878,18 @@ enum IntOff { INT_CIVA=0; INT_CIVB=8; INT_TYPE=16; INT_START=24; INT_END=32; INT
 var int_vec = 0;
 var int_init_done = 0;
 
+#must_use
 fn int_new(ca: Str, cb: Str, itype, sy, ey, desc: Str) {
     var p = alloc(INT_SIZE);
     store64(p+INT_CIVA,ca); store64(p+INT_CIVB,cb); store64(p+INT_TYPE,itype);
     store64(p+INT_START,sy); store64(p+INT_END,ey); store64(p+INT_DESC,desc);
     return p;
 }
+#must_use
 fn int_civa(p) { return load64(p+INT_CIVA); }
+#must_use
 fn int_civb(p) { return load64(p+INT_CIVB); }
+#must_use
 fn int_type(p) { return load64(p+INT_TYPE); }
 
 fn build_interactions() {
@@ -852,12 +918,15 @@ fn build_interactions() {
     return v;
 }
 
+#must_use
 fn all_interactions() {
     if (int_init_done == 0) { int_vec = build_interactions(); int_init_done = 1; }
     return int_vec;
 }
+#must_use
 fn interaction_count() { return vec_len(all_interactions()); }
 
+#must_use
 fn interactions_for(civ: Str) {
     var result = vec_new();
     var v = all_interactions(); var n = vec_len(v);
@@ -868,6 +937,7 @@ fn interactions_for(civ: Str) {
     return result;
 }
 
+#must_use
 fn interactions_between(ca: Str, cb: Str) {
     var result = vec_new();
     var v = all_interactions(); var n = vec_len(v);
@@ -880,6 +950,7 @@ fn interactions_between(ca: Str, cb: Str) {
     return result;
 }
 
+#must_use
 fn interactions_by_type(itype) {
     var result = vec_new();
     var v = all_interactions(); var n = vec_len(v);
@@ -890,6 +961,7 @@ fn interactions_by_type(itype) {
     return result;
 }
 
+#must_use
 fn interaction_neighbors(civ: Str) {
     var result = vec_new();
     var v = all_interactions(); var n = vec_len(v);
@@ -910,6 +982,7 @@ fn interaction_neighbors(civ: Str) {
     return result;
 }
 
+#must_use
 fn influence_score(ca: Str, cb: Str) {
     var btw = interactions_between(ca, cb);
     var score = 0;
@@ -929,6 +1002,7 @@ fn influence_score(ca: Str, cb: Str) {
 
 # Split a ", "-delimited region string into a vec of trimmed Str parts
 # e.g. "Near East, Europe" → ["Near East", "Europe"]
+#must_use
 fn split_regions(region_str) {
     var parts = vec_new();
     var slen = str_len(region_str);
@@ -955,6 +1029,7 @@ fn split_regions(region_str) {
 
 # Geographic proximity score between two civilizations (0-100)
 # 100 = identical region strings, 50-99 = shared region components, 0 = no overlap
+#must_use
 fn region_proximity(ca: Str, cb: Str) {
     var civ_a = civ_by_name(ca);
     var civ_b = civ_by_name(cb);
@@ -1000,6 +1075,7 @@ enum BatOff { BAT_NAME=0; BAT_YEAR=8; BAT_LOC=16; BAT_DESC=24; BAT_SIZE=32; }
 var camp_vec = 0;
 var camp_init_done = 0;
 
+#must_use
 fn camp_new(name: Str, region: Str, sy, ey, ba: Str, bb: Str, cmds: Str, out, desc: Str) {
     var p = alloc(CAMP_SIZE);
     store64(p+CAMP_NAME,name); store64(p+CAMP_REGION,region);
@@ -1008,11 +1084,17 @@ fn camp_new(name: Str, region: Str, sy, ey, ba: Str, bb: Str, cmds: Str, out, de
     store64(p+CAMP_BATTLES,vec_new()); store64(p+CAMP_OUT,out); store64(p+CAMP_DESC,desc);
     return p;
 }
+#must_use
 fn camp_name(p) { return load64(p+CAMP_NAME); }
+#must_use
 fn camp_region(p) { return load64(p+CAMP_REGION); }
+#must_use
 fn camp_out(p) { return load64(p+CAMP_OUT); }
+#must_use
 fn camp_cmds(p) { return load64(p+CAMP_CMDS); }
+#must_use
 fn camp_bella(p) { return load64(p+CAMP_BELLA); }
+#must_use
 fn camp_bellb(p) { return load64(p+CAMP_BELLB); }
 
 fn bat_add(camp, name: Str, year, loc: Str, desc: Str) {
@@ -1090,12 +1172,15 @@ fn build_campaigns() {
     return v;
 }
 
+#must_use
 fn all_campaigns() {
     if (camp_init_done == 0) { camp_vec = build_campaigns(); camp_init_done = 1; }
     return camp_vec;
 }
+#must_use
 fn campaign_count() { return vec_len(all_campaigns()); }
 
+#must_use
 fn campaign_by_name(name: Str) {
     var v = all_campaigns(); var n = vec_len(v);
     for (var i = 0; i < n; i = i + 1) {
@@ -1105,6 +1190,7 @@ fn campaign_by_name(name: Str) {
     return 0;
 }
 
+#must_use
 fn campaigns_by_region(region: Str) {
     var result = vec_new();
     var v = all_campaigns(); var n = vec_len(v);
@@ -1115,6 +1201,7 @@ fn campaigns_by_region(region: Str) {
     return result;
 }
 
+#must_use
 fn campaigns_by_outcome(outcome) {
     var result = vec_new();
     var v = all_campaigns(); var n = vec_len(v);
@@ -1125,6 +1212,7 @@ fn campaigns_by_outcome(outcome) {
     return result;
 }
 
+#must_use
 fn campaigns_by_commander(cmd: Str) {
     var result = vec_new();
     var v = all_campaigns(); var n = vec_len(v);
@@ -1135,6 +1223,7 @@ fn campaigns_by_commander(cmd: Str) {
     return result;
 }
 
+#must_use
 fn campaigns_by_civilization(civ: Str) {
     var result = vec_new();
     var v = all_campaigns(); var n = vec_len(v);
@@ -1145,6 +1234,7 @@ fn campaigns_by_civilization(civ: Str) {
     return result;
 }
 
+#must_use
 fn campaigns_active_at(year) {
     var result = vec_new();
     var v = all_campaigns(); var n = vec_len(v);
@@ -1157,6 +1247,7 @@ fn campaigns_active_at(year) {
 
 fn _cmp_camp_start(a, b) { return load64(a+CAMP_START) - load64(b+CAMP_START); }
 
+#must_use
 fn campaigns_between(sy, ey) {
     var result = vec_new();
     var v = all_campaigns(); var n = vec_len(v);
@@ -1178,6 +1269,7 @@ enum SiteOff { SITE_NAME=0; SITE_LOC=8; SITE_REG=16; SITE_TYPE=24; SITE_CIV=32; 
 var site_vec = 0;
 var site_init_done = 0;
 
+#must_use
 fn site_new(name: Str, loc: Str, reg: Str, st, civ: Str, sy, ey, disc, desc: Str) {
     var p = alloc(SITE_SIZE);
     store64(p+SITE_NAME,name); store64(p+SITE_LOC,loc); store64(p+SITE_REG,reg);
@@ -1185,7 +1277,9 @@ fn site_new(name: Str, loc: Str, reg: Str, st, civ: Str, sy, ey, disc, desc: Str
     store64(p+SITE_START,sy); store64(p+SITE_END,ey); store64(p+SITE_DISC,disc); store64(p+SITE_DESC,desc);
     return p;
 }
+#must_use
 fn site_name(p) { return load64(p+SITE_NAME); }
+#must_use
 fn site_region(p) { return load64(p+SITE_REG); }
 
 fn build_sites() {
@@ -1225,12 +1319,15 @@ fn build_sites() {
     return v;
 }
 
+#must_use
 fn all_sites() {
     if (site_init_done == 0) { site_vec = build_sites(); site_init_done = 1; }
     return site_vec;
 }
+#must_use
 fn site_count() { return vec_len(all_sites()); }
 
+#must_use
 fn sites_by_region(region: Str) {
     var result = vec_new();
     var v = all_sites(); var n = vec_len(v);
@@ -1241,6 +1338,7 @@ fn sites_by_region(region: Str) {
     return result;
 }
 
+#must_use
 fn sites_by_type(stype) {
     var result = vec_new();
     var v = all_sites(); var n = vec_len(v);
@@ -1251,6 +1349,7 @@ fn sites_by_type(stype) {
     return result;
 }
 
+#must_use
 fn sites_by_civilization(civ: Str) {
     var result = vec_new();
     var v = all_sites(); var n = vec_len(v);
@@ -1261,6 +1360,7 @@ fn sites_by_civilization(civ: Str) {
     return result;
 }
 
+#must_use
 fn sites_active_at(year) {
     var result = vec_new();
     var v = all_sites(); var n = vec_len(v);
@@ -1271,6 +1371,7 @@ fn sites_active_at(year) {
     return result;
 }
 
+#must_use
 fn site_by_name(name: Str) {
     var v = all_sites(); var n = vec_len(v);
     for (var i = 0; i < n; i = i + 1) {
@@ -1290,6 +1391,7 @@ enum RouteOff { RT_NAME=0; RT_REGIONS=8; RT_TYPE=16; RT_CIVS=24; RT_COMM=32; RT_
 var route_vec = 0;
 var route_init_done = 0;
 
+#must_use
 fn rt_new(name: Str, regions: Str, rtype, civs: Str, comm: Str, sy, ey, desc: Str) {
     var p = alloc(RT_SIZE);
     store64(p+RT_NAME,name); store64(p+RT_REGIONS,regions); store64(p+RT_TYPE,rtype);
@@ -1297,7 +1399,9 @@ fn rt_new(name: Str, regions: Str, rtype, civs: Str, comm: Str, sy, ey, desc: St
     store64(p+RT_START,sy); store64(p+RT_END,ey); store64(p+RT_DESC,desc);
     return p;
 }
+#must_use
 fn rt_name(p) { return load64(p+RT_NAME); }
+#must_use
 fn rt_comm(p) { return load64(p+RT_COMM); }
 
 fn build_routes() {
@@ -1320,12 +1424,15 @@ fn build_routes() {
     return v;
 }
 
+#must_use
 fn all_routes() {
     if (route_init_done == 0) { route_vec = build_routes(); route_init_done = 1; }
     return route_vec;
 }
+#must_use
 fn route_count() { return vec_len(all_routes()); }
 
+#must_use
 fn route_by_name(name: Str) {
     var v = all_routes(); var n = vec_len(v);
     for (var i = 0; i < n; i = i + 1) {
@@ -1335,6 +1442,7 @@ fn route_by_name(name: Str) {
     return 0;
 }
 
+#must_use
 fn routes_by_commodity(comm: Str) {
     var result = vec_new();
     var v = all_routes(); var n = vec_len(v);
@@ -1345,6 +1453,7 @@ fn routes_by_commodity(comm: Str) {
     return result;
 }
 
+#must_use
 fn routes_by_region(region: Str) {
     var result = vec_new();
     var v = all_routes(); var n = vec_len(v);
@@ -1355,6 +1464,7 @@ fn routes_by_region(region: Str) {
     return result;
 }
 
+#must_use
 fn routes_by_type(rtype) {
     var result = vec_new();
     var v = all_routes(); var n = vec_len(v);
@@ -1365,6 +1475,7 @@ fn routes_by_type(rtype) {
     return result;
 }
 
+#must_use
 fn routes_by_civilization(civ: Str) {
     var result = vec_new();
     var v = all_routes(); var n = vec_len(v);
@@ -1375,6 +1486,7 @@ fn routes_by_civilization(civ: Str) {
     return result;
 }
 
+#must_use
 fn routes_active_at(year) {
     var result = vec_new();
     var v = all_routes(); var n = vec_len(v);
@@ -1443,6 +1555,7 @@ fn _json_sep(sb) { str_builder_add_cstr(sb, ", "); return 0; }
 # ----------------------------------------------------------------
 # Era
 # ----------------------------------------------------------------
+#must_use
 fn era_to_json(p) {
     var sb = str_builder_new();
     str_builder_add_cstr(sb, "{");
@@ -1460,6 +1573,7 @@ fn era_to_json(p) {
 # ----------------------------------------------------------------
 # Civilization
 # ----------------------------------------------------------------
+#must_use
 fn civ_to_json(p) {
     var sb = str_builder_new();
     str_builder_add_cstr(sb, "{");
@@ -1478,6 +1592,7 @@ fn civ_to_json(p) {
 # ----------------------------------------------------------------
 # Event
 # ----------------------------------------------------------------
+#must_use
 fn event_to_json(p) {
     var sb = str_builder_new();
     str_builder_add_cstr(sb, "{");
@@ -1495,6 +1610,7 @@ fn event_to_json(p) {
 # ----------------------------------------------------------------
 # Figure
 # ----------------------------------------------------------------
+#must_use
 fn figure_to_json(p) {
     var sb = str_builder_new();
     str_builder_add_cstr(sb, "{");
@@ -1511,6 +1627,7 @@ fn figure_to_json(p) {
 # ----------------------------------------------------------------
 # Calendar
 # ----------------------------------------------------------------
+#must_use
 fn calendar_to_json(p) {
     var sb = str_builder_new();
     str_builder_add_cstr(sb, "{");
@@ -1537,6 +1654,7 @@ fn battle_to_json(b) {
     return str_builder_build(sb);
 }
 
+#must_use
 fn campaign_to_json(p) {
     var sb = str_builder_new();
     str_builder_add_cstr(sb, "{");
@@ -1566,6 +1684,7 @@ fn campaign_to_json(p) {
 # ----------------------------------------------------------------
 # Site
 # ----------------------------------------------------------------
+#must_use
 fn site_to_json(p) {
     var sb = str_builder_new();
     str_builder_add_cstr(sb, "{");
@@ -1585,6 +1704,7 @@ fn site_to_json(p) {
 # ----------------------------------------------------------------
 # Trade Route
 # ----------------------------------------------------------------
+#must_use
 fn route_to_json(p) {
     var sb = str_builder_new();
     str_builder_add_cstr(sb, "{");
@@ -1603,6 +1723,7 @@ fn route_to_json(p) {
 # ----------------------------------------------------------------
 # Causality
 # ----------------------------------------------------------------
+#must_use
 fn causality_to_json(p) {
     var sb = str_builder_new();
     str_builder_add_cstr(sb, "{");
@@ -1617,6 +1738,7 @@ fn causality_to_json(p) {
 # ----------------------------------------------------------------
 # Interaction
 # ----------------------------------------------------------------
+#must_use
 fn interaction_to_json(p) {
     var sb = str_builder_new();
     str_builder_add_cstr(sb, "{");
@@ -1652,6 +1774,7 @@ enum QueryType {
 # arg1/arg2 are integers or Str pointers depending on type
 enum QueryOff { Q_TYPE=0; Q_ARG1=8; Q_ARG2=16; Q_SIZE=24; }
 
+#must_use
 fn query_new(qtype, a1, a2) {
     var q = alloc(Q_SIZE);
     store64(q+Q_TYPE, qtype);
@@ -1660,11 +1783,17 @@ fn query_new(qtype, a1, a2) {
     return q;
 }
 
+#must_use
 fn query_events_in_range(start, end) { return query_new(QT_EVENTS_IN_RANGE, start, end); }
+#must_use
 fn query_civs_at(year) { return query_new(QT_CIVS_AT, year, 0); }
+#must_use
 fn query_causes_of(event: Str) { return query_new(QT_CAUSES_OF, event, 0); }
+#must_use
 fn query_interactions_between(ca: Str, cb: Str) { return query_new(QT_INTERACTIONS_BETWEEN, ca, cb); }
+#must_use
 fn query_figure_lookup(name: Str) { return query_new(QT_FIGURE_LOOKUP, name, 0); }
+#must_use
 fn query_free_form(question: Str) { return query_new(QT_FREE_FORM, question, 0); }
 
 # ----------------------------------------------------------------
@@ -1675,6 +1804,7 @@ enum RespSource { SRC_DATA; SRC_LLM; SRC_HYBRID; }
 # QueryResponse: { source, content: Str, data_json: Str } — 24 bytes
 enum RespOff { RESP_SRC=0; RESP_CONTENT=8; RESP_DATA=16; RESP_SIZE=24; }
 
+#must_use
 fn resp_new(src, content: Str, data: Str) {
     var r = alloc(RESP_SIZE);
     store64(r+RESP_SRC, src);
@@ -1683,8 +1813,11 @@ fn resp_new(src, content: Str, data: Str) {
     return r;
 }
 
+#must_use
 fn resp_source(r) { return load64(r+RESP_SRC); }
+#must_use
 fn resp_content(r) { return load64(r+RESP_CONTENT); }
+#must_use
 fn resp_data(r) { return load64(r+RESP_DATA); }
 
 # ----------------------------------------------------------------
@@ -1713,6 +1846,7 @@ fn _json_array(v, to_json_fn) {
     return str_builder_build(sb);
 }
 
+#must_use
 fn answer_from_data(q) {
     var qt = load64(q+Q_TYPE);
 
@@ -1780,6 +1914,7 @@ fn answer_from_data(q) {
 # resolve_era_lookup — special tool handler (not a HistoryQuery type)
 # args is a parsed JSON pairs vec from json_parse()
 # ----------------------------------------------------------------
+#must_use
 fn resolve_era_lookup(args) {
     var name_val = json_get(args, str_from("name"));
     if (name_val != 0) {
@@ -1819,10 +1954,12 @@ fn resolve_era_lookup(args) {
 # ----------------------------------------------------------------
 var HOOSH_SYSTEM_PROMPT = "You are a historical data assistant. When the user asks a historical question, use the available tools to look up the answer from structured data. Use events_in_range for date-based queries, civilizations_at for what existed when questions, causes_of for causal questions, interactions_between for relationship queries, figure_lookup for people, and era_lookup for period queries. Only respond directly if no tool fits the question.";
 
+#must_use
 fn hoosh_tool_defs_json() {
     return "[{\"type\":\"function\",\"function\":{\"name\":\"events_in_range\",\"description\":\"Find historical events in a year range (negative = BCE)\",\"parameters\":{\"type\":\"object\",\"properties\":{\"start\":{\"type\":\"integer\",\"description\":\"Start year\"},\"end\":{\"type\":\"integer\",\"description\":\"End year\"}},\"required\":[\"start\",\"end\"]}}},{\"type\":\"function\",\"function\":{\"name\":\"civilizations_at\",\"description\":\"Find civilizations active at a given year (negative = BCE)\",\"parameters\":{\"type\":\"object\",\"properties\":{\"year\":{\"type\":\"integer\",\"description\":\"Year to query\"}},\"required\":[\"year\"]}}},{\"type\":\"function\",\"function\":{\"name\":\"causes_of\",\"description\":\"Find causal factors of a named historical event\",\"parameters\":{\"type\":\"object\",\"properties\":{\"event\":{\"type\":\"string\",\"description\":\"Event name\"}},\"required\":[\"event\"]}}},{\"type\":\"function\",\"function\":{\"name\":\"interactions_between\",\"description\":\"Find interactions between two civilizations\",\"parameters\":{\"type\":\"object\",\"properties\":{\"civ_a\":{\"type\":\"string\",\"description\":\"First civilization\"},\"civ_b\":{\"type\":\"string\",\"description\":\"Second civilization\"}},\"required\":[\"civ_a\",\"civ_b\"]}}},{\"type\":\"function\",\"function\":{\"name\":\"figure_lookup\",\"description\":\"Look up a historical figure by name\",\"parameters\":{\"type\":\"object\",\"properties\":{\"name\":{\"type\":\"string\",\"description\":\"Figure name\"}},\"required\":[\"name\"]}}},{\"type\":\"function\",\"function\":{\"name\":\"era_lookup\",\"description\":\"Look up a historical era by name or find eras containing a year\",\"parameters\":{\"type\":\"object\",\"properties\":{\"name\":{\"type\":\"string\",\"description\":\"Era name\"},\"year\":{\"type\":\"integer\",\"description\":\"Year to find containing eras\"}}}}}]";
 }
 
+#must_use
 fn hoosh_tool_count() { return 6; }
 
 # ----------------------------------------------------------------
@@ -1853,9 +1990,12 @@ fn _build_post_header(buf, path, host, body_len) {
 fn hoosh_post(port, body: Str) {
     var fd = syscall(SYS_SOCKET, 2, 1, 0);
     if (fd < 0) { return 0; }
+    # Close the socket on every exit path below (connect failure, empty read,
+    # success) — one defer replaces the per-path manual close.
+    defer { syscall(3, fd); }
     var sa = sockaddr_in(0x0100007F, port);
     var cr = syscall(SYS_CONNECT, fd, sa, 16);
-    if (cr < 0) { syscall(3, fd); return 0; }
+    if (cr < 0) { return 0; }
     var hdr = alloc(2048);
     var body_data = str_data(body);
     var body_len = str_len(body);
@@ -1869,7 +2009,6 @@ fn hoosh_post(port, body: Str) {
         n = syscall(SYS_READ, fd, rbuf + total, 131072 - total);
         if (n > 0) { total = total + n; }
     }
-    syscall(3, fd);
     if (total == 0) { return 0; }
     return _http_parse_response(rbuf, total);
 }
@@ -1975,6 +2114,7 @@ fn _extract_tool_call(body, body_len) {
 # ----------------------------------------------------------------
 # Parse tool call into HistoryQuery
 # ----------------------------------------------------------------
+#must_use
 fn parse_tool_call(name: Str, args_json: Str) {
     var args = json_parse(args_json);
 

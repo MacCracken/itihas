@@ -18,6 +18,7 @@ enum QueryType {
 # arg1/arg2 are integers or Str pointers depending on type
 enum QueryOff { Q_TYPE=0; Q_ARG1=8; Q_ARG2=16; Q_SIZE=24; }
 
+#must_use
 fn query_new(qtype, a1, a2) {
     var q = alloc(Q_SIZE);
     store64(q+Q_TYPE, qtype);
@@ -26,11 +27,17 @@ fn query_new(qtype, a1, a2) {
     return q;
 }
 
+#must_use
 fn query_events_in_range(start, end) { return query_new(QT_EVENTS_IN_RANGE, start, end); }
+#must_use
 fn query_civs_at(year) { return query_new(QT_CIVS_AT, year, 0); }
+#must_use
 fn query_causes_of(event: Str) { return query_new(QT_CAUSES_OF, event, 0); }
+#must_use
 fn query_interactions_between(ca: Str, cb: Str) { return query_new(QT_INTERACTIONS_BETWEEN, ca, cb); }
+#must_use
 fn query_figure_lookup(name: Str) { return query_new(QT_FIGURE_LOOKUP, name, 0); }
+#must_use
 fn query_free_form(question: Str) { return query_new(QT_FREE_FORM, question, 0); }
 
 # ----------------------------------------------------------------
@@ -41,6 +48,7 @@ enum RespSource { SRC_DATA; SRC_LLM; SRC_HYBRID; }
 # QueryResponse: { source, content: Str, data_json: Str } — 24 bytes
 enum RespOff { RESP_SRC=0; RESP_CONTENT=8; RESP_DATA=16; RESP_SIZE=24; }
 
+#must_use
 fn resp_new(src, content: Str, data: Str) {
     var r = alloc(RESP_SIZE);
     store64(r+RESP_SRC, src);
@@ -49,8 +57,11 @@ fn resp_new(src, content: Str, data: Str) {
     return r;
 }
 
+#must_use
 fn resp_source(r) { return load64(r+RESP_SRC); }
+#must_use
 fn resp_content(r) { return load64(r+RESP_CONTENT); }
+#must_use
 fn resp_data(r) { return load64(r+RESP_DATA); }
 
 # ----------------------------------------------------------------
@@ -79,6 +90,7 @@ fn _json_array(v, to_json_fn) {
     return str_builder_build(sb);
 }
 
+#must_use
 fn answer_from_data(q) {
     var qt = load64(q+Q_TYPE);
 
@@ -146,6 +158,7 @@ fn answer_from_data(q) {
 # resolve_era_lookup — special tool handler (not a HistoryQuery type)
 # args is a parsed JSON pairs vec from json_parse()
 # ----------------------------------------------------------------
+#must_use
 fn resolve_era_lookup(args) {
     var name_val = json_get(args, str_from("name"));
     if (name_val != 0) {
@@ -185,10 +198,12 @@ fn resolve_era_lookup(args) {
 # ----------------------------------------------------------------
 var HOOSH_SYSTEM_PROMPT = "You are a historical data assistant. When the user asks a historical question, use the available tools to look up the answer from structured data. Use events_in_range for date-based queries, civilizations_at for what existed when questions, causes_of for causal questions, interactions_between for relationship queries, figure_lookup for people, and era_lookup for period queries. Only respond directly if no tool fits the question.";
 
+#must_use
 fn hoosh_tool_defs_json() {
     return "[{\"type\":\"function\",\"function\":{\"name\":\"events_in_range\",\"description\":\"Find historical events in a year range (negative = BCE)\",\"parameters\":{\"type\":\"object\",\"properties\":{\"start\":{\"type\":\"integer\",\"description\":\"Start year\"},\"end\":{\"type\":\"integer\",\"description\":\"End year\"}},\"required\":[\"start\",\"end\"]}}},{\"type\":\"function\",\"function\":{\"name\":\"civilizations_at\",\"description\":\"Find civilizations active at a given year (negative = BCE)\",\"parameters\":{\"type\":\"object\",\"properties\":{\"year\":{\"type\":\"integer\",\"description\":\"Year to query\"}},\"required\":[\"year\"]}}},{\"type\":\"function\",\"function\":{\"name\":\"causes_of\",\"description\":\"Find causal factors of a named historical event\",\"parameters\":{\"type\":\"object\",\"properties\":{\"event\":{\"type\":\"string\",\"description\":\"Event name\"}},\"required\":[\"event\"]}}},{\"type\":\"function\",\"function\":{\"name\":\"interactions_between\",\"description\":\"Find interactions between two civilizations\",\"parameters\":{\"type\":\"object\",\"properties\":{\"civ_a\":{\"type\":\"string\",\"description\":\"First civilization\"},\"civ_b\":{\"type\":\"string\",\"description\":\"Second civilization\"}},\"required\":[\"civ_a\",\"civ_b\"]}}},{\"type\":\"function\",\"function\":{\"name\":\"figure_lookup\",\"description\":\"Look up a historical figure by name\",\"parameters\":{\"type\":\"object\",\"properties\":{\"name\":{\"type\":\"string\",\"description\":\"Figure name\"}},\"required\":[\"name\"]}}},{\"type\":\"function\",\"function\":{\"name\":\"era_lookup\",\"description\":\"Look up a historical era by name or find eras containing a year\",\"parameters\":{\"type\":\"object\",\"properties\":{\"name\":{\"type\":\"string\",\"description\":\"Era name\"},\"year\":{\"type\":\"integer\",\"description\":\"Year to find containing eras\"}}}}}]";
 }
 
+#must_use
 fn hoosh_tool_count() { return 6; }
 
 # ----------------------------------------------------------------
@@ -219,9 +234,12 @@ fn _build_post_header(buf, path, host, body_len) {
 fn hoosh_post(port, body: Str) {
     var fd = syscall(SYS_SOCKET, 2, 1, 0);
     if (fd < 0) { return 0; }
+    # Close the socket on every exit path below (connect failure, empty read,
+    # success) — one defer replaces the per-path manual close.
+    defer { syscall(3, fd); }
     var sa = sockaddr_in(0x0100007F, port);
     var cr = syscall(SYS_CONNECT, fd, sa, 16);
-    if (cr < 0) { syscall(3, fd); return 0; }
+    if (cr < 0) { return 0; }
     var hdr = alloc(2048);
     var body_data = str_data(body);
     var body_len = str_len(body);
@@ -235,7 +253,6 @@ fn hoosh_post(port, body: Str) {
         n = syscall(SYS_READ, fd, rbuf + total, 131072 - total);
         if (n > 0) { total = total + n; }
     }
-    syscall(3, fd);
     if (total == 0) { return 0; }
     return _http_parse_response(rbuf, total);
 }
@@ -341,6 +358,7 @@ fn _extract_tool_call(body, body_len) {
 # ----------------------------------------------------------------
 # Parse tool call into HistoryQuery
 # ----------------------------------------------------------------
+#must_use
 fn parse_tool_call(name: Str, args_json: Str) {
     var args = json_parse(args_json);
 

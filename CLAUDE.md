@@ -64,11 +64,11 @@ sankhya (ancient math), avatara (simulation), kiran (game engine), joshua (strat
 - **Tests + benchmarks are the way.** Minimum 80%+ coverage target.
 - **Own the stack.** If an AGNOS project wraps an external lib, depend on the AGNOS project.
 - **No magic.** Every operation is measurable, auditable, traceable.
-- **`#[non_exhaustive]`** on all public enums.
-- **`#[must_use]`** on all pure functions.
-- **`#[inline]`** on hot-path functions.
-- **`write!` over `format!`** — avoid temporary allocations.
-- **Cow over clone** — borrow when you can, allocate only when you must.
+- **Cyrius attributes use bare `#attr` syntax**, not Rust's `#[attr]` (in Cyrius `#[...]` is just a comment — a silent no-op). Real, compiler-recognized attributes: `#must_use`, `#deprecated("reason")`, `#regalloc N`, `#derive(...)`, `#ref`, `#skip-lint`. (`#non_exhaustive`/`#inline` are NOT Cyrius attributes.)
+- **`#must_use`** on pure functions whose result is a bug to discard (warns at `fn();` statement use; assignment/return/arg-passing are fine).
+- **`#regalloc`** on benchmark-proven hot paths (routes hot locals to callee-saved regs). Never add it without a measured win — numbers in the CSV.
+- **`#deprecated("reason")`** on stale APIs; warns at every call site.
+- **Avoid temporary allocations** — build into a caller-provided buffer / `str_builder` rather than allocating throwaway strings; borrow (pass pointers) before copying.
 - **Feature-gate optional deps** — consumers pull only what they need.
 - **tracing on all operations** — structured logging for audit trail.
 

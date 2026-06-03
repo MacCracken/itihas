@@ -6,6 +6,7 @@ enum SiteOff { SITE_NAME=0; SITE_LOC=8; SITE_REG=16; SITE_TYPE=24; SITE_CIV=32; 
 var site_vec = 0;
 var site_init_done = 0;
 
+#must_use
 fn site_new(name: Str, loc: Str, reg: Str, st, civ: Str, sy, ey, disc, desc: Str) {
     var p = alloc(SITE_SIZE);
     store64(p+SITE_NAME,name); store64(p+SITE_LOC,loc); store64(p+SITE_REG,reg);
@@ -13,7 +14,9 @@ fn site_new(name: Str, loc: Str, reg: Str, st, civ: Str, sy, ey, disc, desc: Str
     store64(p+SITE_START,sy); store64(p+SITE_END,ey); store64(p+SITE_DISC,disc); store64(p+SITE_DESC,desc);
     return p;
 }
+#must_use
 fn site_name(p) { return load64(p+SITE_NAME); }
+#must_use
 fn site_region(p) { return load64(p+SITE_REG); }
 
 fn build_sites() {
@@ -53,12 +56,15 @@ fn build_sites() {
     return v;
 }
 
+#must_use
 fn all_sites() {
     if (site_init_done == 0) { site_vec = build_sites(); site_init_done = 1; }
     return site_vec;
 }
+#must_use
 fn site_count() { return vec_len(all_sites()); }
 
+#must_use
 fn sites_by_region(region: Str) {
     var result = vec_new();
     var v = all_sites(); var n = vec_len(v);
@@ -69,6 +75,7 @@ fn sites_by_region(region: Str) {
     return result;
 }
 
+#must_use
 fn sites_by_type(stype) {
     var result = vec_new();
     var v = all_sites(); var n = vec_len(v);
@@ -79,6 +86,7 @@ fn sites_by_type(stype) {
     return result;
 }
 
+#must_use
 fn sites_by_civilization(civ: Str) {
     var result = vec_new();
     var v = all_sites(); var n = vec_len(v);
@@ -89,6 +97,7 @@ fn sites_by_civilization(civ: Str) {
     return result;
 }
 
+#must_use
 fn sites_active_at(year) {
     var result = vec_new();
     var v = all_sites(); var n = vec_len(v);
@@ -99,6 +108,7 @@ fn sites_active_at(year) {
     return result;
 }
 
+#must_use
 fn site_by_name(name: Str) {
     var v = all_sites(); var n = vec_len(v);
     for (var i = 0; i < n; i = i + 1) {

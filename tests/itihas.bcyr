@@ -23,44 +23,46 @@ var ROUNDS = 100;
 # ----------------------------------------------------------------
 # Wrapper functions for fncall0 dispatch
 # ----------------------------------------------------------------
-fn _b_all_eras() { all_eras(); }
-fn _b_all_civs() { all_civilizations(); }
-fn _b_all_events() { all_events(); }
-fn _b_all_calendars() { all_calendars(); }
-fn _b_all_figures() { all_figures(); }
-fn _b_all_causalities() { all_causalities(); }
-fn _b_all_interactions() { all_interactions(); }
-fn _b_all_sites() { all_sites(); }
-fn _b_all_routes() { all_routes(); }
-fn _b_all_campaigns() { all_campaigns(); }
-fn _b_eras_containing() { eras_containing((0-500)); }
-fn _b_civs_active_at() { civs_active_at((0-500)); }
-fn _b_civs_by_region() { civs_by_region("Mediterranean"); }
-fn _b_events_cat_war() { events_by_category(CAT_WAR); }
-fn _b_events_at_476() { events_at_year(476); }
-fn _b_events_between() { events_between((0-500), 500); }
-fn _b_cal_by_name() { calendar_by_name("Gregorian"); }
-fn _b_figs_by_domain() { figures_by_domain(DOM_SCIENTIST); }
-fn _b_causes_of() { causes_of("French Revolution"); }
-fn _b_chain_writing() { causal_chain("Invention of Writing", 3); }
-fn _b_int_for_rome() { interactions_for("Roman Empire"); }
-fn _b_influence() { influence_score("Ancient Egypt", "Hittite Empire"); }
-fn _b_sites_by_region() { sites_by_region("Near East"); }
-fn _b_sites_active() { sites_active_at((0-500)); }
-fn _b_routes_by_region() { routes_by_region("East Asia"); }
-fn _b_routes_by_comm() { routes_by_commodity("silk"); }
-fn _b_camps_by_cmd() { campaigns_by_commander("Napoleon"); }
-fn _b_camps_between() { campaigns_between((0-500), 500); }
+# `return` so the #must_use query results aren't discarded (and the calls
+# aren't elided); the bench loop still measures one call per iteration.
+fn _b_all_eras() { return all_eras(); }
+fn _b_all_civs() { return all_civilizations(); }
+fn _b_all_events() { return all_events(); }
+fn _b_all_calendars() { return all_calendars(); }
+fn _b_all_figures() { return all_figures(); }
+fn _b_all_causalities() { return all_causalities(); }
+fn _b_all_interactions() { return all_interactions(); }
+fn _b_all_sites() { return all_sites(); }
+fn _b_all_routes() { return all_routes(); }
+fn _b_all_campaigns() { return all_campaigns(); }
+fn _b_eras_containing() { return eras_containing((0-500)); }
+fn _b_civs_active_at() { return civs_active_at((0-500)); }
+fn _b_civs_by_region() { return civs_by_region("Mediterranean"); }
+fn _b_events_cat_war() { return events_by_category(CAT_WAR); }
+fn _b_events_at_476() { return events_at_year(476); }
+fn _b_events_between() { return events_between((0-500), 500); }
+fn _b_cal_by_name() { return calendar_by_name("Gregorian"); }
+fn _b_figs_by_domain() { return figures_by_domain(DOM_SCIENTIST); }
+fn _b_causes_of() { return causes_of("French Revolution"); }
+fn _b_chain_writing() { return causal_chain("Invention of Writing", 3); }
+fn _b_int_for_rome() { return interactions_for("Roman Empire"); }
+fn _b_influence() { return influence_score("Ancient Egypt", "Hittite Empire"); }
+fn _b_sites_by_region() { return sites_by_region("Near East"); }
+fn _b_sites_active() { return sites_active_at((0-500)); }
+fn _b_routes_by_region() { return routes_by_region("East Asia"); }
+fn _b_routes_by_comm() { return routes_by_commodity("silk"); }
+fn _b_camps_by_cmd() { return campaigns_by_commander("Napoleon"); }
+fn _b_camps_between() { return campaigns_between((0-500), 500); }
 
 # ----------------------------------------------------------------
 # Top-level execution
 # ----------------------------------------------------------------
 alloc_init();
 
-# Warm up lazy init
-all_eras(); all_civilizations(); all_events(); all_calendars();
-all_figures(); all_causalities(); all_interactions();
-all_campaigns(); all_sites(); all_routes();
+# Warm up lazy init (assign to use the #must_use results; first call builds the cache)
+var warm = all_eras(); warm = all_civilizations(); warm = all_events(); warm = all_calendars();
+warm = all_figures(); warm = all_causalities(); warm = all_interactions();
+warm = all_campaigns(); warm = all_sites(); warm = all_routes();
 
 var benches = vec_new();
 var b = 0;

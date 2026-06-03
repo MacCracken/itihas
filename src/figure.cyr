@@ -6,13 +6,16 @@ enum FigOff { FIG_NAME=0; FIG_BIRTH=8; FIG_DEATH=16; FIG_CIV=24; FIG_DOM=32; FIG
 var fig_vec = 0;
 var fig_init_done = 0;
 
+#must_use
 fn fig_new(name: Str, by, dy, civ: Str, dom, desc: Str) {
     var p = alloc(FIG_SIZE);
     store64(p+FIG_NAME,name); store64(p+FIG_BIRTH,by); store64(p+FIG_DEATH,dy);
     store64(p+FIG_CIV,civ); store64(p+FIG_DOM,dom); store64(p+FIG_DESC,desc);
     return p;
 }
+#must_use
 fn fig_name(p) { return load64(p+FIG_NAME); }
+#must_use
 fn fig_domain(p) { return load64(p+FIG_DOM); }
 
 fn build_figs() {
@@ -72,12 +75,15 @@ fn build_figs() {
     return v;
 }
 
+#must_use
 fn all_figures() {
     if (fig_init_done == 0) { fig_vec = build_figs(); fig_init_done = 1; }
     return fig_vec;
 }
+#must_use
 fn figure_count() { return vec_len(all_figures()); }
 
+#must_use
 fn figures_by_domain(dom) {
     var result = vec_new();
     var v = all_figures(); var n = vec_len(v);
@@ -88,6 +94,7 @@ fn figures_by_domain(dom) {
     return result;
 }
 
+#must_use
 fn figure_by_name(name: Str) {
     var v = all_figures(); var n = vec_len(v);
     for (var i = 0; i < n; i = i + 1) {

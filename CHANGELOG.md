@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **`#must_use`** — Applied the real, compiler-enforced `#must_use` attribute to the pure public API across all 10 data modules plus `serial` (`*_to_json`) and `hoosh` (query builders, response accessors, tool defs). Discarding a query/lookup/serialization result now warns at compile time.
+- **`defer`** — `hoosh_post` closes its socket via `defer { syscall(3, fd); }`, replacing per-path manual closes and guaranteeing cleanup on every exit.
+
+### Changed
+
+- **CLAUDE.md** — Corrected the attribute principles: Cyrius uses bare `#attr` syntax, not Rust's `#[attr]` (which is just a comment — a silent no-op). Replaced the Rust-holdover `#[non_exhaustive]`/`#[must_use]`/`#[inline]` with the real Cyrius set (`#must_use`, `#regalloc`, `#deprecated`, `#derive`); `#non_exhaustive` and `#inline` are not Cyrius attributes.
+- **tests/itihas.bcyr** — Bench wrappers now `return` their query result and the warm-up assigns it, so the new `#must_use` attributes don't flag the harness; per-iteration measurements are unchanged.
+
 ## [2.3.3] - 2026-06-03
 
 ### Removed

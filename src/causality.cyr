@@ -6,13 +6,16 @@ enum CausOff { CAUS_CAUSE=0; CAUS_EFFECT=8; CAUS_STR=16; CAUS_DESC=24; CAUS_SIZE
 var caus_vec = 0;
 var caus_init_done = 0;
 
+#must_use
 fn caus_new(cause: Str, effect: Str, str, desc: Str) {
     var p = alloc(CAUS_SIZE);
     store64(p+CAUS_CAUSE,cause); store64(p+CAUS_EFFECT,effect);
     store64(p+CAUS_STR,str); store64(p+CAUS_DESC,desc);
     return p;
 }
+#must_use
 fn caus_cause(p) { return load64(p+CAUS_CAUSE); }
+#must_use
 fn caus_effect(p) { return load64(p+CAUS_EFFECT); }
 
 fn build_causalities() {
@@ -33,12 +36,15 @@ fn build_causalities() {
     return v;
 }
 
+#must_use
 fn all_causalities() {
     if (caus_init_done == 0) { caus_vec = build_causalities(); caus_init_done = 1; }
     return caus_vec;
 }
+#must_use
 fn causality_count() { return vec_len(all_causalities()); }
 
+#must_use
 fn causes_of(event_name: Str) {
     var result = vec_new();
     var v = all_causalities(); var n = vec_len(v);
@@ -49,6 +55,7 @@ fn causes_of(event_name: Str) {
     return result;
 }
 
+#must_use
 fn effects_of(event_name: Str) {
     var result = vec_new();
     var v = all_causalities(); var n = vec_len(v);
@@ -62,6 +69,7 @@ fn effects_of(event_name: Str) {
 # BFS causal chain: returns vec of [name_str, depth] pairs stored as 16-byte entries
 enum ChainOff { CH_NAME=0; CH_DEPTH=8; CH_SIZE=16; }
 
+#must_use
 fn causal_chain(event_name: Str, max_depth) {
     var results = vec_new();
     var visited = vec_new();
@@ -119,5 +127,7 @@ fn causal_chain(event_name: Str, max_depth) {
     return results;
 }
 
+#must_use
 fn chain_entry_name(p) { return load64(p + CH_NAME); }
+#must_use
 fn chain_entry_depth(p) { return load64(p + CH_DEPTH); }
