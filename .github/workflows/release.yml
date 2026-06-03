@@ -46,11 +46,15 @@ jobs:
           CYRIUS_DCE=1 cyrius build src/main.cyr build/itihas
           echo "itihas: $(wc -c < build/itihas) bytes"
 
+      - name: Regenerate bundle
+        run: cyrius distlib
+
       - name: Archive
         run: |
           TAG="${GITHUB_REF_NAME}"
           git archive --format=tar.gz --prefix="itihas-${TAG}/" -o "itihas-${TAG}-src.tar.gz" HEAD
-          sha256sum itihas-*.tar.gz build/itihas > SHA256SUMS
+          cp dist/itihas.cyr "itihas-${TAG}.cyr"
+          sha256sum itihas-*.tar.gz itihas-*.cyr build/itihas > SHA256SUMS
 
       - name: Extract changelog
         run: |
@@ -63,5 +67,6 @@ jobs:
           body_path: /tmp/body.md
           files: |
             itihas-*.tar.gz
+            itihas-*.cyr
             build/itihas
             SHA256SUMS

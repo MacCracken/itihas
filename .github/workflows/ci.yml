@@ -72,6 +72,12 @@ jobs:
           CYRIUS_DCE=1 cyrius build tests/itihas.bcyr build/itihas_bench
           ./build/itihas_bench
 
+      - name: Verify dist bundle is current
+        # dist/itihas.cyr is committed for consumers; ensure it matches source.
+        run: |
+          cyrius distlib
+          git diff --exit-code dist/itihas.cyr || { echo "dist/itihas.cyr is stale — run 'cyrius distlib' and commit"; exit 1; }
+
   docs:
     name: Documentation
     runs-on: ubuntu-latest

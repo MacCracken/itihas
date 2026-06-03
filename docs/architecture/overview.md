@@ -7,7 +7,9 @@
 ```
 itihas/
 ├── src/
-│   ├── main.cyr          — entry point, test harness, module includes
+│   ├── main.cyr          — binary entry point / smoke test
+│   ├── lib.cyr           — library aggregator (public API; drives distlib bundle)
+│   ├── util.cyr          — shared string/print/number helpers
 │   ├── error.cyr         — ItihasError enum (integer error codes)
 │   ├── era.cyr           — historical periods, date ranges, era categories
 │   │                       25 eras (8 global + 17 regional), temporal/scope lookups
@@ -27,11 +29,16 @@ itihas/
 │   │                       14 campaigns with belligerents and outcomes
 │   ├── site.cyr          — archaeological sites, location, discovery metadata
 │   │                       32 sites with period and type classification
-│   └── trade.cyr         — historical trade routes, endpoints, commodities
-│                           15 trade routes with civilization context
+│   ├── trade.cyr         — historical trade routes, endpoints, commodities
+│   │                       15 trade routes with civilization context
+│   ├── logging.cyr       — sakshi logging init (itihas_log_init)
+│   ├── serial.cyr        — JSON serialization for all types (*_to_json)
+│   └── hoosh.cyr         — LLM-powered historical queries + data-answer path
 ├── tests/
-│   ├── test.sh           — basic build + run test
-│   └── test_itihas.sh    — full build + test suite runner
+│   ├── itihas.tcyr       — full 153-assertion suite (cyrius test)
+│   └── itihas.bcyr       — 28-benchmark suite (cyrius bench)
+├── dist/
+│   └── itihas.cyr        — single-file consumer bundle (cyrius distlib)
 └── rust-old/             — preserved Rust v1.5.0 source (reference)
 ```
 

@@ -11,5 +11,28 @@ repository = "https://github.com/MacCracken/itihas"
 entry = "src/main.cyr"
 output = "build/itihas"
 
+[lib]
+# `cyrius distlib` reads this section to build dist/itihas.cyr — the single
+# bundle consumers (sankhya, avatara, kiran, joshua, jnana, lipi, vidya)
+# include. Order matches src/lib.cyr's include order; lib.cyr itself is last.
+modules = [
+    "src/util.cyr",
+    "src/error.cyr",
+    "src/era.cyr",
+    "src/calendar.cyr",
+    "src/civilization.cyr",
+    "src/figure.cyr",
+    "src/event.cyr",
+    "src/causality.cyr",
+    "src/interaction.cyr",
+    "src/campaign.cyr",
+    "src/site.cyr",
+    "src/trade.cyr",
+    "src/logging.cyr",
+    "src/serial.cyr",
+    "src/hoosh.cyr",
+    "src/lib.cyr",
+]
+
 [deps]
-stdlib = ["string", "fmt", "alloc", "vec", "str", "syscalls", "io", "args", "assert", "hashmap", "tagged", "json", "toml", "fnptr", "bench", "net", "http"]
+stdlib = ["string", "fmt", "alloc", "vec", "str", "syscalls", "io", "args", "assert", "hashmap", "tagged", "json", "toml", "fnptr", "bench", "net", "http", "sakshi"]
