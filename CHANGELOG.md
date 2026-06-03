@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.3.1] - 2026-06-03
+
 ### Added
 
 - **tests/itihas.tcyr** — Full 153-assertion integration suite runnable via `cyrius test` (module counts, lookups, filters, cross-module integration, case-insensitive lookups, chronological sort, JSON serialization, hoosh data-answer path). Built on the stdlib `assert_*` / `assert_summary` harness.
