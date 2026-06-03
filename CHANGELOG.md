@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed
+
+- **cyrius.cyml** — Dropped 4 unused stdlib deps (`io`, `args`, `toml`, `hashmap`) after a usage audit; itihas's own code never calls them and no retained stdlib module needs them transitively. Verified by rebuilding the binary, test suite, benchmark suite, and consumer bundle.
+
+### Changed
+
+- **cyrius.cyml** — Documented why `net` + `http` are retained: hoosh ships a **self-contained HTTP client** (raw syscalls + `sockaddr_in` from `net`) so itihas works independently and as a library; and `tagged` is kept for the `Result` type used transitively by `sakshi` and `net`.
+
 ## [2.3.2] - 2026-06-03
 
 ### Added

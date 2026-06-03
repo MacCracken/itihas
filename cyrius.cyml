@@ -35,4 +35,7 @@ modules = [
 ]
 
 [deps]
-stdlib = ["string", "fmt", "alloc", "vec", "str", "syscalls", "io", "args", "assert", "hashmap", "tagged", "json", "toml", "fnptr", "bench", "net", "http", "sakshi"]
+# net + http: hoosh ships a self-contained HTTP client (raw syscalls + net's
+# sockaddr_in) for independent use — load-bearing, do not remove.
+# tagged: needed transitively (sakshi + net use Result).
+stdlib = ["string", "fmt", "alloc", "vec", "str", "syscalls", "assert", "tagged", "json", "fnptr", "bench", "net", "http", "sakshi"]
