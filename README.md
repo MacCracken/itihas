@@ -40,17 +40,14 @@ Used by [sankhya](https://github.com/MacCracken/sankhya) (ancient math), [avatar
 ## Quick Start
 
 ```sh
-# Build
-cat src/main.cyr | cc3 > build/itihas && chmod +x build/itihas
+# Build (DCE-optimized)
+CYRIUS_DCE=1 cyrius build src/main.cyr build/itihas
 
-# Run tests
+# Run the in-binary assertion suite
 ./build/itihas
-
-# Or use cyrius tooling
-cyrius build src/main.cyr -o build/itihas
 ```
 
-Requires Cyrius >= 3.6.3 (`cyriusly install 3.6.3`).
+Requires Cyrius 6.0.50 (`cyriusly install 6.0.50`) — pinned in `cyrius.cyml`.
 
 ## Architecture
 

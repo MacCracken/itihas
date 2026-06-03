@@ -1,14 +1,15 @@
 [package]
 name = "itihas"
-version = "2.2.0"
+version = "${file:VERSION}"
 description = "Itihas — structured world history: civilizations, eras, events, figures, campaigns, sites, trade routes, calendars"
 license = "GPL-3.0-only"
 language = "cyrius"
-cyrius = "4.0.0"
+cyrius = "6.0.50"
+repository = "https://github.com/MacCracken/itihas"
 
 [build]
 entry = "src/main.cyr"
-output = "itihas"
+output = "build/itihas"
 
 [deps]
 stdlib = ["string", "fmt", "alloc", "vec", "str", "syscalls", "io", "args", "assert", "hashmap", "tagged", "json", "toml", "fnptr", "bench", "net", "http"]

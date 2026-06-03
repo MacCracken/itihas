@@ -1,7 +1,7 @@
-# itihas — Structured World History v2.2.0
+# itihas — Structured World History v2.3.0
 # 10 modules, 297 entities, ported from 8846 lines of Rust
 
-# Stdlib auto-included via cyrius.toml
+# Stdlib auto-included via cyrius.cyml
 
 include "src/util.cyr"
 include "src/error.cyr"
@@ -391,20 +391,17 @@ ok(er, "events_in_range returns data");
 check(resp_source(er), SRC_DATA, "events source=DATA");
 ok(str_len(resp_content(er)) > 0, "events content not empty");
 
-
 # EventsInRange — empty range
 var eq2 = query_events_in_range(9999, 9999);
 var er2 = answer_from_data(eq2);
 ok(er2, "events empty range returns resp");
 ok(str_contains_cstr(resp_content(er2), "No events"), "events empty msg");
 
-
 # CivilizationsAt
 var cq = query_civs_at((0-500));
 var cr = answer_from_data(cq);
 ok(cr, "civs_at returns data");
 ok(str_contains(resp_content(cr), "Ancient Greece"), "civs content has Greece");
-
 
 # CausesOf — known
 var caq = query_causes_of("French Revolution");
@@ -415,7 +412,6 @@ ok(car, "causes_of known returns data");
 var caq2 = query_causes_of("Battle of Endor");
 var car2 = answer_from_data(caq2);
 check(car2, 0, "causes_of unknown returns 0");
-
 
 # InteractionsBetween — known
 var iq = query_interactions_between("Ancient Egypt", "Hittite Empire");

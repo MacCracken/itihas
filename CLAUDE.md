@@ -6,7 +6,7 @@
 
 - **Type**: Cyrius library (ported from Rust v1.5.0)
 - **License**: GPL-3.0
-- **Compiler**: Cyrius cc3 >= 3.6.3
+- **Compiler**: Cyrius 6.0.50 (cc5) — pinned in `cyrius.cyml` `[package].cyrius`
 - **Version**: SemVer 2.0.0
 
 ## Consumers
@@ -19,7 +19,7 @@ sankhya (ancient math), avatara (simulation), kiran (game engine), joshua (strat
 
 0. Read roadmap, CHANGELOG, and open issues — know what was intended before auditing what was built
 1. Test + benchmark sweep of existing code
-2. Cleanliness check: `cat src/main.cyr | cc3 > build/itihas && chmod +x build/itihas && ./build/itihas`
+2. Cleanliness check: `cyrius build src/main.cyr build/itihas && ./build/itihas`
 3. Get baseline benchmarks (when `.bcyr` harness exists)
 4. Internal deep review — gaps, optimizations, security, logging/errors, docs
 5. External research — domain completeness, missing capabilities, best practices, world-class accuracy
@@ -31,7 +31,7 @@ sankhya (ancient math), avatara (simulation), kiran (game engine), joshua (strat
 ### Work Loop / Working Loop (continuous)
 
 1. Work phase — new features, roadmap items, bug fixes
-2. Cleanliness check: `cat src/main.cyr | cc3 > build/itihas && chmod +x build/itihas && ./build/itihas`
+2. Cleanliness check: `cyrius build src/main.cyr build/itihas && ./build/itihas`
 3. Test + benchmark additions for new code
 4. Run benchmarks (when `.bcyr` harness exists)
 5. Internal review — performance, memory, security, throughput, correctness
@@ -40,8 +40,9 @@ sankhya (ancient math), avatara (simulation), kiran (game engine), joshua (strat
 8. Run benchmarks again — prove the wins
 9. If audit heavy → return to step 5
 10. Documentation — update CHANGELOG, roadmap, docs
-11. Version check — VERSION, cyrius.toml all in sync
-12. Return to step 1
+11. Version check — VERSION and `cyrius.cyml` in sync (`cyrius.cyml` derives its version from `VERSION` via `${file:VERSION}`)
+12. **Release benchmark gate (MANDATORY)** — before any version release, run the full benchmark suite, record deltas vs the prior release in the CSV history, and confirm no regressions. No version ships without a benchmark run.
+13. Return to step 1
 
 ### Task Sizing
 
@@ -59,6 +60,7 @@ sankhya (ancient math), avatara (simulation), kiran (game engine), joshua (strat
 ### Key Principles
 
 - **Never skip benchmarks.** Numbers don't lie. The CSV history is the proof.
+- **Benchmarks are mandatory for every version release.** Each release captures deltas vs the prior version in the CSV history to track performance and catch regressions — no version ships without a benchmark run.
 - **Tests + benchmarks are the way.** Minimum 80%+ coverage target.
 - **Own the stack.** If an AGNOS project wraps an external lib, depend on the AGNOS project.
 - **No magic.** Every operation is measurable, auditable, traceable.
@@ -76,7 +78,7 @@ sankhya (ancient math), avatara (simulation), kiran (game engine), joshua (strat
 - Do not add unnecessary dependencies — keep it lean
 - Do not skip benchmarks before claiming performance improvements
 - Do not commit `build/`, `target/`, or `lib/` (vendored stdlib)
-- **NEVER bump version** (VERSION, cyrius.toml) unless the user explicitly says to
+- **NEVER bump version** (VERSION, cyrius.cyml) unless the user explicitly says to
 
 ## Documentation Structure
 

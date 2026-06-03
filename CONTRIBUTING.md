@@ -7,21 +7,21 @@ Thank you for your interest in contributing to Itihas.
 1. Fork and clone the repository
 2. Create a feature branch from `main`
 3. Make your changes
-4. Run `sh tests/test_itihas.sh` to validate
+4. Run `CYRIUS_DCE=1 cyrius build src/main.cyr build/itihas && ./build/itihas` to validate
 5. Open a pull request
 
 ## Prerequisites
 
-- Cyrius >= 3.6.3 (`cyriusly install 3.6.3`)
-- cc3 compiler on PATH
+- Cyrius 6.0.50 (`cyriusly install 6.0.50`) — pinned in `cyrius.cyml`
 
 ## Commands
 
 | Command | Description |
 |---------|-------------|
-| `sh tests/test_itihas.sh` | Build + run full test suite |
-| `cat src/main.cyr \| cc3 > build/itihas` | Manual build |
-| `./build/itihas` | Run tests |
+| `cyrius build src/main.cyr build/itihas` | Build |
+| `CYRIUS_DCE=1 cyrius build src/main.cyr build/itihas` | Build (DCE-optimized) |
+| `./build/itihas` | Run the in-binary assertion suite |
+| `cyrius lint src/*.cyr` | Lint |
 
 ## Adding Historical Data
 
@@ -29,7 +29,7 @@ Thank you for your interest in contributing to Itihas.
 2. Use `store64`/`load64` with offset enums for heap struct fields
 3. String params annotated `: Str` for auto-coercion
 4. Update count assertion in `src/main.cyr`
-5. Verify build: `cat src/main.cyr | cc3 > build/itihas`
+5. Verify build: `cyrius build src/main.cyr build/itihas && ./build/itihas`
 
 ## Code Style
 
@@ -41,9 +41,9 @@ Thank you for your interest in contributing to Itihas.
 
 ## Testing
 
-- Assertions in `src/main.cyr` test harness
-- `sh tests/test_itihas.sh` for full build + test cycle
+- Assertions in `src/main.cyr` test harness (run via `./build/itihas`)
 - Target: all data counts verified, all `by_name` lookups working
+- A dedicated `cyrius test` (`.tcyr`) harness arrives in v2.3.1
 
 ## Commits
 

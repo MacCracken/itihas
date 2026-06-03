@@ -1,6 +1,6 @@
 # Development Roadmap
 
-> **Status**: v2.2.0 released | **Current**: 2.2.0 | **Compiler**: cc3 4.0.0
+> **Status**: v2.3.0 released | **Current**: 2.3.0 | **Compiler**: cyrius 6.0.50
 
 Completed items are in [CHANGELOG.md](../../CHANGELOG.md).
 Rust benchmark baseline in [benchmarks-rust-v-cyrius.md](../../benchmarks-rust-v-cyrius.md).
@@ -32,7 +32,27 @@ Rust benchmark baseline in [benchmarks-rust-v-cyrius.md](../../benchmarks-rust-v
 - [x] hoosh module: `answer_from_data()`, `llm_answer()`, `parse_tool_call()`, `resolve_era_lookup()`, 6 tool definitions, HTTP POST client
 - [x] 30 new tests (153 total)
 
-## v2.3.0 — Tool Integration (blocked on bote)
+## Completed in 2.3.0 — Toolchain/CI Modernization
+
+- [x] Cyrius compiler pin `4.0.0` → `6.0.50` (clean build, no source changes required)
+- [x] Manifest migrated `cyrius.toml` → `cyrius.cyml` (`${file:VERSION}`, `repository`, single-source toolchain pin)
+- [x] CI/release modernized on the avatara pattern (`install.sh` from the pin, `cyrius lint` hard-gate, `CYRIUS_DCE=1` build, ELF verify, version-consistency, `SHA256SUMS`, changelog-extracted release body)
+- [x] `.cyrius-toolchain` retired; stale `cc3` tooling fixed in CLAUDE.md; mandatory per-release benchmark gate added
+
+## v2.3.x — Modernization Arc (planned)
+
+Deeper modernizations beyond the 2.3.0 pin/CI work. Each is its own work-loop cycle
+(cleanliness + benchmark gates), in dependency order:
+
+| Ver | Item | Effort | Details |
+|-----|------|--------|---------|
+| 2.3.1 | **Test + benchmark harnesses** | Large | Port shell tests + `main.cyr` inline asserts to `tests/tcyr/itihas.tcyr` (`cyrius test`); convert `src/bench_main.cyr` + `scripts/bench-history.sh` to `benches/itihas.bcyr` (`cyrius bench`) with a committed `bench-history.csv`; wire both into CI, including the mandatory per-release benchmark delta gate. Subsumes old v2.1.0 #5. |
+| 2.3.2 | **distlib bundle + lint clean gate** | Medium | Add `src/lib.cyr` aggregator + `[lib].modules`; generate `dist/itihas.cyr` via `cyrius distlib`; CI dist-freshness gate — enables consumers to depend on itihas. Same release: drive `cyrius lint` to zero non-cosmetic warnings and harden the CI lint gate. |
+| 2.3.3 | **Lean-deps audit** | Low | Confirm whether `net/http/io/toml` are truly unused (check hoosh's HTTP path) and drop the dead stdlib deps; add `result` if any I/O is added. |
+| 2.3.4 | **Stop vendoring `./lib/`; DCE-by-default** | Medium | Resolve the `./lib/ shadows pinned lib/` warning (use the version-pinned snapshot); address the 332-unreachable-fn / large-`.bss` warnings. |
+| 2.3.5 | **Language idiom modernization** | Large | Apply current idioms per vidya/cyrius: `#[non_exhaustive]` on public enums, `#[must_use]` on pure fns, `#[inline]` on hot paths, width-typed struct fields, `defer`, slices, `Result`/`?` for new I/O. Verify each against the installed 6.0.50 compiler first. |
+
+## v2.4.0 — Tool Integration (blocked on bote)
 
 | # | Item | Blocked on | Details |
 |---|------|-----------|---------|
@@ -46,7 +66,7 @@ These Cyrius ports must happen in other repos before itihas can integrate:
 | Dependency | Repo | Blocks | Status |
 |-----------|------|--------|--------|
 | **hoosh** | MacCracken/hoosh | v2.2.0 #7 | Ported |
-| **bote** | MacCracken/bote | v2.3.0 #8, #9 | Not started |
+| **bote** | MacCracken/bote | v2.4.0 #8, #9 | Not started |
 | **argonaut** (itihas integration) | MacCracken/argonaut | v2.1.0 #3 | argonaut itself is ported (424 tests), but itihas struct integration not done |
 
 ## Future (demand-gated)

@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.3.0] - 2026-06-03
+
+### Changed
+
+- **Toolchain** — Cyrius compiler pin bumped `4.0.0` → `6.0.50`. Builds clean with no source changes (itihas uses only in-memory `json_parse`, so the v4→v6 int-return→`Result` I/O migration does not apply).
+- **Manifest** — Migrated `cyrius.toml` → `cyrius.cyml` (canonical CYML manifest, matching avatara). Version now derives from `VERSION` via `${file:VERSION}`; added `repository` field; the `[package].cyrius` pin is the single source of truth for the toolchain version.
+- **CI** — Rebuilt `.github/workflows/ci.yml` on the avatara pattern: toolchain installed via `install.sh` reading the `cyrius.cyml` pin (no hardcoded version, no tarball download), `cyrius lint` hard-gate (non-cosmetic warnings fail CI), `CYRIUS_DCE=1` build, ELF-magic verification, and a docs job that checks `cyrius.cyml` plus VERSION/cyrius.cyml/CHANGELOG version consistency.
+- **Release** — Rebuilt `.github/workflows/release.yml`: verifies VERSION and `cyrius.cyml` match the tag, DCE build, `git archive` source tarball with `SHA256SUMS`, and a changelog-extracted release body (replacing bare `generate_release_notes`).
+- **CLAUDE.md** — Added a mandatory per-release benchmark gate (capture deltas vs the prior release, catch regressions); replaced the stale `cc3` cleanliness command with `cyrius build`; updated compiler/manifest references to 6.0.50 / `cyrius.cyml`.
+
+### Fixed
+
+- **main.cyr** — Collapsed 4 double-blank-line lint warnings so CI can run the avatara-identical lint hard-gate.
+
+### Removed
+
+- **.cyrius-toolchain** — Retired; the toolchain version now lives solely in `cyrius.cyml` `[package].cyrius`.
+- **cyrius.toml** — Replaced by `cyrius.cyml`.
+
 ## [2.2.0] - 2026-04-13
 
 ### Added
