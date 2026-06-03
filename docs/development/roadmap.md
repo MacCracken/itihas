@@ -1,6 +1,6 @@
 # Development Roadmap
 
-> **Status**: v2.3.3 released | **Current**: 2.3.3 | **Compiler**: cyrius 6.0.50
+> **Status**: v2.3.4 released | **Current**: 2.3.4 | **Compiler**: cyrius 6.0.50
 
 Completed items are in [CHANGELOG.md](../../CHANGELOG.md).
 Rust benchmark baseline in [benchmarks-rust-v-cyrius.md](../../benchmarks-rust-v-cyrius.md).
@@ -49,7 +49,7 @@ Deeper modernizations beyond the 2.3.0 pin/CI work. Each is its own work-loop cy
 | 2.3.1 | **Test + benchmark harnesses** | Large | ✅ Released in 2.3.1. Ported `main.cyr`'s 153 inline asserts to `tests/itihas.tcyr` (`cyrius test`); relocated benchmarks to `tests/itihas.bcyr`; rewrote `scripts/bench-history.sh` for the Cyrius harness with a committed `bench-history.csv`; slimmed `main.cyr` to a smoke test; wired `cyrius test` + benchmark steps into CI. Subsumes old v2.1.0 #5. |
 | 2.3.2 | **distlib bundle + lint clean gate** | Medium | ✅ Released in 2.3.2. Added `src/lib.cyr` aggregator + `[lib].modules`; `cyrius distlib` → `dist/itihas.cyr` (consumer-ready); CI dist-freshness gate; release ships the bundle; added `sakshi` to stdlib so the bundle is self-resolving. `cyrius lint` already at zero non-cosmetic warnings under the existing hard gate. |
 | 2.3.3 | **Lean-deps audit + de-vendor `./lib/`** | Low | ✅ Released in 2.3.3. Dropped 4 truly-dead deps (`io`, `args`, `toml`, `hashmap`); **kept `net` + `http`** (hoosh's self-contained raw-syscall HTTP client + `net`'s `sockaddr_in` — load-bearing for independent + library use) and `tagged` (`Result`, used transitively by `sakshi`/`net`). Stopped vendoring `./lib/` (now gitignored; cyrius regenerates it from the pinned snapshot), resolving the shadow warning. Unreachable-fns handled by `CYRIUS_DCE=1`. Verified across binary/test/bench/bundle. |
-| 2.3.4 | **Language idiom modernization** | Large | ✅ Done (in `[Unreleased]`). Verified attributes against the compiler first — key finding: Cyrius uses bare `#attr`, not Rust `#[attr]` (a no-op comment); `#non_exhaustive`/`#inline` aren't Cyrius attributes. Applied enforced `#must_use` across the public API (data modules + serial + hoosh) and `defer` for socket cleanup in `hoosh_post`; corrected CLAUDE.md. Not applicable to itihas's offset-`store64` struct model: width-typed fields, `#derive(Serialize)`. `#regalloc` deferred (needs a measured win). |
+| 2.3.4 | **Language idiom modernization** | Large | ✅ Released in 2.3.4. Verified attributes against the compiler first — key finding: Cyrius uses bare `#attr`, not Rust `#[attr]` (a no-op comment); `#non_exhaustive`/`#inline` aren't Cyrius attributes. Applied enforced `#must_use` across the public API (data modules + serial + hoosh) and `defer` for socket cleanup in `hoosh_post`; corrected CLAUDE.md. Not applicable to itihas's offset-`store64` struct model: width-typed fields, `#derive(Serialize)`. `#regalloc` deferred (needs a measured win). |
 
 ### Deferred / future
 

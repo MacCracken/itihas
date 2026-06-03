@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.3.4] - 2026-06-03
+
 ### Added
 
 - **`#must_use`** — Applied the real, compiler-enforced `#must_use` attribute to the pure public API across all 10 data modules plus `serial` (`*_to_json`) and `hoosh` (query builders, response accessors, tool defs). Discarding a query/lookup/serialization result now warns at compile time.
