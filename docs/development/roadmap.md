@@ -59,8 +59,8 @@ Deeper modernizations beyond the 2.3.0 pin/CI work. Each is its own work-loop cy
 
 | # | Item | Blocked on | Details |
 |---|------|-----------|---------|
-| 8 | **mcp module** | bote Cyrius port | `tool_definitions()`, `register_handlers()`, `register_all()`. 5 MCP tool handlers: `itihas_era`, `itihas_civilization`, `itihas_event`, `itihas_figure`, `itihas_timeline`. |
-| 9 | **daimon module** | bote Cyrius port | `register_tools()`, `host_tool_descriptions()`, `invoke()`. Agent orchestrator integration via McpHostRegistry. |
+| 8 | **mcp module** | bote toolchain bring-up | `tool_definitions()`, `register_handlers()`, `register_all()`. 5 MCP tool handlers: `itihas_era`, `itihas_civilization`, `itihas_event`, `itihas_figure`, `itihas_timeline`. |
+| 9 | **daimon module** | bote toolchain bring-up | `register_tools()`, `host_tool_descriptions()`, `invoke()`. Agent orchestrator integration via McpHostRegistry. |
 
 ## Blocked Dependencies
 
@@ -69,7 +69,7 @@ These Cyrius ports must happen in other repos before itihas can integrate:
 | Dependency | Repo | Blocks | Status |
 |-----------|------|--------|--------|
 | **hoosh** | MacCracken/hoosh | v2.2.0 #7 | Ported |
-| **bote** | MacCracken/bote | v2.4.0 #8, #9 | Not started |
+| **bote** | MacCracken/bote | v2.4.0 #8, #9 | Ported — needs toolchain bring-up to latest Cyrius (same modernization itihas got in 2.3.0) before integration |
 | **argonaut** (itihas integration) | MacCracken/argonaut | v2.1.0 #3 | argonaut itself is ported (424 tests), but itihas struct integration not done |
 
 ## Future (demand-gated)
