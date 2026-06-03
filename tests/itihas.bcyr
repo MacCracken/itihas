@@ -1,6 +1,6 @@
-# bench_main.cyr — itihas benchmarks (28 benchmarks, ported from Rust criterion)
-# Build: cyrius build src/bench_main.cyr build/itihas_bench
-# Run: ./build/itihas_bench
+# itihas.bcyr — itihas benchmarks (28 benchmarks, ported from Rust criterion)
+# Run: cyrius build tests/itihas.bcyr build/itihas_bench && ./build/itihas_bench
+# (or via scripts/bench-history.sh to record the CSV/markdown history)
 
 include "src/util.cyr"
 include "src/error.cyr"

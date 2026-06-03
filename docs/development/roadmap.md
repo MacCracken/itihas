@@ -46,7 +46,7 @@ Deeper modernizations beyond the 2.3.0 pin/CI work. Each is its own work-loop cy
 
 | Ver | Item | Effort | Details |
 |-----|------|--------|---------|
-| 2.3.1 | **Test + benchmark harnesses** | Large | Port shell tests + `main.cyr` inline asserts to `tests/tcyr/itihas.tcyr` (`cyrius test`); convert `src/bench_main.cyr` + `scripts/bench-history.sh` to `benches/itihas.bcyr` (`cyrius bench`) with a committed `bench-history.csv`; wire both into CI, including the mandatory per-release benchmark delta gate. Subsumes old v2.1.0 #5. |
+| 2.3.1 | **Test + benchmark harnesses** | Large | ✅ Done (in `[Unreleased]`). Ported `main.cyr`'s 153 inline asserts to `tests/itihas.tcyr` (`cyrius test`); relocated benchmarks to `tests/itihas.bcyr`; rewrote `scripts/bench-history.sh` for the Cyrius harness with a committed `bench-history.csv`; slimmed `main.cyr` to a smoke test; wired `cyrius test` + benchmark steps into CI. Subsumes old v2.1.0 #5. |
 | 2.3.2 | **distlib bundle + lint clean gate** | Medium | Add `src/lib.cyr` aggregator + `[lib].modules`; generate `dist/itihas.cyr` via `cyrius distlib`; CI dist-freshness gate — enables consumers to depend on itihas. Same release: drive `cyrius lint` to zero non-cosmetic warnings and harden the CI lint gate. |
 | 2.3.3 | **Lean-deps audit** | Low | Confirm whether `net/http/io/toml` are truly unused (check hoosh's HTTP path) and drop the dead stdlib deps; add `result` if any I/O is added. |
 | 2.3.4 | **Stop vendoring `./lib/`; DCE-by-default** | Medium | Resolve the `./lib/ shadows pinned lib/` warning (use the version-pinned snapshot); address the 332-unreachable-fn / large-`.bss` warnings. |

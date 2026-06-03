@@ -54,11 +54,23 @@ jobs:
         run: xxd -l 4 build/itihas | grep -q "7f45 4c46"
 
       - name: Smoke test
-        # build/itihas runs the in-binary assertion suite; require zero failures.
+        # build/itihas loads every data module and checks core invariants.
         run: |
           chmod +x build/itihas
           ./build/itihas 2>&1 | tee /tmp/smoke
-          grep -q "failed: 0" /tmp/smoke
+          grep -q "smoke: OK" /tmp/smoke
+
+      - name: Unit tests
+        # The full 153-assertion suite. assert_summary() prints "N failed".
+        run: |
+          cyrius test tests/itihas.tcyr 2>&1 | tee /tmp/test_output
+          tail -1 /tmp/test_output | grep "0 failed"
+
+      - name: Benchmarks
+        # Build + run the suite to catch performance regressions / build breakage.
+        run: |
+          CYRIUS_DCE=1 cyrius build tests/itihas.bcyr build/itihas_bench
+          ./build/itihas_bench
 
   docs:
     name: Documentation

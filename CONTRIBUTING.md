@@ -7,7 +7,7 @@ Thank you for your interest in contributing to Itihas.
 1. Fork and clone the repository
 2. Create a feature branch from `main`
 3. Make your changes
-4. Run `CYRIUS_DCE=1 cyrius build src/main.cyr build/itihas && ./build/itihas` to validate
+4. Run `cyrius test tests/itihas.tcyr` to validate (and `./scripts/bench-history.sh` if performance is touched)
 5. Open a pull request
 
 ## Prerequisites
@@ -20,7 +20,9 @@ Thank you for your interest in contributing to Itihas.
 |---------|-------------|
 | `cyrius build src/main.cyr build/itihas` | Build |
 | `CYRIUS_DCE=1 cyrius build src/main.cyr build/itihas` | Build (DCE-optimized) |
-| `./build/itihas` | Run the in-binary assertion suite |
+| `./build/itihas` | Run the smoke test |
+| `cyrius test tests/itihas.tcyr` | Run the full 153-assertion suite |
+| `./scripts/bench-history.sh` | Run benchmarks + record history |
 | `cyrius lint src/*.cyr` | Lint |
 
 ## Adding Historical Data
@@ -41,9 +43,10 @@ Thank you for your interest in contributing to Itihas.
 
 ## Testing
 
-- Assertions in `src/main.cyr` test harness (run via `./build/itihas`)
+- Full suite in `tests/itihas.tcyr` (run via `cyrius test tests/itihas.tcyr`)
+- Smoke test in `src/main.cyr` (run via `./build/itihas`)
+- Benchmarks in `tests/itihas.bcyr` (run via `./scripts/bench-history.sh`)
 - Target: all data counts verified, all `by_name` lookups working
-- A dedicated `cyrius test` (`.tcyr`) harness arrives in v2.3.1
 
 ## Commits
 

@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Run criterion benchmarks, append results to CSV history, and generate benchmarks.md
-# with a 3-point trend table (baseline -> previous -> current).
+# Build + run the Cyrius benchmark suite (tests/itihas.bcyr), append results to
+# a CSV history, and regenerate benchmarks.md with a 3-point trend table
+# (baseline -> mid -> current). This is the per-release benchmark gate — run it
+# before every version release to record deltas and catch regressions.
 #
 # Usage:
 #   ./scripts/bench-history.sh              # defaults to bench-history.csv
@@ -13,6 +15,8 @@ BENCHMARKS_MD="benchmarks.md"
 TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 COMMIT=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
 BRANCH=$(git branch --show-current 2>/dev/null || echo "unknown")
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$REPO_ROOT"
 
 # Create header if file doesn't exist
 if [ ! -f "$HISTORY_FILE" ]; then
@@ -28,49 +32,41 @@ echo "  date:   $TIMESTAMP"
 echo "======================================"
 echo ""
 
-# Run benchmarks and capture output, stripping ANSI escape codes
-BENCH_OUTPUT=$(cargo bench --bench benchmarks 2>&1 | sed 's/\x1b\[[0-9;]*m//g')
+# Build and run the benchmark harness (DCE for representative timings).
+mkdir -p build
+CYRIUS_DCE=1 cyrius build tests/itihas.bcyr build/itihas_bench
+BENCH_OUTPUT=$(./build/itihas_bench)
 
 # Show full output
 echo "$BENCH_OUTPUT"
 echo ""
 
-# Collect results for CSV
-declare -a BENCH_NAMES=()
-declare -a BENCH_NS=()
-
-PREV_LINE=""
+# Collect results for CSV. bench_report lines look like:
+#   "  all_eras: 5ns avg (min=5ns max=7ns) [1000000 iters]"
+# We capture the benchmark name and the "avg" estimate, normalized to ns.
+COUNT=0
 while IFS= read -r line; do
-    if [[ "$line" == *"time:"*"["* ]]; then
-        BENCH_NAME=$(echo "$line" | sed -E 's/[[:space:]]*time:.*//' | xargs)
-        if [ -z "$BENCH_NAME" ]; then
-            BENCH_NAME=$(echo "$PREV_LINE" | xargs)
-        fi
-
-        VALS=$(echo "$line" | sed -E 's/.*\[(.+)\]/\1/')
-        MEDIAN=$(echo "$VALS" | awk '{print $3}')
-        UNIT=$(echo "$VALS" | awk '{print $4}')
-
-        # Normalize to nanoseconds
-        case "$UNIT" in
-            ps)  NS=$(echo "$MEDIAN" | awk '{printf "%.4f", $1 / 1000}') ;;
-            ns)  NS="$MEDIAN" ;;
-            µs|us)  NS=$(echo "$MEDIAN" | awk '{printf "%.4f", $1 * 1000}') ;;
-            ms)  NS=$(echo "$MEDIAN" | awk '{printf "%.4f", $1 * 1000000}') ;;
-            s)   NS=$(echo "$MEDIAN" | awk '{printf "%.4f", $1 * 1000000000}') ;;
-            *)   NS="$MEDIAN" ;;
-        esac
-
-        echo "${TIMESTAMP},${COMMIT},${BRANCH},${BENCH_NAME},${NS}" >> "$HISTORY_FILE"
-        BENCH_NAMES+=("$BENCH_NAME")
-        BENCH_NS+=("$NS")
-    fi
-    PREV_LINE="$line"
+    case "$line" in
+        *": "*" avg "*)
+            BENCH_NAME=$(printf '%s' "$line" | sed -E 's/^[[:space:]]*([^:]+):.*/\1/')
+            AVG_FIELD=$(printf '%s' "$line" | sed -E 's/^[[:space:]]*[^:]+:[[:space:]]*([0-9.]+)[[:space:]]*([a-zµ]+)[[:space:]]+avg.*/\1 \2/')
+            VAL=$(printf '%s' "$AVG_FIELD" | awk '{print $1}')
+            UNIT=$(printf '%s' "$AVG_FIELD" | awk '{print $2}')
+            case "$UNIT" in
+                ps)      NS=$(awk -v v="$VAL" 'BEGIN{printf "%.4f", v/1000}') ;;
+                ns)      NS="$VAL" ;;
+                µs|us)   NS=$(awk -v v="$VAL" 'BEGIN{printf "%.4f", v*1000}') ;;
+                ms)      NS=$(awk -v v="$VAL" 'BEGIN{printf "%.4f", v*1000000}') ;;
+                s)       NS=$(awk -v v="$VAL" 'BEGIN{printf "%.4f", v*1000000000}') ;;
+                *)       NS="$VAL" ;;
+            esac
+            echo "${TIMESTAMP},${COMMIT},${BRANCH},${BENCH_NAME},${NS}" >> "$HISTORY_FILE"
+            COUNT=$((COUNT + 1))
+            ;;
+    esac
 done <<< "$BENCH_OUTPUT"
 
-COUNT=${#BENCH_NAMES[@]}
-
-# Generate benchmarks.md with 3-point trend using python
+# Generate benchmarks.md with a 3-point trend using python
 python3 - "$HISTORY_FILE" "$BENCHMARKS_MD" <<'PYEOF'
 import csv, sys
 from collections import OrderedDict
@@ -139,7 +135,7 @@ with open(md_file, "w") as f:
     ts_last = pick[-1]
     f.write(f"Latest: **{ts_last}** -- commit `{commits[ts_last]}`\n\n")
     if len(pick) >= 3:
-        f.write(f"Tracking: `{commits[pick[0]]}` (baseline) -> `{commits[pick[1]]}` (optimized) -> `{commits[pick[-1]]}` (current)\n\n")
+        f.write(f"Tracking: `{commits[pick[0]]}` (baseline) -> `{commits[pick[1]]}` (mid) -> `{commits[pick[-1]]}` (current)\n\n")
 
     # Table
     cols = " | ".join(labels)
