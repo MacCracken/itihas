@@ -1,6 +1,6 @@
 # Development Roadmap
 
-> **Status**: v2.3.2 released | **Current**: 2.3.2 | **Compiler**: cyrius 6.0.50
+> **Status**: v2.3.3 released | **Current**: 2.3.3 | **Compiler**: cyrius 6.0.50
 
 Completed items are in [CHANGELOG.md](../../CHANGELOG.md).
 Rust benchmark baseline in [benchmarks-rust-v-cyrius.md](../../benchmarks-rust-v-cyrius.md).
@@ -48,9 +48,12 @@ Deeper modernizations beyond the 2.3.0 pin/CI work. Each is its own work-loop cy
 |-----|------|--------|---------|
 | 2.3.1 | **Test + benchmark harnesses** | Large | ✅ Released in 2.3.1. Ported `main.cyr`'s 153 inline asserts to `tests/itihas.tcyr` (`cyrius test`); relocated benchmarks to `tests/itihas.bcyr`; rewrote `scripts/bench-history.sh` for the Cyrius harness with a committed `bench-history.csv`; slimmed `main.cyr` to a smoke test; wired `cyrius test` + benchmark steps into CI. Subsumes old v2.1.0 #5. |
 | 2.3.2 | **distlib bundle + lint clean gate** | Medium | ✅ Released in 2.3.2. Added `src/lib.cyr` aggregator + `[lib].modules`; `cyrius distlib` → `dist/itihas.cyr` (consumer-ready); CI dist-freshness gate; release ships the bundle; added `sakshi` to stdlib so the bundle is self-resolving. `cyrius lint` already at zero non-cosmetic warnings under the existing hard gate. |
-| 2.3.3 | **Lean-deps audit** | Low | ✅ Done (in `[Unreleased]`). Dropped 4 truly-dead deps (`io`, `args`, `toml`, `hashmap`). **Kept `net` + `http`** — hoosh's self-contained HTTP client (raw syscalls + `net`'s `sockaddr_in`) is load-bearing for itihas's independent + library use. Kept `tagged` (`Result` used transitively by `sakshi`/`net`). Verified across binary/test/bench/bundle. |
-| 2.3.4 | **Stop vendoring `./lib/`; DCE-by-default** | Medium | Resolve the `./lib/ shadows pinned lib/` warning (use the version-pinned snapshot); address the 332-unreachable-fn / large-`.bss` warnings. |
-| 2.3.5 | **Language idiom modernization** | Large | Apply current idioms per vidya/cyrius: `#[non_exhaustive]` on public enums, `#[must_use]` on pure fns, `#[inline]` on hot paths, width-typed struct fields, `defer`, slices, `Result`/`?` for new I/O. Verify each against the installed 6.0.50 compiler first. |
+| 2.3.3 | **Lean-deps audit + de-vendor `./lib/`** | Low | ✅ Released in 2.3.3. Dropped 4 truly-dead deps (`io`, `args`, `toml`, `hashmap`); **kept `net` + `http`** (hoosh's self-contained raw-syscall HTTP client + `net`'s `sockaddr_in` — load-bearing for independent + library use) and `tagged` (`Result`, used transitively by `sakshi`/`net`). Stopped vendoring `./lib/` (now gitignored; cyrius regenerates it from the pinned snapshot), resolving the shadow warning. Unreachable-fns handled by `CYRIUS_DCE=1`. Verified across binary/test/bench/bundle. |
+| 2.3.4 | **Language idiom modernization** | Large | Apply current idioms per vidya/cyrius: `#[non_exhaustive]` on public enums, `#[must_use]` on pure fns, `#[inline]` on hot paths, width-typed struct fields, `defer`, slices, `Result`/`?` for new I/O. Verify each against the installed compiler first. |
+
+### Deferred / future
+
+- **Static-data `.bss` footprint** — the 10 data modules embed ~300 KB of inline historical strings (descriptions). Restructuring to runtime `alloc()` per the compiler hint touches every data module and is its own large, risky cycle; deferred until there's demand.
 
 ## v2.4.0 — Tool Integration (blocked on bote)
 

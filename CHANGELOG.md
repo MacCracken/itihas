@@ -7,13 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.3.3] - 2026-06-03
+
 ### Removed
 
 - **cyrius.cyml** — Dropped 4 unused stdlib deps (`io`, `args`, `toml`, `hashmap`) after a usage audit; itihas's own code never calls them and no retained stdlib module needs them transitively. Verified by rebuilding the binary, test suite, benchmark suite, and consumer bundle.
+- **lib/** — Stopped vendoring the Cyrius stdlib snapshot in-repo (18 files, now gitignored). `cyrius` regenerates `./lib/` from the version-pinned snapshot (`[package].cyrius`) on build/deps, so the committed copy only went stale and shadowed the matched snapshot. Resolves the `./lib/ shadows version-pinned lib/` build warning.
 
 ### Changed
 
 - **cyrius.cyml** — Documented why `net` + `http` are retained: hoosh ships a **self-contained HTTP client** (raw syscalls + `sockaddr_in` from `net`) so itihas works independently and as a library; and `tagged` is kept for the `Result` type used transitively by `sakshi` and `net`.
+- **Build hygiene** — Unreachable-fn notes are eliminated by the `CYRIUS_DCE=1` build used in CI and releases. (The large static-data `.bss` footprint — historical description strings — is left as a future optimization; restructuring it touches all 10 data modules.)
 
 ## [2.3.2] - 2026-06-03
 

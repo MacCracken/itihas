@@ -7,8 +7,10 @@
 /rust-old/target/
 /rust-old/Cargo.lock
 
-# Cyrius vendored stdlib — committed (required for build)
-# Regenerate with: cyrius deps (or cyrius port)
+# Cyrius stdlib — no longer vendored. cyrius regenerates ./lib/ from the
+# version-pinned snapshot (the `[package].cyrius` pin) on build/deps, so a
+# committed copy would only go stale and shadow the matched snapshot.
+/lib/
 
 # Cargo
 Cargo.lock
