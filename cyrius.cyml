@@ -4,7 +4,7 @@ version = "${file:VERSION}"
 description = "Itihas — structured world history: civilizations, eras, events, figures, campaigns, sites, trade routes, calendars"
 license = "GPL-3.0-only"
 language = "cyrius"
-cyrius = "6.0.50"
+cyrius = "6.2.11"
 repository = "https://github.com/MacCracken/itihas"
 
 [build]
@@ -38,4 +38,9 @@ modules = [
 # net + http: hoosh ships a self-contained HTTP client (raw syscalls + net's
 # sockaddr_in) for independent use — load-bearing, do not remove.
 # tagged: needed transitively (sakshi + net use Result).
-stdlib = ["string", "fmt", "alloc", "vec", "str", "syscalls", "assert", "tagged", "json", "fnptr", "bench", "net", "http", "sakshi"]
+# bayan: the data-format stdlib carve (cyrius 6.1.25) moved json/toml/csv/base64/
+# bigint out of the stdlib into the bayan sibling, folded back as lib/bayan.cyr.
+# itihas's hoosh tool-call parsing uses json_parse/json_get (bayan compat aliases
+# for bayan_json_*). Replaces the former standalone "json" dep, which no longer
+# exists. result + io are bayan's internal prereqs.
+stdlib = ["string", "fmt", "alloc", "vec", "str", "syscalls", "assert", "tagged", "result", "io", "fnptr", "bench", "net", "http", "bayan", "sakshi"]

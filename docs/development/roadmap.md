@@ -1,6 +1,6 @@
 # Development Roadmap
 
-> **Status**: v2.3.4 released | **Current**: 2.3.4 | **Compiler**: cyrius 6.0.50
+> **Status**: v2.3.5 released | **Current**: 2.3.5 | **Compiler**: cyrius 6.2.11
 
 Completed items are in [CHANGELOG.md](../../CHANGELOG.md).
 Rust benchmark baseline in [benchmarks-rust-v-cyrius.md](../../benchmarks-rust-v-cyrius.md).
@@ -50,10 +50,20 @@ Deeper modernizations beyond the 2.3.0 pin/CI work. Each is its own work-loop cy
 | 2.3.2 | **distlib bundle + lint clean gate** | Medium | ✅ Released in 2.3.2. Added `src/lib.cyr` aggregator + `[lib].modules`; `cyrius distlib` → `dist/itihas.cyr` (consumer-ready); CI dist-freshness gate; release ships the bundle; added `sakshi` to stdlib so the bundle is self-resolving. `cyrius lint` already at zero non-cosmetic warnings under the existing hard gate. |
 | 2.3.3 | **Lean-deps audit + de-vendor `./lib/`** | Low | ✅ Released in 2.3.3. Dropped 4 truly-dead deps (`io`, `args`, `toml`, `hashmap`); **kept `net` + `http`** (hoosh's self-contained raw-syscall HTTP client + `net`'s `sockaddr_in` — load-bearing for independent + library use) and `tagged` (`Result`, used transitively by `sakshi`/`net`). Stopped vendoring `./lib/` (now gitignored; cyrius regenerates it from the pinned snapshot), resolving the shadow warning. Unreachable-fns handled by `CYRIUS_DCE=1`. Verified across binary/test/bench/bundle. |
 | 2.3.4 | **Language idiom modernization** | Large | ✅ Released in 2.3.4. Verified attributes against the compiler first — key finding: Cyrius uses bare `#attr`, not Rust `#[attr]` (a no-op comment); `#non_exhaustive`/`#inline` aren't Cyrius attributes. Applied enforced `#must_use` across the public API (data modules + serial + hoosh) and `defer` for socket cleanup in `hoosh_post`; corrected CLAUDE.md. Not applicable to itihas's offset-`store64` struct model: width-typed fields, `#derive(Serialize)`. `#regalloc` deferred (needs a measured win). |
+| 2.3.5 | **Toolchain bump 6.0.50 → 6.2.11 + `json` → `bayan`** | Low | ✅ Released in 2.3.5. Pinned cyrius 6.2.11 and resynced `lib/`. The 6.1.25 data-format carve removed standalone `json` from the stdlib (now `lib/bayan.cyr`); swapped `[deps] stdlib` `json` → `bayan` (+ `result`/`io` prereqs). hoosh's `json_parse`/`json_get` unchanged via bayan compat aliases. Recorded toolchain-codegen creep on vec/str-heavy paths (no source change). Mirrors avatara 2.7.1/2.7.2. |
 
 ### Deferred / future
 
 - **Static-data `.bss` footprint** — the 10 data modules embed ~300 KB of inline historical strings (descriptions). Restructuring to runtime `alloc()` per the compiler hint touches every data module and is its own large, risky cycle; deferred until there's demand.
+
+### Modernization backlog (from avatara stdlib-usage review, 2.3.5)
+
+Sibling avatara has completed two stdlib modernizations itihas has not. Both are large, behavior-preserving refactors — sequenced as their own work-loop cycles, never batched:
+
+| Item | Effort | Details |
+|------|--------|---------|
+| **Checked allocation (`xalloc`) — CWE-690** | Medium | itihas has ~21 raw `alloc()` sites that write into the result unchecked; the stdlib `alloc()` returns `0` on OOM (near-NULL write / UB under exhaustion). Route heap allocation through a checked `xalloc(n)` that aborts with a diagnostic, per avatara 2.5.4 / its ADR-009 (Rust/Go abort-on-OOM policy). |
+| **Native `#derive(accessors)` struct migration** | Large | The 10 data modules + serial address fields via ~242 manual `load64(p+OFFSET)` / `store64` calls against hand-maintained offset enums. avatara (2.5.3) migrated its profile to a named-field `#derive(accessors)` `struct` once the 6.x struct field cap was raised (32 → 256), making offset-collision bugs a compile error while keeping `prof_*` compat shims. The same applies here: convert each module's offset layout to a native struct, keep the public getters as shims. Touches all 11 modules — strictly one module per cycle, each behind the cleanliness + benchmark gates. |
 
 ## v2.4.0 — Tool Integration (blocked on bote)
 

@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.3.5] - 2026-06-15
+
+Toolchain modernization release — the cyrius 6.0.50 → 6.2.11 bump and the
+stdlib data-format carve it requires. Source behavior unchanged; 153 tests pass.
+
+### Changed
+
+- **Toolchain pin bumped 6.0.50 → 6.2.11** (`cyrius.cyml` `[package].cyrius`). Resyncs the vendored `lib/` snapshot to the 6.2.x stdlib, clearing the toolchain-drift and `./lib/ shadows version-pinned lib/` build warnings (the local snapshot was a stale 6.0.50 copy).
+- **`cyrius.cyml` `[deps] stdlib`: `json` → `bayan` (+ `result`, `io`).** Cyrius 6.1.25 carved the data-format modules (json/toml/csv/base64/bigint/u128) out of the stdlib into the **bayan** sibling, folded back as `lib/bayan.cyr`; standalone `json` no longer exists and was dropped from the auto-prepend list. hoosh's tool-call parsing (`json_parse`/`json_get`) is unchanged — bayan keeps those as compat aliases for `bayan_json_*`. `result` + `io` are bayan's internal prereqs. Mirrors avatara's 2.7.1 `json`-drop.
+
+### Performance
+
+- **Toolchain-codegen creep (no source change), attributable to the 6.2.x stdlib snapshot.** Same-binary, same-machine comparison (pre-bump 6.0.50 `lib/` vs post-bump 6.2.11 `lib/`, both under cycc 6.2.11) shows the vec/str-heavy query paths slower while the O(1) collection accessors (`all_*`) hold flat at 5–6 ns: `chain_writing_depth3` 544 → 948 ns, `eras_containing_500bce` 490 → 620 ns, `causes_of_french_revolution` 244 → 346 ns, `figures_by_domain_scientist` 592 → 695 ns, `sites_active_at_500bce` 373 → 472 ns, `campaigns_between_500bce_500ce` 293 → 399 ns. This matches the codegen creep avatara recorded across its 6.1.34/6.2.11 bumps; it is the cost of the toolchain bump, not a regression in itihas source. Full run recorded in `bench-history.csv` / `benchmarks.md`.
+
 ## [2.3.4] - 2026-06-03
 
 ### Added
