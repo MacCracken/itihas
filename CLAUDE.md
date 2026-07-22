@@ -6,7 +6,7 @@
 
 - **Type**: Cyrius library (ported from Rust v1.5.0)
 - **License**: GPL-3.0
-- **Compiler**: Cyrius 6.0.50 (cc5) — pinned in `cyrius.cyml` `[package].cyrius`
+- **Compiler**: Cyrius 6.4.69 (cc5) — pinned in `cyrius.cyml` `[package].cyrius`
 - **Version**: SemVer 2.0.0
 
 ## Consumers

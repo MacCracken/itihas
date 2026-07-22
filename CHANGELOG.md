@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.4.0] - 2026-07-21
+
+Toolchain modernization release — the cyrius 6.2.11 → 6.4.69 bump and the
+vendored-`lib/` resync it requires. Source behavior unchanged; 153 tests pass.
+The 6.4.x stdlib codegen recovers the 6.2.x creep and improves on it.
+
+### Changed
+
+- **Toolchain pin bumped 6.2.11 → 6.4.69** (`cyrius.cyml` `[package].cyrius`). Resyncs the local `lib/` snapshot to the 6.4.69 stdlib — 25 declared `[deps].stdlib` modules re-vendored via `cyrius lib sync` — clearing the toolchain-drift build warning (the local snapshot was a stale 6.2.11 copy). `[deps].stdlib` is unchanged; `net` + `http` remain load-bearing (hoosh's self-contained HTTP client). `dist/itihas.cyr` regenerated with the v2.4.0 header.
+
+### Performance
+
+- **Toolchain-codegen recovery (no source change), attributable to the 6.4.69 stdlib snapshot.** Same-machine, same-session comparison (pre-bump 6.2.11 `lib/` vs post-bump 6.4.69 `lib/`, both under cycc 6.4.69) shows the vec/str-heavy query paths **10–36% faster** while the O(1) collection accessors (`all_*`) hold flat at 4–5 ns: `chain_writing_depth3` 853 → 546 ns (**-36%**, essentially back to its pre-6.2.x baseline), `interactions_for_rome` 668 → 453 ns (**-32%**), `causes_of_french_revolution` 311 → 237 ns (**-24%**), `campaigns_between_500bce_500ce` 367 → 285 ns (**-22%**), `campaigns_by_commander_napoleon` 387 → 309 ns (**-20%**), `routes_by_region_east_asia` 364 → 291 ns (**-20%**), `routes_by_commodity_silk` 401 → 325 ns (**-19%**), `sites_active_at_500bce` 433 → 360 ns (**-17%**), `eras_containing_500bce` 545 → 475 ns (**-13%**), `influence_score_egypt_hittite` 544 → 471 ns (**-13%**), `figures_by_domain_scientist` 631 → 564 ns (**-11%**), `sites_by_region_near_east` 649 → 583 ns (**-10%**). This reverses the codegen creep itihas recorded across the 6.0.50 → 6.2.11 bump in 2.3.5; no regressions. Full run recorded in `bench-history.csv` / `benchmarks.md`.
+
 ## [2.3.5] - 2026-06-15
 
 Toolchain modernization release — the cyrius 6.0.50 → 6.2.11 bump and the
@@ -278,7 +292,14 @@ stdlib data-format carve it requires. Source behavior unchanged; 153 tests pass.
 - `no_std` support via `alloc`/`core`; `std` feature adds `LazyLock` caching
 - All public types: `Display` impls, `Cow<'static, str>` for zero-alloc statics, full serde roundtrip, `#[non_exhaustive]` on all enums and structs, `#[must_use]` on all pure functions
 
-[Unreleased]: https://github.com/MacCracken/itihas/compare/v2.2.0...HEAD
+[Unreleased]: https://github.com/MacCracken/itihas/compare/v2.4.0...HEAD
+[2.4.0]: https://github.com/MacCracken/itihas/compare/v2.3.5...v2.4.0
+[2.3.5]: https://github.com/MacCracken/itihas/compare/v2.3.4...v2.3.5
+[2.3.4]: https://github.com/MacCracken/itihas/compare/v2.3.3...v2.3.4
+[2.3.3]: https://github.com/MacCracken/itihas/compare/v2.3.2...v2.3.3
+[2.3.2]: https://github.com/MacCracken/itihas/compare/v2.3.1...v2.3.2
+[2.3.1]: https://github.com/MacCracken/itihas/compare/v2.3.0...v2.3.1
+[2.3.0]: https://github.com/MacCracken/itihas/compare/v2.2.0...v2.3.0
 [2.2.0]: https://github.com/MacCracken/itihas/compare/v2.1.0...v2.2.0
 [2.1.0]: https://github.com/MacCracken/itihas/compare/v2.0.0...v2.1.0
 [2.0.0]: https://github.com/MacCracken/itihas/compare/v1.5.0...v2.0.0

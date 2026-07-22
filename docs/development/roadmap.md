@@ -1,6 +1,6 @@
 # Development Roadmap
 
-> **Status**: v2.3.5 released | **Current**: 2.3.5 | **Compiler**: cyrius 6.2.11
+> **Status**: v2.4.0 released | **Current**: 2.4.0 | **Compiler**: cyrius 6.4.69
 
 Completed items are in [CHANGELOG.md](../../CHANGELOG.md).
 Rust benchmark baseline in [benchmarks-rust-v-cyrius.md](../../benchmarks-rust-v-cyrius.md).
@@ -65,7 +65,13 @@ Sibling avatara has completed two stdlib modernizations itihas has not. Both are
 | **Checked allocation (`xalloc`) — CWE-690** | Medium | itihas has ~21 raw `alloc()` sites that write into the result unchecked; the stdlib `alloc()` returns `0` on OOM (near-NULL write / UB under exhaustion). Route heap allocation through a checked `xalloc(n)` that aborts with a diagnostic, per avatara 2.5.4 / its ADR-009 (Rust/Go abort-on-OOM policy). |
 | **Native `#derive(accessors)` struct migration** | Large | The 10 data modules + serial address fields via ~242 manual `load64(p+OFFSET)` / `store64` calls against hand-maintained offset enums. avatara (2.5.3) migrated its profile to a named-field `#derive(accessors)` `struct` once the 6.x struct field cap was raised (32 → 256), making offset-collision bugs a compile error while keeping `prof_*` compat shims. The same applies here: convert each module's offset layout to a native struct, keep the public getters as shims. Touches all 11 modules — strictly one module per cycle, each behind the cleanliness + benchmark gates. |
 
-## v2.4.0 — Tool Integration (blocked on bote)
+## Completed in 2.4.0 — Toolchain bump 6.2.11 → 6.4.69
+
+- [x] Cyrius compiler pin `6.2.11` → `6.4.69` (`cyrius.cyml` `[package].cyrius`); local `lib/` snapshot resynced via `cyrius lib sync` (25 declared `[deps].stdlib` modules), clearing the toolchain-drift warning
+- [x] `[deps].stdlib` unchanged; `net` + `http` remain load-bearing (hoosh's self-contained HTTP client); `dist/itihas.cyr` regenerated (v2.4.0)
+- [x] Source behavior unchanged; 153 tests pass. Benchmark gate recorded a **codegen recovery** — vec/str-heavy query paths 10–36% faster vs 6.2.11, O(1) accessors flat; reverses the 6.0.50 → 6.2.11 creep (see CHANGELOG / `benchmarks.md`)
+
+## v2.5.0 — Tool Integration (blocked on bote)
 
 | # | Item | Blocked on | Details |
 |---|------|-----------|---------|
@@ -79,7 +85,7 @@ These Cyrius ports must happen in other repos before itihas can integrate:
 | Dependency | Repo | Blocks | Status |
 |-----------|------|--------|--------|
 | **hoosh** | MacCracken/hoosh | v2.2.0 #7 | Ported |
-| **bote** | MacCracken/bote | v2.4.0 #8, #9 | Ported — needs toolchain bring-up to latest Cyrius (same modernization itihas got in 2.3.0) before integration |
+| **bote** | MacCracken/bote | v2.5.0 #8, #9 | Ported — needs toolchain bring-up to latest Cyrius (same modernization itihas got in 2.3.0) before integration |
 | **argonaut** (itihas integration) | MacCracken/argonaut | v2.1.0 #3 | argonaut itself is ported (424 tests), but itihas struct integration not done |
 
 ## Future (demand-gated)
