@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.4.3] - 2026-08-30
+
 Two 2.4.x hardening-arc items — checked allocation and query tracing — plus the
 documentation and repository housekeeping that preceded them. **299 tests**
 (was 285), coverage 94%, docs/fmt/dist gates clean.
@@ -99,6 +101,34 @@ documentation and repository housekeeping that preceded them. **299 tests**
   its current status. Its `interactions_for_rome` note also still said 22
   interactions; the table has held 21 since 2.4.2.
 
+- **Data tables exempted from the line-length rule.** `cyrius lint` reports
+  `#skip-lint` **per line**, so 352 data rows carry the marker directly, along
+  with 8 single-line offset/type enums and hoosh's two irreducible string
+  constants (the system prompt and the tool-definitions JSON). The two genuinely
+  over-long *code* lines — the belligerent test in `campaigns_by_civilization`
+  and the bidirectional match in `interactions_between`, both introduced by
+  2.4.2 — were **wrapped** rather than exempted, since those were real style
+  problems. `src/` goes from **364 lint warnings to 0**, which makes the count a
+  usable gate again instead of a standing backlog.
+
+- **Civilization-name fields are documented as free text.** The `civilization`
+  field on figures, sites, routes and events, and a campaign's belligerents, are
+  free-text labels rather than keys into `all_civilizations()`. This is now
+  stated at each constructor and in
+  [usage.md](docs/guides/usage.md), because the alternative reading — that they
+  are foreign keys — would make 72 of the 223 references (32%) look like bugs
+  when they are correct.
+
+  Those 72 split two ways, and both are legitimate: real polities outside the
+  curated 53-entry civilization table (`Maurya Empire`, `Roman Republic`,
+  `Carthage`, `Gupta Empire`, `Kingdom of England`), and labels that name no
+  state at all (`Pre-Pottery Neolithic`, `Neolithic Anatolia`, `Italian
+  city-states`) because that is often the only honest attribution. Consequently
+  **no referential-integrity test exists** — one would fail on correct data — and
+  a name absent from `all_civilizations()` remains a valid query. A reference
+  whose dates contradict the record pointing at it is still a data bug; two such
+  were fixed in 2.4.2.
+
 ### Fixed — stale documentation
 
 - **Battle count corrected 40+ → 35** in `README.md`, `src/lib.cyr`,
@@ -114,16 +144,35 @@ documentation and repository housekeeping that preceded them. **299 tests**
 
 ### Performance
 
-Interleaved A/B against `f5d60bb`, 4 rounds each, same machine and session.
-**No benchmark regresses beyond its own run-to-run spread**; the aggregate cost
-of putting a gated trace call on every query path is **+0.9%** across all 28
-(10,106 → 10,194 ns summed medians).
+Interleaved A/B against the 2.4.2 release (`c835ff1`), **6 rounds each**, same
+machine and session. **Aggregate +1.4%** across all 28 benchmarks
+(9,877 → 10,018 ns summed medians), with four regressing beyond their own
+run-to-run spread:
 
-An earlier 3-round pass showed three benchmarks at +4%; a fourth round resolved
-them as noise, which is why the recorded figure is the 4-round one. A variant
-that skipped `sakshi_get_level()` by reading sakshi's level global directly was
-measured and **rejected** — it was within noise of the public-API version, so it
-bought nothing for the layering it broke.
+| Benchmark | 2.4.2 | 2.4.3 | Delta | Spread |
+|-----------|-------|-------|-------|--------|
+| `causes_of_french_revolution` | 238 ns | 248 ns | +4.2% (+10 ns) | 2.4% |
+| `chain_writing_depth3` | 387 ns | 403 ns | +4.1% (+16 ns) | 3.0% |
+| `campaigns_between_500bce_500ce` | 198 ns | 206 ns | +4.0% (+8 ns) | 2.4% |
+| `calendar_by_name_gregorian` | 124 ns | 129 ns | +3.6% (+4 ns) | 2.4% |
+
+**These are accepted, not incidental.** They are the measured price of the two
+things this release exists to add: `xalloc` puts a call and a null check on every
+allocation (which is why the causality paths, allocating a `CH_SIZE` entry per
+chain node, move most), and every query now carries a level-gated trace call.
+Nothing here is a hot-path algorithm change; no benchmark improved, and none was
+expected to.
+
+An earlier 4-round pass reported **no** regressions at +0.9%. That measurement
+was wrong — its run-to-run spread was wide enough to swallow deltas this size.
+Six rounds tightened the spreads to 2.4-3.0% and the same four benchmarks
+separated cleanly and reproducibly. The six-round figures above are the ones to
+trust; the earlier number is recorded here only so the discrepancy is not
+mistaken for drift.
+
+A variant that avoided the `sakshi_get_level()` call by reading sakshi's level
+global directly was measured and **rejected** — it landed within noise of the
+public-API version, so it bought nothing for the layering it broke.
 
 ## [2.4.2] - 2026-08-29
 

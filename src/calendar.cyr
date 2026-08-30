@@ -37,8 +37,8 @@ fn build_calendars() {
     vec_push(v, cal_new("Islamic (Hijri)", CAL_LUNAR, 622, 12, "11 leap years in a 30-year cycle"));
     vec_push(v, cal_new("Hebrew", CAL_LUNISOLAR, (0-3761), 12, "7 leap years in a 19-year Metonic cycle"));
     vec_push(v, cal_new("Chinese", CAL_LUNISOLAR, (0-2697), 12, "7 intercalary months in 19-year cycle"));
-    vec_push(v, cal_new("Hindu (Vikram Samvat)", CAL_LUNISOLAR, (0-57), 12, "Intercalary month when two new moons in same solar month"));
-    vec_push(v, cal_new("Maya (Long Count)", CAL_FIXED, (0-3114), 18, "Positional day count: 18 uinal x 20 kin = 360-day tun; no leap correction"));
+    vec_push(v, cal_new("Hindu (Vikram Samvat)", CAL_LUNISOLAR, (0-57), 12, "Intercalary month when two new moons in same solar month"));   #skip-lint
+    vec_push(v, cal_new("Maya (Long Count)", CAL_FIXED, (0-3114), 18, "Positional day count: 18 uinal x 20 kin = 360-day tun; no leap correction"));   #skip-lint
     vec_push(v, cal_new("Egyptian (Civil)", CAL_FIXED, (0-2781), 12, "No leap days; 12x30 + 5 epagomenal = 365"));
     return v;
 }

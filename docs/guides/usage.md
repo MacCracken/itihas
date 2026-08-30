@@ -173,6 +173,41 @@ var silk = route_by_name("Silk Road");
 var silk_routes = routes_by_commodity("silk");
 ```
 
+## Civilization names are free text
+
+The `civilization` field on a figure, site, trade route or event — and the
+belligerent fields on a campaign — are **free-text labels, not foreign keys into
+`all_civilizations()`**. This is a deliberate decision, not an oversight.
+
+Of the 223 such references in the dataset, **72 (32%) name something that has no
+`civ_new` record**, and they fall into two groups:
+
+- **Real polities outside the curated set.** The civilization table is 53
+  hand-curated entries, not an exhaustive index of every state in history.
+  `Maurya Empire`, `Roman Republic`, `Carthage`, `Gupta Empire` and
+  `Kingdom of England` are all correct attributions for the records that carry
+  them, and none has its own row.
+- **Culture and period labels that are not polities at all.**
+  `Pre-Pottery Neolithic`, `Neolithic Anatolia`, `Italian city-states` — these
+  describe who made something without naming a state, which is often the only
+  honest attribution available.
+
+### What this means for you
+
+- A name absent from `all_civilizations()` is still a **valid query**.
+  `sites_by_civilization("Nabataean Kingdom")` returns its sites even though
+  there is no Nabataean civilization record.
+- Matching is on the string. For the `;`-delimited fields (site, route, event,
+  campaign belligerents) it is whole-token and case-insensitive, so
+  `"Roman Empire"` does not match the distinct polity `"Holy Roman Empire"`.
+- **Do not** write a test asserting that every civilization reference resolves
+  to a record. It would fail on correct data. If you need the subset that does
+  resolve, intersect against `all_civilizations()` explicitly at the call site.
+
+If a reference is genuinely wrong — naming a civilization whose own dates
+exclude the record pointing at it — that is a data bug and worth reporting. Two
+such cases were corrected in 2.4.2.
+
 ## Year Conventions
 
 All years use **astronomical year numbering**:

@@ -1,6 +1,6 @@
 # Development Roadmap
 
-> **Current**: 2.4.2 | **Compiler**: cyrius 6.5.36 | **Tests**: 299 | **Coverage**: 94%
+> **Current**: 2.4.3 | **Compiler**: cyrius 6.5.36 | **Tests**: 299 | **Coverage**: 94% | **Lint**: clean
 
 This file tracks **open work only**. Completed releases are recorded in
 [CHANGELOG.md](../../CHANGELOG.md) — they are not duplicated here.
@@ -10,17 +10,28 @@ gates per CLAUDE.md) unless explicitly marked as batchable.
 
 ---
 
-## 2.4.x — Hardening arc (in progress)
+## 2.4.x — Hardening arc (complete)
 
-The P(-1) sweep landed in 2.4.2. These are findings it confirmed but did not
-batch, in the order they should be taken. **`xalloc` (CWE-690) and the tracing
-restoration are done** — see CHANGELOG `[Unreleased]`. What remains needs a
-project decision before any code changes, so both are stated as decisions:
+Every finding the P(-1) sweep confirmed has now been resolved — see CHANGELOG
+`[2.4.3]` for `xalloc`, the tracing restoration, and the two project decisions
+below. Nothing from this arc is outstanding.
 
-| Item | Effort | Detail |
-|------|--------|--------|
-| **Referential-integrity policy for civ-name fields** | Medium | **Decision needed.** Many figure/site/route records name civilizations with no `civ_new` record. Most are deliberate free-text culture labels (`Upper Paleolithic`, `Neolithic Britain`), not broken keys — so a blanket validation test would fail on correct data. Options: (a) declare these fields free text and add no test; (b) split them into a typed `civ_ref` (validated) and a free-text `culture` field; (c) keep one field and maintain an allow-list of non-civ labels. Nothing should be written until one is chosen. |
-| **Line-length lint (364 warnings)** | Low | **Decision needed.** Almost entirely data-table rows whose long description strings read better unwrapped; `src/util.cyr` is already clean and shows the code style is not the problem. Options: (a) raise the limit for `src/*.cyr` data modules; (b) `#skip-lint` the data tables; (c) accept the warnings and stop treating the count as a gate. |
+Decisions taken, recorded here because they govern future work:
+
+- **Civilization-name fields are FREE TEXT, not foreign keys.** 72 of 223
+  references (32%) name something with no `civ_new` record — both real polities
+  outside the curated 53 (`Maurya Empire`, `Carthage`, `Kingdom of England`) and
+  non-polity culture labels (`Pre-Pottery Neolithic`, `Italian city-states`). A
+  test asserting every reference resolves would fail on correct data, so none
+  exists. Documented for consumers in
+  [usage.md](../guides/usage.md#civilization-names-are-free-text) and at each
+  affected constructor. A reference whose *dates* contradict the record pointing
+  at it is still a data bug (two were fixed in 2.4.2).
+- **Data tables are exempt from the line-length rule** via per-line
+  `#skip-lint`. 352 data rows plus 8 single-line offset/type enums and hoosh's
+  two irreducible string constants are exempted; the two genuinely over-long
+  *code* lines were wrapped instead. `cyrius lint` on `src/` went 364 warnings →
+  **0**, so the count is a usable gate again rather than a permanent backlog.
 
 ## 2.5.0 — Tool integration (unblocked)
 
