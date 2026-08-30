@@ -21,7 +21,7 @@ Thank you for your interest in contributing to Itihas.
 | `cyrius build src/main.cyr build/itihas` | Build |
 | `CYRIUS_DCE=1 cyrius build src/main.cyr build/itihas` | Build (DCE-optimized) |
 | `./build/itihas` | Run the smoke test |
-| `cyrius test tests/itihas.tcyr` | Run the full 153-assertion suite |
+| `cyrius test tests/itihas.tcyr` | Run the full 285-assertion suite |
 | `./scripts/bench-history.sh` | Run benchmarks + record history |
 | `cyrius lint src/*.cyr` | Lint |
 

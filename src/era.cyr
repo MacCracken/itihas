@@ -7,6 +7,11 @@ enum EraScope { SCOPE_GLOBAL; SCOPE_REGIONAL; }
 # Era field offsets: name(0) start_year(8) end_year(16) region(24) description(32) category(40) scope(48) = 56 bytes
 enum EraOff { ERA_NAME = 0; ERA_START = 8; ERA_END = 16; ERA_REGION = 24; ERA_DESC = 32; ERA_CAT = 40; ERA_SCOPE = 48; ERA_SIZE = 56; }
 
+# Sentinel end_year meaning "still ongoing" (i32 max, not i64 max). Stored as a
+# real number so range predicates like eras_containing stay simple comparisons;
+# presentation layers should render it as "present" rather than the digits.
+enum EraSentinel { ERA_ONGOING = 2147483647; }
+
 var era_vec = 0;
 var era_init_done = 0;
 
@@ -29,6 +34,10 @@ fn era_name(p) { return load64(p + ERA_NAME); }
 fn era_start(p) { return load64(p + ERA_START); }
 #must_use
 fn era_end(p) { return load64(p + ERA_END); }
+
+# True when this era has no end year yet (end == ERA_ONGOING).
+#must_use
+fn era_is_ongoing(p) { return load64(p + ERA_END) == ERA_ONGOING; }
 #must_use
 fn era_region(p) { return load64(p + ERA_REGION); }
 #must_use
@@ -36,6 +45,7 @@ fn era_cat(p) { return load64(p + ERA_CAT); }
 #must_use
 fn era_scope(p) { return load64(p + ERA_SCOPE); }
 
+# Build the era table (25 rows). Called once by the lazy initializer.
 fn build_eras() {
     var v = vec_new();
     # Global
@@ -46,7 +56,7 @@ fn build_eras() {
     vec_push(v, era_new("Renaissance", 1400, 1610, "Europe", "Revival of classical learning, art, science, and exploration", EARLY_MODERN, SCOPE_GLOBAL));
     vec_push(v, era_new("Age of Enlightenment", 1648, 1789, "Europe", "Rationalism, empiricism, natural rights, social contract theory", EARLY_MODERN, SCOPE_GLOBAL));
     vec_push(v, era_new("Industrial Age", 1760, 1970, "Global", "Mechanization, mass production, urbanization, world wars", MODERN, SCOPE_GLOBAL));
-    vec_push(v, era_new("Information Age", 1970, 2147483647, "Global", "Digital revolution, internet, AI, globalization", CONTEMPORARY, SCOPE_GLOBAL));
+    vec_push(v, era_new("Information Age", 1970, ERA_ONGOING, "Global", "Digital revolution, internet, AI, globalization", CONTEMPORARY, SCOPE_GLOBAL));
     # Chinese dynasties
     vec_push(v, era_new("Xia Dynasty", (0-2070), (0-1600), "East Asia", "Semi-legendary first dynasty of China, Yellow River valley", ANCIENT, SCOPE_REGIONAL));
     vec_push(v, era_new("Shang Dynasty", (0-1600), (0-1046), "East Asia", "Oracle bones, bronze casting, earliest Chinese writing", ANCIENT, SCOPE_REGIONAL));
@@ -110,6 +120,8 @@ fn eras_by_scope(scope) {
 #must_use
 fn eras_by_region(region: Str) {
     var result = vec_new();
+    # Zero-length needle matches every string; return nothing instead of all.
+    if (str_len(region) == 0) { return result; }
     var v = all_eras();
     var n = vec_len(v);
     for (var i = 0; i < n; i = i + 1) {

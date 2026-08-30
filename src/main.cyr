@@ -1,9 +1,9 @@
-# itihas — Structured World History v2.3.4
+# itihas — Structured World History
 # 10 data modules, ported from 8846 lines of Rust
 #
 # This is the library smoke test / binary entry point. It loads every data
 # module and checks core invariants, exiting non-zero on gross failure.
-# The full 153-assertion suite lives in tests/itihas.tcyr (`cyrius test`);
+# The full 285-assertion suite lives in tests/itihas.tcyr (`cyrius test`);
 # benchmarks in tests/itihas.bcyr (`cyrius bench`).
 
 # Stdlib auto-included via cyrius.cyml
@@ -28,8 +28,8 @@ alloc_init();
 
 # Total entity count across all 10 data modules.
 var total = era_count() + calendar_count() + civ_count() + figure_count()
-    + event_count() + causality_count() + interaction_count()
-    + campaign_count() + site_count() + route_count();
++ event_count() + causality_count() + interaction_count()
++ campaign_count() + site_count() + route_count();
 
 syscall(SYS_WRITE, 1, "itihas: ", 8);
 print_num(total);

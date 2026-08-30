@@ -1,4 +1,6 @@
 # itihas — calendar system metadata (8 systems)
+# Year convention: epoch is a signed year NUMBER, negative = BCE, with no year
+# zero (1 BCE is -1). Do not use astronomical numbering here.
 
 enum CalendarType { CAL_SOLAR; CAL_LUNAR; CAL_LUNISOLAR; CAL_FIXED; }
 
@@ -27,15 +29,16 @@ fn cal_epoch(p) { return load64(p + CAL_EPOCH); }
 #must_use
 fn cal_months(p) { return load64(p + CAL_MONTHS); }
 
+# Build the calendar-system table (8 rows). Called once by the lazy initializer.
 fn build_calendars() {
     var v = vec_new();
     vec_push(v, cal_new("Gregorian", CAL_SOLAR, 1, 12, "Divisible by 4, except centuries unless divisible by 400"));
     vec_push(v, cal_new("Julian", CAL_SOLAR, 1, 12, "Every 4th year without exception"));
     vec_push(v, cal_new("Islamic (Hijri)", CAL_LUNAR, 622, 12, "11 leap years in a 30-year cycle"));
-    vec_push(v, cal_new("Hebrew", CAL_LUNISOLAR, (0-3760), 12, "7 leap years in a 19-year Metonic cycle"));
+    vec_push(v, cal_new("Hebrew", CAL_LUNISOLAR, (0-3761), 12, "7 leap years in a 19-year Metonic cycle"));
     vec_push(v, cal_new("Chinese", CAL_LUNISOLAR, (0-2697), 12, "7 intercalary months in 19-year cycle"));
     vec_push(v, cal_new("Hindu (Vikram Samvat)", CAL_LUNISOLAR, (0-57), 12, "Intercalary month when two new moons in same solar month"));
-    vec_push(v, cal_new("Maya (Long Count)", CAL_FIXED, (0-3114), 18, "No leap correction; 18x20 + 5 Wayeb = 365"));
+    vec_push(v, cal_new("Maya (Long Count)", CAL_FIXED, (0-3114), 18, "Positional day count: 18 uinal x 20 kin = 360-day tun; no leap correction"));
     vec_push(v, cal_new("Egyptian (Civil)", CAL_FIXED, (0-2781), 12, "No leap days; 12x30 + 5 epagomenal = 365"));
     return v;
 }

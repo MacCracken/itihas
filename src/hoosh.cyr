@@ -170,7 +170,11 @@ fn resolve_era_lookup(args) {
             str_builder_add_cstr(sb, " (");
             str_builder_add_int(sb, era_start(era));
             str_builder_add_cstr(sb, " - ");
-            str_builder_add_int(sb, era_end(era));
+            # The ongoing sentinel is a real stored year (kept so range queries
+            # stay plain comparisons), but rendering "2147483647" as the
+            # data-grounded answer text is nonsense to a reader.
+            if (era_is_ongoing(era) == 1) { str_builder_add_cstr(sb, "present"); }
+            else { str_builder_add_int(sb, era_end(era)); }
             str_builder_add_cstr(sb, ")");
             var content = str_builder_build(sb);
             var data = era_to_json(era);
@@ -209,16 +213,33 @@ fn hoosh_tool_count() { return 6; }
 # ----------------------------------------------------------------
 # HTTP POST to hoosh — build inference request
 # ----------------------------------------------------------------
+# Wire limits. The header buffer is bounds-checked against HOOSH_HDR_CAP; a
+# response that reaches HOOSH_RESP_CAP is rejected rather than parsed from a
+# body cut mid-JSON. The timeout bounds connect/send/recv so a squatting peer
+# cannot hang the caller indefinitely.
+enum HooshWire {
+    HOOSH_HDR_CAP = 2048;
+    HOOSH_RESP_CAP = 131072;
+    HOOSH_TIMEOUT_SECS = 30;
+}
+
+# Build the request head into `buf` (capacity HOOSH_HDR_CAP). Returns the byte
+# count, or -1 if the fixed buffer could not hold it. The caller-supplied path
+# and host are the only variable-length parts.
 fn _build_post_header(buf, path, host, body_len) {
+    var need = 5 + strlen(path) + 9 + 2 + 6 + strlen(host) + 2 + 30 + 2 + 17 + 2 + 16 + 32 + 2 + 2;
+    if (need > HOOSH_HDR_CAP) { return 0-1; }
     var pos = 0;
     memcpy(buf + pos, "POST ", 5); pos = pos + 5;
-    memcpy(buf + pos, path, strlen(path)); pos = pos + strlen(path);
+    var plen = strlen(path);
+    memcpy(buf + pos, path, plen); pos = pos + plen;
     memcpy(buf + pos, " HTTP/1.0", 9); pos = pos + 9;
     store8(buf + pos, 13); store8(buf + pos + 1, 10); pos = pos + 2;
     memcpy(buf + pos, "Host: ", 6); pos = pos + 6;
-    memcpy(buf + pos, host, strlen(host)); pos = pos + strlen(host);
+    var hnlen = strlen(host);
+    memcpy(buf + pos, host, hnlen); pos = pos + hnlen;
     store8(buf + pos, 13); store8(buf + pos + 1, 10); pos = pos + 2;
-    memcpy(buf + pos, "Content-Type: application/json", 29); pos = pos + 29;
+    memcpy(buf + pos, "Content-Type: application/json", 30); pos = pos + 30;
     store8(buf + pos, 13); store8(buf + pos + 1, 10); pos = pos + 2;
     memcpy(buf + pos, "Connection: close", 17); pos = pos + 17;
     store8(buf + pos, 13); store8(buf + pos + 1, 10); pos = pos + 2;
@@ -231,29 +252,90 @@ fn _build_post_header(buf, path, host, body_len) {
     return pos;
 }
 
+# Write exactly `len` bytes from `buf` to `fd`, looping over short writes.
+# Returns 1 on success, 0 if any write fails. A single unchecked SYS_WRITE could
+# send a partial request body, which the server then blocks on forever.
+fn _write_all(fd, buf, len) {
+    var off = 0;
+    while (off < len) {
+        var w = syscall(SYS_WRITE, fd, buf + off, len - off);
+        if (w <= 0) { return 0; }
+        off = off + w;
+    }
+    return 1;
+}
+
+fn _hoosh_warn(msg, len) {
+    sakshi_warn(msg, len);
+    return 0;
+}
+
+# POST `body` to a hoosh inference server on 127.0.0.1:`port` and return the
+# parsed HTTP response, or 0 on any failure (socket, connect, short write,
+# read error/timeout, oversized or empty response). Failures are logged via
+# sakshi_warn; the socket is closed on every exit path.
 fn hoosh_post(port, body: Str) {
     var fd = syscall(SYS_SOCKET, 2, 1, 0);
-    if (fd < 0) { return 0; }
-    # Close the socket on every exit path below (connect failure, empty read,
-    # success) — one defer replaces the per-path manual close.
-    defer { syscall(3, fd); }
+    if (fd < 0) {
+        _hoosh_warn("hoosh_post: socket() failed", 27);
+        return 0;
+    }
+    # Close the socket on every exit path below (connect failure, short write,
+    # read error, truncation, success) — one defer replaces the per-path close.
+    # SYS_CLOSE, not a bare 3: the literal is close() only on x86_64 Linux and
+    # is io_cancel on aarch64 (where close is 57).
+    defer { syscall(SYS_CLOSE, fd); }
+
+    # Bound every blocking phase. Without these a process squatting the port
+    # hangs the caller forever with no cancellation path.
+    sock_set_recv_timeout(fd, HOOSH_TIMEOUT_SECS, 0);
+    sock_set_send_timeout(fd, HOOSH_TIMEOUT_SECS, 0);
+
     var sa = sockaddr_in(0x0100007F, port);
     var cr = syscall(SYS_CONNECT, fd, sa, 16);
-    if (cr < 0) { return 0; }
-    var hdr = alloc(2048);
+    if (cr < 0) {
+        _hoosh_warn("hoosh_post: connect() refused", 29);
+        return 0;
+    }
+    var hdr = alloc(HOOSH_HDR_CAP);
     var body_data = str_data(body);
     var body_len = str_len(body);
     var hlen = _build_post_header(hdr, "/v1/chat/completions", "localhost", body_len);
-    syscall(SYS_WRITE, fd, hdr, hlen);
-    syscall(SYS_WRITE, fd, body_data, body_len);
-    var rbuf = alloc(131072);
+    if (hlen < 0) {
+        _hoosh_warn("hoosh_post: request header exceeds buffer", 41);
+        return 0;
+    }
+    if (_write_all(fd, hdr, hlen) == 0) {
+        _hoosh_warn("hoosh_post: short write sending headers", 39);
+        return 0;
+    }
+    if (_write_all(fd, body_data, body_len) == 0) {
+        _hoosh_warn("hoosh_post: short write sending body", 36);
+        return 0;
+    }
+    var rbuf = alloc(HOOSH_RESP_CAP);
     var total = 0;
     var n = 1;
-    while (n > 0) {
-        n = syscall(SYS_READ, fd, rbuf + total, 131072 - total);
+    # Distinguish the three ways this loop used to end identically: clean EOF,
+    # a read error (n < 0, e.g. ECONNRESET or the recv timeout firing), and the
+    # buffer filling (count becomes 0, which read reports as EOF).
+    while (n > 0 && total < HOOSH_RESP_CAP) {
+        n = syscall(SYS_READ, fd, rbuf + total, HOOSH_RESP_CAP - total);
         if (n > 0) { total = total + n; }
     }
-    if (total == 0) { return 0; }
+    if (n < 0) {
+        _hoosh_warn("hoosh_post: read error or timeout", 33);
+        return 0;
+    }
+    if (total >= HOOSH_RESP_CAP) {
+        # Parsing a response cut mid-JSON yields silent garbage — refuse it.
+        _hoosh_warn("hoosh_post: response exceeds buffer, truncated", 46);
+        return 0;
+    }
+    if (total == 0) {
+        _hoosh_warn("hoosh_post: empty response", 26);
+        return 0;
+    }
     return _http_parse_response(rbuf, total);
 }
 
@@ -263,24 +345,33 @@ fn hoosh_post(port, body: Str) {
 fn _build_inference_request(question: Str, model: Str) {
     var sb = str_builder_new();
     str_builder_add_cstr(sb, "{\"model\": \"");
-    str_builder_add(sb, model);
+    # `model` is caller-supplied and was interpolated with no escaping at all.
+    json_escape_into(sb, model);
     str_builder_add_cstr(sb, "\", \"messages\": [{\"role\": \"system\", \"content\": \"");
     str_builder_add_cstr(sb, HOOSH_SYSTEM_PROMPT);
     str_builder_add_cstr(sb, "\"}, {\"role\": \"user\", \"content\": \"");
-    # Escape question text
-    var qlen = str_len(question);
-    var qd = str_data(question);
-    for (var i = 0; i < qlen; i = i + 1) {
-        var c = load8(qd + i);
-        if (c == 34) { str_builder_add_cstr(sb, "\\\""); }
-        else { if (c == 92) { str_builder_add_cstr(sb, "\\\\"); }
-        else { if (c == 10) { str_builder_add_cstr(sb, "\\n"); }
-        else { str_builder_add_byte(sb, c); } } }
-    }
+    # Shared RFC 8259 escaper (util.cyr). The three-case loop this replaced let
+    # a TAB or CR in the question through raw, producing an invalid request.
+    json_escape_into(sb, question);
     str_builder_add_cstr(sb, "\"}], \"tools\": ");
     str_builder_add_cstr(sb, hoosh_tool_defs_json());
     str_builder_add_cstr(sb, ", \"tool_choice\": \"auto\", \"max_tokens\": 1024, \"temperature\": 0.0}");
     return str_builder_build(sb);
+}
+
+# True when the run of backslashes immediately before `at` has even length,
+# i.e. the byte at `at` is NOT escaped. The previous test looked only at the
+# single preceding byte, so a value ending in a literal backslash ("...\\\\")
+# read its closing quote as escaped and overran into the rest of the body.
+fn _bs_parity_even(data, start, at) {
+    var k = at - 1;
+    var count = 0;
+    while (k >= start) {
+        if (load8(data + k) != 92) { break; }
+        count = count + 1;
+        k = k - 1;
+    }
+    return 1 - (count - (count / 2) * 2);
 }
 
 # ----------------------------------------------------------------
@@ -305,24 +396,32 @@ fn _extract_tool_call(body, body_len) {
         if (c == 34) { break; }
         i = i + 1;
     }
+    # An unterminated name leaves i == slen; i+1 would then put name_start past
+    # i and hand str_new a negative length.
+    if (i >= slen) { return 0; }
     i = i + 1; # skip opening quote
     var name_start = i;
     while (i < slen) {
         if (load8(data + i) == 34) { break; }
         i = i + 1;
     }
+    if (i <= name_start) { return 0; }
     var tool_name = str_new(data + name_start, i - name_start);
 
     # Find "arguments" — could be string or object
     var args_idx = str_index_of_cstr(body_str, "\"arguments\"");
     if (args_idx < 0) { return 0; }
     i = args_idx + 12;
+    if (i > slen) { i = slen; }
     while (i < slen) {
         var c = load8(data + i);
         if (c == 123) { break; }  # {
         if (c == 34) { break; }   # " (stringified JSON)
         i = i + 1;
     }
+    # A body with neither { nor " after "arguments" leaves i == slen; the two
+    # reads below would then be one byte past the buffer.
+    if (i >= slen) { return 0; }
     # Extract args JSON object or string
     var args_str = str_from("");
     if (load8(data + i) == 123) {
@@ -337,16 +436,22 @@ fn _extract_tool_call(body, body_len) {
         }
         args_str = str_new(data + start, i - start);
     }
-    if (load8(data + i) == 34) {
-        # Stringified JSON — unescape
-        i = i + 1;
-        var start = i;
-        while (i < slen) {
-            if (load8(data + i) == 34 && load8(data + i - 1) != 92) { break; }
+    else { if (load8(data + i) == 34) {
+            # Stringified JSON — the OpenAI /v1/chat/completions shape, and what
+            # hoosh's own emitter always produces. The span is JSON-*encoded*, so
+            # it must be decoded before json_parse sees it; returning the raw
+            # escaped bytes made every tool call parse to zero pairs and silently
+            # drop the structured-data answer.
+            # `else if`, not a second `if`: the object branch above already advanced
+            # i past its closing brace, and a quote there would overwrite args_str.
             i = i + 1;
-        }
-        args_str = str_new(data + start, i - start);
-    }
+            var start = i;
+            while (i < slen) {
+                if (load8(data + i) == 34 && _bs_parity_even(data, start, i) == 1) { break; }
+                i = i + 1;
+            }
+            args_str = json_unescape(str_new(data + start, i - start));
+        } }
 
     # Return {name, args_str} packed in 16 bytes
     var result = alloc(16);
@@ -413,13 +518,17 @@ fn _extract_content(body, body_len) {
         }
         i = i + 1;
     }
+    # No opening quote found — i == slen, and i+1 would yield a negative length.
+    if (i >= slen) { return str_from(""); }
     i = i + 1;
     var start = i;
     while (i < slen) {
-        if (load8(data + i) == 34 && load8(data + i - 1) != 92) { break; }
+        if (load8(data + i) == 34 && _bs_parity_even(data, start, i) == 1) { break; }
         i = i + 1;
     }
-    return str_new(data + start, i - start);
+    # The content is a JSON string body: decode it, or \n and \" reach the
+    # caller as literal backslash-n and backslash-quote.
+    return json_unescape(str_new(data + start, i - start));
 }
 
 # ----------------------------------------------------------------

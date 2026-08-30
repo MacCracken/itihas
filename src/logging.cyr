@@ -3,11 +3,14 @@
 # sakshi is auto-included via cyrius.cyml [deps] stdlib (so the distlib
 # bundle resolves SK_INFO from the consumer's stdlib, not a stripped include).
 
+# Initialize structured logging at INFO. Consumers call this once at startup;
+# without it sakshi keeps its own default level.
 fn itihas_log_init() {
     sakshi_set_level(SK_INFO);
     return 0;
 }
 
+# Initialize structured logging at an explicit sakshi level (SK_DEBUG..SK_ERROR).
 fn itihas_log_init_level(level) {
     sakshi_set_level(level);
     return 0;

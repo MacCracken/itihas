@@ -1,5 +1,5 @@
 # serial.cyr — JSON serialization for all itihas types
-# Uses str_builder from stdlib. Requires json.cyr for json_pair_new/json_build.
+# Uses str_builder from stdlib and json_escape_into from util.cyr.
 
 # ----------------------------------------------------------------
 # JSON string escaping helper
@@ -8,18 +8,10 @@ fn _json_str(sb, key, val: Str) {
     str_builder_add_cstr(sb, "\"");
     str_builder_add_cstr(sb, key);
     str_builder_add_cstr(sb, "\": \"");
-    # Escape backslashes, quotes, newlines in val
-    var vlen = str_len(val);
-    var vd = str_data(val);
-    var ji = 0;
-    while (ji < vlen) {
-        var c = load8(vd + ji);
-        if (c == 34) { str_builder_add_cstr(sb, "\\\""); }
-        else { if (c == 92) { str_builder_add_cstr(sb, "\\\\"); }
-        else { if (c == 10) { str_builder_add_cstr(sb, "\\n"); }
-        else { str_builder_add_byte(sb, c); } } }
-        ji = ji + 1;
-    }
+    # Full RFC 8259 escaping lives in util.cyr — shared with hoosh's request
+    # builder. The local copy this replaced handled only " \ and LF, so a TAB
+    # or CR in a caller-supplied string emitted raw and produced invalid JSON.
+    json_escape_into(sb, val);
     str_builder_add_cstr(sb, "\"");
     return 0;
 }
@@ -125,6 +117,7 @@ fn calendar_to_json(p) {
 # ----------------------------------------------------------------
 # Campaign (with nested battles array)
 # ----------------------------------------------------------------
+#must_use
 fn battle_to_json(b) {
     var sb = str_builder_new();
     str_builder_add_cstr(sb, "{");

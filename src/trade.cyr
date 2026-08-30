@@ -19,6 +19,7 @@ fn rt_name(p) { return load64(p+RT_NAME); }
 #must_use
 fn rt_comm(p) { return load64(p+RT_COMM); }
 
+# Build the trade-route table (15 rows). Called once by the lazy initializer.
 fn build_routes() {
     var v = vec_new();
     vec_push(v, rt_new("Silk Road","East Asia;Central Asia;Near East;Mediterranean",RT_LAND,"Ancient China;Persian Empire;Roman Empire;Mongol Empire","silk;spices;jade;glass;paper",(0-130),1453,"Trans-Eurasian overland network linking Chang'an to Constantinople; primary conduit for silk, ideas, and religions"));
@@ -31,9 +32,9 @@ fn build_routes() {
     vec_push(v, rt_new("Via Maris","Near East;North Africa",RT_LAND,"Ancient Egypt;Mesopotamia;Persian Empire","grain;olive oil;textiles;metals",(0-2000),(0-300),"Ancient coastal road from Egypt through Levant to Mesopotamia; major military and commercial artery"));
     vec_push(v, rt_new("Hanseatic Trade Network","Europe",RT_MARITIME,"Hanseatic League","herring;timber;furs;grain;wool",1200,1669,"North and Baltic Sea trade network; merchant guild alliance controlling northern European commerce"));
     vec_push(v, rt_new("Nile Trade Route","North Africa;Sub-Saharan Africa",RT_RIVER,"Ancient Egypt;Kingdom of Kush","gold;ivory;ebony;grain;papyrus",(0-3100),640,"Nile River corridor linking Upper and Lower Egypt to Nubia and Kush; annual flood cycle enabling agriculture and transport"));
-    vec_push(v, rt_new("Grand Trunk Road","South Asia;Central Asia",RT_LAND,"Maurya Empire;Gupta Empire;Mughal Empire","textiles;spices;gemstones;horses",(0-300),2147483647,"South Asia's great trunk road from Kabul to Chittagong; rebuilt by Sher Shah Suri, still in use"));
+    vec_push(v, rt_new("Grand Trunk Road","South Asia;Central Asia",RT_LAND,"Maurya Empire;Gupta Empire;Mughal Empire","textiles;spices;gemstones;horses",(0-300),ERA_ONGOING,"South Asia's great trunk road from Kabul to Chittagong; rebuilt by Sher Shah Suri, still in use"));
     vec_push(v, rt_new("Austronesian Maritime Network","Southeast Asia;Oceania;East Africa",RT_MARITIME,"Austronesian Peoples","obsidian;pottery;cinnamon;coconut",(0-3000),1500,"Open-ocean trade spanning Taiwan to Madagascar; earliest long-distance maritime exchange network"));
-    vec_push(v, rt_new("Varangian Trade Routes","Europe;Near East",RT_RIVER,"Viking Civilization;Byzantine Empire;Arab Caliphates","furs;slaves;amber;silver;swords",750,1100,"Norse river routes via Dnieper and Volga connecting Scandinavia to Constantinople and Baghdad"));
+    vec_push(v, rt_new("Varangian Trade Routes","Europe;Near East",RT_RIVER,"Viking/Norse;Byzantine Empire;Arab Caliphates","furs;slaves;amber;silver;swords",750,1100,"Norse river routes via Dnieper and Volga connecting Scandinavia to Constantinople and Baghdad"));
     vec_push(v, rt_new("Triangular Trade","Europe;West Africa;Americas",RT_MARITIME,"British Empire;Portuguese Empire;Spanish Empire","slaves;sugar;rum;cotton;manufactured goods",1500,1867,"Atlantic triangular exchange: European goods to Africa, enslaved people to Americas, plantation commodities to Europe"));
     vec_push(v, rt_new("Tea-Horse Road","East Asia;South Asia",RT_LAND,"Ancient China;Tibet","tea;horses;salt;medicinal herbs",600,1950,"Sichuan-to-Tibet caravan trail; Chinese tea exchanged for Tibetan war horses across Himalayan passes"));
     return v;
@@ -63,7 +64,7 @@ fn routes_by_commodity(comm: Str) {
     var v = all_routes(); var n = vec_len(v);
     for (var i = 0; i < n; i = i + 1) {
         var p = vec_get(v, i);
-        if (str_contains(rt_comm(p), comm) == 1) { vec_push(result, p); }
+        if (str_list_has(rt_comm(p), comm, 59) == 1) { vec_push(result, p); }
     }
     return result;
 }
@@ -96,7 +97,7 @@ fn routes_by_civilization(civ: Str) {
     var v = all_routes(); var n = vec_len(v);
     for (var i = 0; i < n; i = i + 1) {
         var p = vec_get(v, i);
-        if (str_contains(load64(p+RT_CIVS), civ) == 1) { vec_push(result, p); }
+        if (str_list_has(load64(p+RT_CIVS), civ, 59) == 1) { vec_push(result, p); }
     }
     return result;
 }

@@ -23,6 +23,7 @@ fn evt_cat(p) { return load64(p+EVT_CAT); }
 #must_use
 fn evt_sig(p) { return load64(p+EVT_SIG); }
 
+# Build the event table (105 rows). Called once by the lazy initializer.
 fn build_events() {
     var v = vec_new();
     vec_push(v,evt_new("Invention of Writing",(0-3400),"Bronze Age",CAT_INVENTION,"Development of cuneiform in Sumer, enabling record-keeping and literature","Mesopotamia",SIG_GLOBAL));

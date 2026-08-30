@@ -35,7 +35,7 @@ itihas/
 │   ├── serial.cyr        — JSON serialization for all types (*_to_json)
 │   └── hoosh.cyr         — LLM-powered historical queries + data-answer path
 ├── tests/
-│   ├── itihas.tcyr       — full 153-assertion suite (cyrius test)
+│   ├── itihas.tcyr       — full 285-assertion suite (cyrius test)
 │   └── itihas.bcyr       — 28-benchmark suite (cyrius bench)
 ├── dist/
 │   └── itihas.cyr        — single-file consumer bundle (cyrius distlib)
@@ -101,6 +101,8 @@ itihas
 - **Data-driven**: Historical data as structured heap records with typed accessors
 - **Queryable**: Every dataset supports lookup, filtering by year/region/category
 - **Composable**: Each module is independent — consumers include only what they need
-- **Zero external deps**: Vendored Cyrius stdlib only
+- **No third-party deps**: Cyrius stdlib only, regenerated into `lib/` from the
+  `[package].cyrius` pin rather than vendored in-repo
 - **Graph-ready**: Causality chains and interaction graphs for relational queries
-- **Compact**: 117KB static ELF binary with all 297 entities
+- **Compact**: 674KB static ELF binary with all 338 entities (`CYRIUS_DCE=1` NOPs ~397KB of
+  unreachable stdlib rather than stripping it, so it improves locality, not file size)

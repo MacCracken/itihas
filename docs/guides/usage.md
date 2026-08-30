@@ -178,7 +178,7 @@ var silk_routes = routes_by_commodity("silk");
 All years use **astronomical year numbering**:
 - Negative = BCE: use `(0 - 500)` for 500 BCE
 - Positive = CE: `476` = 476 CE
-- `2147483647` = ongoing (i64 max, equivalent to "present")
+- `2147483647` = ongoing (`ERA_ONGOING`, i32 max, equivalent to "present")
 
 ## Error Handling
 

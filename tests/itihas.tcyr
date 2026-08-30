@@ -1,9 +1,10 @@
 # itihas.tcyr — integration test suite for itihas (run via `cyrius test`)
 #
-# 153 assertions covering module counts, lookups, filters, cross-module
+# 285 assertions covering module counts, lookups, filters, cross-module
 # integration, case-insensitive lookups, chronological sort, JSON
-# serialization, and the hoosh data-answer path. Ported from the legacy
-# inline harness that used to live in src/main.cyr.
+# serialization, the hoosh data-answer and wire-parsing paths, the 2.4.2
+# hardening regressions, and one assertion per public accessor/constructor.
+# Ported from the legacy inline harness that used to live in src/main.cyr.
 
 # Stdlib auto-included via cyrius.cyml
 
@@ -445,6 +446,287 @@ fn main() {
     var era_args3 = json_parse(str_from("{\"name\": \"Space Age\"}"));
     var elr3 = resolve_era_lookup(era_args3);
     check(elr3, 0, "era lookup unknown=0");
+
+
+    # ---------------------------------------------------------------
+    # 2.4.2 regressions — util helpers
+    # ---------------------------------------------------------------
+    println("--- util helpers ---");
+    ok(str_eq(str_lower(str_from("MiXeD Case 123")), str_from("mixed case 123")), "str_lower ASCII");
+    ok(str_eq(str_upper(str_from("MiXeD Case 123")), str_from("MIXED CASE 123")), "str_upper ASCII");
+    check(str_eq_lower(str_from("Bronze Age"), str_from("BRONZE age")), 1, "str_eq_lower folds");
+    check(str_eq_lower(str_from("abc"), str_from("abcd")), 0, "str_eq_lower length differs");
+
+    # Whole-token membership: the bug this replaced matched "Roman Empire"
+    # inside "Holy Roman Empire".
+    var toks = str_from("Holy Roman Empire;Spanish Empire");
+    check(str_list_has(toks, str_from("Roman Empire"), 59), 0, "list_has rejects inner substring");
+    check(str_list_has(toks, str_from("Holy Roman Empire"), 59), 1, "list_has first token");
+    check(str_list_has(toks, str_from("Spanish Empire"), 59), 1, "list_has last token");
+    check(str_list_has(toks, str_from("spanish empire"), 59), 1, "list_has is case-insensitive");
+    check(str_list_has(toks, str_from(""), 59), 0, "list_has empty needle");
+    check(str_list_has(str_from("French Empire"), str_from("French Empire"), 59), 1, "list_has single token");
+    # Name matching allows a leading whole-word prefix but not a partial word.
+    check(str_list_has_name(str_from("Darius III;Alexander"), str_from("Darius I"), 59), 0, "name rejects Darius I/III");
+    check(str_list_has_name(str_from("Napoleon Bonaparte"), str_from("Napoleon"), 59), 1, "name allows surname prefix");
+    check(str_list_has_name(str_from("Napoleon Bonaparte"), str_from("Napo"), 59), 0, "name rejects partial word");
+
+    # JSON escaping must cover every C0 control, not just " \ and LF.
+    var esb = str_builder_new();
+    json_escape_into(esb, str_from("q\"b\\s\tt\rc\nn"));
+    var escaped = str_builder_build(esb);
+    ok(str_contains_cstr(escaped, "\\\""), "escape quote");
+    ok(str_contains_cstr(escaped, "\\\\"), "escape backslash");
+    ok(str_contains_cstr(escaped, "\\t"), "escape tab");
+    ok(str_contains_cstr(escaped, "\\r"), "escape CR");
+    ok(str_contains_cstr(escaped, "\\n"), "escape LF");
+    ok(str_eq(json_unescape(escaped), str_from("q\"b\\s\tt\rc\nn")), "escape/unescape roundtrip");
+    ok(str_eq(json_unescape(str_from("caf\\u00e9")), str_from("café")), "unescape \\u to UTF-8");
+    ok(str_eq(json_unescape(str_from("plain")), str_from("plain")), "unescape passthrough");
+
+    # ---------------------------------------------------------------
+    # 2.4.2 regressions — query semantics
+    # ---------------------------------------------------------------
+    println("--- query semantics ---");
+    # campaigns_by_civilization used to return the Thirty Years' War for
+    # "Roman Empire", matched inside "Holy Roman Empire".
+    check(vec_len(campaigns_by_civilization("Roman Empire")), 0, "no campaign lists Roman Empire");
+    check(vec_len(campaigns_by_civilization("Roman Republic")), 2, "Roman Republic has 2 campaigns");
+    check(vec_len(campaigns_by_civilization("Holy Roman Empire")), 1, "Holy Roman Empire exact");
+    check(vec_len(campaigns_by_commander("Darius I")), 1, "Darius I excludes Darius III");
+    ok(vec_len(campaigns_by_commander("Napoleon")) > 0, "Napoleon surname still resolves");
+    check(vec_len(routes_by_commodity("silk")), 2, "routes_by_commodity silk exact");
+
+    # Referential integrity restored by the 2.4.2 data corrections.
+    ok(vec_len(routes_by_civilization("Viking/Norse")) > 0, "Viking/Norse route resolves");
+    ok(vec_len(sites_by_civilization("Great Zimbabwe")) > 0, "Great Zimbabwe site resolves");
+
+    # Causality and interaction lookups now fold case like every *_by_name.
+    check(vec_len(causes_of("french revolution")), vec_len(causes_of("French Revolution")), "causes_of folds case");
+    check(vec_len(effects_of("invention of writing")), vec_len(effects_of("Invention of Writing")), "effects_of folds case");
+    check(vec_len(interactions_for("roman empire")), vec_len(interactions_for("Roman Empire")), "interactions_for folds case");
+    check(vec_len(interactions_between("roman empire", "ancient egypt")),
+          vec_len(interactions_between("Roman Empire", "Ancient Egypt")), "interactions_between folds case");
+    zero(vec_len(causes_of("No Such Event")), "causes_of unknown = 0");
+    zero(vec_len(effects_of("No Such Event")), "effects_of unknown = 0");
+
+    # causal_chain depth invariant: nothing may exceed max_depth.
+    zero(vec_len(causal_chain("Invention of Writing", 0)), "causal_chain depth 0 = empty");
+    ok(vec_len(causal_chain("Invention of Writing", 1)) > 0, "causal_chain depth 1 non-empty");
+    var chain3 = causal_chain("Invention of Writing", 3);
+    var depth_ok = 1;
+    for (var ci = 0; ci < vec_len(chain3); ci = ci + 1) {
+        if (load64(vec_get(chain3, ci) + CH_DEPTH) > 3) { depth_ok = 0; }
+    }
+    ok(depth_ok, "causal_chain respects max_depth");
+
+    # An empty region needle used to match every record.
+    zero(vec_len(civs_by_region(str_from(""))), "civs_by_region empty = 0");
+    zero(vec_len(eras_by_region(str_from(""))), "eras_by_region empty = 0");
+
+    # campaigns_active_at had no test at all; 1453 pins both inclusive endpoints.
+    ok(vec_len(campaigns_active_at(1453)) > 0, "campaigns_active_at 1453");
+    zero(vec_len(campaigns_active_at(-5000)), "campaigns_active_at prehistory = 0");
+
+    # Ongoing-era sentinel.
+    check(era_is_ongoing(era_by_name("Information Age")), 1, "Information Age is ongoing");
+    check(era_is_ongoing(era_by_name("Bronze Age")), 0, "Bronze Age is not ongoing");
+
+    # Corrected data values.
+    check(cal_epoch(calendar_by_name("Hebrew")), -3761, "Hebrew epoch is 3761 BCE");
+    check(civ_found(civ_by_name("Chola Dynasty")), 848, "Chola founded 848");
+
+    # ---------------------------------------------------------------
+    # 2.4.2 regressions — serializer escaping and round-trip
+    # ---------------------------------------------------------------
+    println("--- json escaping ---");
+    var hostile = era_new(str_from("Tab\tAnd \"Quote\""), 1, 2, str_from("R"),
+                          str_from("back\\slash\r\nlines"), ANCIENT, SCOPE_GLOBAL);
+    var hj = era_to_json(hostile);
+    ok(json_parse(hj), "hostile era json parses");
+    ok(str_contains_cstr(hj, "\\t"), "hostile era escapes tab");
+    ok(str_contains_cstr(hj, "\\r"), "hostile era escapes CR");
+    # bayan's json_get returns the RAW escaped span, so the decode step is the
+    # caller's; json_unescape is the inverse of what the serializer emitted.
+    var hp = json_parse(hj);
+    ok(str_eq(json_unescape(json_get(hp, str_from("name"))), str_from("Tab\tAnd \"Quote\"")), "hostile name round-trips");
+
+    # The three *_to_json functions with no previous assertions.
+    var caus0 = vec_get(all_causalities(), 0);
+    ok(json_parse(causality_to_json(caus0)), "causality json parses");
+    var int0 = vec_get(all_interactions(), 0);
+    ok(json_parse(interaction_to_json(int0)), "interaction json parses");
+    var camp0 = vec_get(all_campaigns(), 0);
+    ok(json_parse(campaign_to_json(camp0)), "campaign json parses");
+
+    # resp_data had zero call sites anywhere in the repo.
+    var rdq = query_causes_of(str_from("French Revolution"));
+    var rdr = answer_from_data(rdq);
+    ok(rdr, "causes_of data response");
+    ok(json_parse(resp_data(rdr)), "resp_data is valid json");
+
+    # ---------------------------------------------------------------
+    # 2.4.2 regressions — hoosh wire path (no network required)
+    # ---------------------------------------------------------------
+    println("--- hoosh wire ---");
+    var hbuf = alloc(2048);
+    var hlen = _build_post_header(hbuf, "/v1/chat/completions", "localhost", 123);
+    ok(hlen > 0, "post header built");
+    var hstr = str_from_buf(hbuf, hlen);
+    ok(str_contains_cstr(hstr, "Content-Type: application/json\r\n"), "full Content-Type header");
+    ok(str_contains_cstr(hstr, "Content-Length: 123\r\n"), "Content-Length correct");
+    ok(str_contains_cstr(hstr, "POST /v1/chat/completions HTTP/1.0\r\n"), "request line");
+
+    # The wire shape hoosh actually emits: arguments as a JSON-ENCODED STRING.
+    var wire_esc = "{\"choices\":[{\"message\":{\"tool_calls\":[{\"function\":{\"name\":\"causes_of\",\"arguments\":\"{\\\"event\\\": \\\"French Revolution\\\"}\"}}]}}]}";
+    var tc1 = _extract_tool_call(wire_esc, strlen(wire_esc));
+    ok(tc1, "extract tool call (escaped args)");
+    ok(str_eq(load64(tc1), str_from("causes_of")), "escaped args tool name");
+    var q1 = parse_tool_call(load64(tc1), load64(tc1 + 8));
+    ok(q1, "escaped args resolve to a query");
+    check(load64(q1 + Q_TYPE), QT_CAUSES_OF, "escaped args query type");
+
+    # Object-form arguments must still work (no double-unescape).
+    var wire_obj = "{\"tool_calls\":[{\"function\":{\"name\":\"civilizations_at\",\"arguments\":{\"year\": -500}}}]}";
+    var tc2 = _extract_tool_call(wire_obj, strlen(wire_obj));
+    ok(tc2, "extract tool call (object args)");
+    var q2 = parse_tool_call(load64(tc2), load64(tc2 + 8));
+    ok(q2, "object args resolve to a query");
+    check(load64(q2 + Q_ARG1), -500, "object args value parsed");
+
+    var wire_rng = "{\"tool_calls\":[{\"function\":{\"name\":\"events_in_range\",\"arguments\":\"{\\\"start\\\": -500, \\\"end\\\": 500}\"}}]}";
+    var tc3 = _extract_tool_call(wire_rng, strlen(wire_rng));
+    var q3 = parse_tool_call(load64(tc3), load64(tc3 + 8));
+    ok(q3, "escaped range args resolve");
+    check(load64(q3 + Q_ARG1), -500, "range start value");
+    check(load64(q3 + Q_ARG2), 500, "range end value");
+
+    # Hostile/truncated bodies must return 0, not read past the buffer.
+    var trunc1 = "{\"tool_calls\":[{\"name\":\"causes_of\",\"arguments\"";
+    check(_extract_tool_call(trunc1, strlen(trunc1)), 0, "truncated after arguments = 0");
+    var trunc2 = "{\"tool_calls\":[{\"name\":\"causes_of";
+    check(_extract_tool_call(trunc2, strlen(trunc2)), 0, "unterminated name = 0");
+    var trunc3 = "{\"no tool calls here\"}";
+    check(_extract_tool_call(trunc3, strlen(trunc3)), 0, "no tool_calls = 0");
+
+    # _extract_content decodes escapes rather than leaking them to the caller.
+    var cbody = "{\"choices\":[{\"message\":{\"content\":\"Line one\\nLine \\\"two\\\"\"}}]}";
+    var cout = _extract_content(cbody, strlen(cbody));
+    ok(str_contains_cstr(cout, "Line one\nLine \"two\""), "content escapes decoded");
+    var cnull = "{\"choices\":[{\"message\":{\"content\":null}}]}";
+    check(str_len(_extract_content(cnull, strlen(cnull))), 0, "null content = empty");
+
+    # The outgoing request must stay valid JSON for a hostile question.
+    var req = _build_inference_request(str_from("What\tabout \"Rome\"\r\nand C:\\path?"), str_from("llama3.2:1b"));
+    ok(json_parse(req), "inference request is valid json");
+    ok(str_contains_cstr(req, "\\t"), "request escapes tab");
+
+    # Offline failure path: port 1 refuses connect immediately.
+    check(hoosh_post(1, str_from("{}")), 0, "hoosh_post connect refused = 0");
+    check(llm_answer(1, str_from("q"), str_from("m")), 0, "llm_answer connect refused = 0");
+
+
+    # ---------------------------------------------------------------
+    # Public accessor coverage — every getter asserted at least once
+    # ---------------------------------------------------------------
+    println("--- accessors ---");
+    var e0 = era_by_name("Bronze Age");
+    ok(str_eq(era_name(e0), str_from("Bronze Age")), "era_name");
+    ok(str_len(era_region(e0)) > 0, "era_region");
+    check(era_cat(e0), ANCIENT, "era_cat");
+    check(era_scope(e0), SCOPE_GLOBAL, "era_scope");
+    ok(era_get(0), "era_get");
+
+    var c0 = calendar_by_name("Gregorian");
+    ok(str_eq(cal_name(c0), str_from("Gregorian")), "cal_name");
+    check(cal_type(c0), CAL_SOLAR, "cal_type");
+    check(cal_months(c0), 12, "cal_months");
+
+    var v0 = civ_by_name("Roman Empire");
+    ok(str_len(civ_region(v0)) > 0, "civ_region");
+    ok(civ_get(0), "civ_get");
+
+    var f0 = figure_by_name("Aristotle");
+    ok(str_eq(fig_name(f0), str_from("Aristotle")), "fig_name");
+    check(fig_domain(f0), DOM_PHILOSOPHER, "fig_domain");
+
+    var v1 = event_by_name("Fall of the Western Roman Empire");
+    ok(str_eq(evt_name(v1), str_from("Fall of the Western Roman Empire")), "evt_name");
+    check(evt_cat(v1), CAT_COLLAPSE, "evt_cat");
+    ok(evt_sig(v1) >= 0, "evt_sig");
+
+    var k0 = vec_get(all_causalities(), 0);
+    ok(str_len(caus_cause(k0)) > 0, "caus_cause");
+    ok(str_len(caus_effect(k0)) > 0, "caus_effect");
+
+    var i0 = vec_get(all_interactions(), 0);
+    ok(str_len(int_civa(i0)) > 0, "int_civa");
+    ok(str_len(int_civb(i0)) > 0, "int_civb");
+    ok(int_type(i0) >= 0, "int_type");
+    ok(vec_len(split_regions(str_from("Near East, Europe"))) == 2, "split_regions");
+
+    var m0 = vec_get(all_campaigns(), 0);
+    ok(str_len(camp_name(m0)) > 0, "camp_name");
+    ok(str_len(camp_region(m0)) > 0, "camp_region");
+    ok(camp_out(m0) >= 0, "camp_out");
+    ok(str_len(camp_cmds(m0)) > 0, "camp_cmds");
+    ok(str_len(camp_bella(m0)) > 0, "camp_bella");
+    ok(str_len(camp_bellb(m0)) > 0, "camp_bellb");
+
+    var s0 = vec_get(all_sites(), 0);
+    ok(str_len(site_name(s0)) > 0, "site_name");
+    ok(str_len(site_region(s0)) > 0, "site_region");
+
+    var r0 = vec_get(all_routes(), 0);
+    ok(str_len(rt_name(r0)) > 0, "rt_name");
+    ok(str_len(rt_comm(r0)) > 0, "rt_comm");
+
+    # Constructors, used directly rather than only through the build_* tables.
+    var ne = era_new(str_from("Test Era"), 1, 2, str_from("R"), str_from("d"), MODERN, SCOPE_REGIONAL);
+    check(era_start(ne), 1, "era_new");
+    var nc = cal_new(str_from("Test Cal"), CAL_SOLAR, 1, 12, str_from("none"));
+    check(cal_months(nc), 12, "cal_new");
+    var nv = civ_new(str_from("Test Civ"), str_from("R"), str_from("E"), 1, 2, str_from("t"), str_from("s"), str_from("l"));
+    check(civ_found(nv), 1, "civ_new");
+    var nf = fig_new(str_from("Test Fig"), 1, 2, str_from("C"), DOM_SCIENTIST, str_from("d"));
+    check(fig_domain(nf), DOM_SCIENTIST, "fig_new");
+    var nev = evt_new(str_from("Test Evt"), 5, str_from("E"), CAT_WAR, str_from("d"), str_from("c"), SIG_REGIONAL);
+    check(evt_year(nev), 5, "evt_new");
+    var nk = caus_new(str_from("A"), str_from("B"), 1, str_from("d"));
+    ok(str_eq(caus_cause(nk), str_from("A")), "caus_new");
+    var ni = int_new(str_from("A"), str_from("B"), INT_TRADE, 1, 2, str_from("d"));
+    check(int_type(ni), INT_TRADE, "int_new");
+    var ns = site_new(str_from("Test Site"), str_from("X"), str_from("R"), ST_SETTLEMENT, str_from("C"), 1, 2, 3, str_from("d"));
+    ok(str_eq(site_name(ns), str_from("Test Site")), "site_new");
+    var nr = rt_new(str_from("Test Route"), str_from("R"), RT_LAND, str_from("C"), str_from("goods"), 1, 2, str_from("d"));
+    ok(str_eq(rt_name(nr), str_from("Test Route")), "rt_new");
+    var nm = camp_new(str_from("Test Camp"), str_from("R"), 1, 2, str_from("A"), str_from("B"), str_from("C"), OUT_VICTORY, str_from("d"));
+    bat_add(nm, str_from("Test Battle"), 1, str_from("Loc"), str_from("d"));
+    var nbats = load64(nm + CAMP_BATTLES);
+    check(vec_len(nbats), 1, "camp_new + bat_add");
+    ok(json_parse(battle_to_json(vec_get(nbats, 0))), "battle_to_json parses");
+
+    # The build_* table builders, called directly.
+    ok(vec_len(build_eras()) > 0, "build_eras");
+    ok(vec_len(build_calendars()) > 0, "build_calendars");
+    ok(vec_len(build_civs()) > 0, "build_civs");
+    ok(vec_len(build_figs()) > 0, "build_figs");
+    ok(vec_len(build_events()) > 0, "build_events");
+    ok(vec_len(build_causalities()) > 0, "build_causalities");
+    ok(vec_len(build_interactions()) > 0, "build_interactions");
+    ok(vec_len(build_campaigns()) > 0, "build_campaigns");
+    ok(vec_len(build_sites()) > 0, "build_sites");
+    ok(vec_len(build_routes()) > 0, "build_routes");
+
+    # vec_sort with an explicit comparator.
+    var sortv = vec_new();
+    vec_push(sortv, era_new(str_from("B"), 20, 21, str_from("R"), str_from("d"), MODERN, SCOPE_GLOBAL));
+    vec_push(sortv, era_new(str_from("A"), 10, 11, str_from("R"), str_from("d"), MODERN, SCOPE_GLOBAL));
+    vec_sort(sortv, &_cmp_era_start);
+    check(era_start(vec_get(sortv, 0)), 10, "vec_sort orders ascending");
+
+    itihas_log_init_level(SK_WARN);
+    ok(1, "log level set");
 
     return assert_summary();
 }

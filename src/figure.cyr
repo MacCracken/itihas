@@ -18,6 +18,7 @@ fn fig_name(p) { return load64(p+FIG_NAME); }
 #must_use
 fn fig_domain(p) { return load64(p+FIG_DOM); }
 
+# Build the historical-figure table (52 rows). Called once by the lazy initializer.
 fn build_figs() {
     var v = vec_new();
     vec_push(v, fig_new("Hammurabi",(0-1810),(0-1750),"Mesopotamia",DOM_RULER,"King of Babylon, author of one of the earliest written law codes"));

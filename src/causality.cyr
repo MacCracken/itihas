@@ -18,6 +18,7 @@ fn caus_cause(p) { return load64(p+CAUS_CAUSE); }
 #must_use
 fn caus_effect(p) { return load64(p+CAUS_EFFECT); }
 
+# Build the causal-link table (13 rows). Called once by the lazy initializer.
 fn build_causalities() {
     var v = vec_new();
     vec_push(v, caus_new("Invention of Writing","Code of Hammurabi",STRENGTH_STRONG,"Written law codes required writing systems"));
@@ -50,7 +51,7 @@ fn causes_of(event_name: Str) {
     var v = all_causalities(); var n = vec_len(v);
     for (var i = 0; i < n; i = i + 1) {
         var p = vec_get(v, i);
-        if (str_eq(caus_effect(p), event_name) == 1) { vec_push(result, p); }
+        if (str_eq_lower(caus_effect(p), event_name) == 1) { vec_push(result, p); }
     }
     return result;
 }
@@ -61,7 +62,7 @@ fn effects_of(event_name: Str) {
     var v = all_causalities(); var n = vec_len(v);
     for (var i = 0; i < n; i = i + 1) {
         var p = vec_get(v, i);
-        if (str_eq(caus_cause(p), event_name) == 1) { vec_push(result, p); }
+        if (str_eq_lower(caus_cause(p), event_name) == 1) { vec_push(result, p); }
     }
     return result;
 }
@@ -75,6 +76,10 @@ fn causal_chain(event_name: Str, max_depth) {
     var visited = vec_new();
     var frontier = vec_new();
     vec_push(visited, event_name);
+    # The seed loop below stores entries at depth 1 before max_depth is ever
+    # consulted (only frontier entry is gated), so max_depth 0 or negative used
+    # to return depth-1 rows and break the depth <= max_depth invariant.
+    if (max_depth < 1) { return results; }
 
     # Seed with direct effects
     var eff = effects_of(event_name);

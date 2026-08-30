@@ -19,6 +19,7 @@ fn site_name(p) { return load64(p+SITE_NAME); }
 #must_use
 fn site_region(p) { return load64(p+SITE_REG); }
 
+# Build the archaeological-site table (32 rows). Called once by the lazy initializer.
 fn build_sites() {
     var v = vec_new();
     vec_push(v, site_new("Gobekli Tepe","Turkey","Near East",ST_TEMPLE,"Pre-Pottery Neolithic",(0-9500),(0-8000),1963,"Oldest known monumental sanctuary; massive T-shaped pillars with animal reliefs"));
@@ -47,7 +48,7 @@ fn build_sites() {
     vec_push(v, site_new("Tikal","Guatemala","Mesoamerica",ST_SETTLEMENT,"Maya",(0-600),900,1848,"Major Maya city; towering temple pyramids, stelae with Long Count dates"));
     vec_push(v, site_new("Chichen Itza","Mexico","Mesoamerica",ST_TEMPLE,"Maya",600,1200,1843,"Maya-Toltec city; El Castillo pyramid with equinox serpent shadow"));
     vec_push(v, site_new("Machu Picchu","Peru","South America",ST_SETTLEMENT,"Inca Empire",1450,1572,1911,"Inca royal estate; dry-stone terraces, Intihuatana sundial, cloud-forest setting"));
-    vec_push(v, site_new("Great Zimbabwe","Zimbabwe","Sub-Saharan Africa",ST_SETTLEMENT,"Kingdom of Zimbabwe",1100,1450,1871,"Medieval stone city; Great Enclosure with drystone walls up to 11m high"));
+    vec_push(v, site_new("Great Zimbabwe","Zimbabwe","Sub-Saharan Africa",ST_SETTLEMENT,"Great Zimbabwe",1100,1450,1871,"Medieval stone city; Great Enclosure with drystone walls up to 11m high"));
     vec_push(v, site_new("Lalibela","Ethiopia","Sub-Saharan Africa",ST_TEMPLE,"Zagwe Dynasty",1181,1221,1520,"11 monolithic rock-hewn churches; carved top-down from living rock"));
     vec_push(v, site_new("Stonehenge","England","Europe",ST_MONUMENT,"Neolithic Britain",(0-3000),(0-1500),0,"Megalithic stone circle; sarsen trilithons aligned to solstice sunrise"));
     vec_push(v, site_new("Lascaux","France","Europe",ST_CAVE,"Upper Paleolithic",(0-17000),(0-15000),1940,"Paleolithic cave paintings; Hall of Bulls, polychrome animal figures"));
@@ -92,7 +93,7 @@ fn sites_by_civilization(civ: Str) {
     var v = all_sites(); var n = vec_len(v);
     for (var i = 0; i < n; i = i + 1) {
         var p = vec_get(v, i);
-        if (str_contains(load64(p+SITE_CIV), civ) == 1) { vec_push(result, p); }
+        if (str_list_has(load64(p+SITE_CIV), civ, 59) == 1) { vec_push(result, p); }
     }
     return result;
 }

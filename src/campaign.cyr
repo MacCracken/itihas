@@ -29,6 +29,7 @@ fn camp_bella(p) { return load64(p+CAMP_BELLA); }
 #must_use
 fn camp_bellb(p) { return load64(p+CAMP_BELLB); }
 
+# Append a battle record to `camp`. Used by build_campaigns while assembling the table.
 fn bat_add(camp, name: Str, year, loc: Str, desc: Str) {
     var b = alloc(BAT_SIZE);
     store64(b+BAT_NAME,name); store64(b+BAT_YEAR,year);
@@ -36,6 +37,7 @@ fn bat_add(camp, name: Str, year, loc: Str, desc: Str) {
     vec_push(load64(camp+CAMP_BATTLES), b);
 }
 
+# Build the military-campaign table, including each campaign's battles. Called once by the lazy initializer.
 fn build_campaigns() {
     var v = vec_new();
     var c = camp_new("Greco-Persian Wars","Mediterranean",(0-499),(0-449),"Persian Empire","Ancient Greece","Darius I;Xerxes I;Themistocles;Leonidas I",OUT_DEFEAT,"Persian attempts to conquer Greece repelled; secured Greek independence and Classical golden age");
@@ -150,7 +152,7 @@ fn campaigns_by_commander(cmd: Str) {
     var v = all_campaigns(); var n = vec_len(v);
     for (var i = 0; i < n; i = i + 1) {
         var p = vec_get(v, i);
-        if (str_contains(camp_cmds(p), cmd) == 1) { vec_push(result, p); }
+        if (str_list_has_name(camp_cmds(p), cmd, 59) == 1) { vec_push(result, p); }
     }
     return result;
 }
@@ -161,7 +163,7 @@ fn campaigns_by_civilization(civ: Str) {
     var v = all_campaigns(); var n = vec_len(v);
     for (var i = 0; i < n; i = i + 1) {
         var p = vec_get(v, i);
-        if (str_contains(camp_bella(p), civ) == 1 || str_contains(camp_bellb(p), civ) == 1) { vec_push(result, p); }
+        if (str_list_has(camp_bella(p), civ, 59) == 1 || str_list_has(camp_bellb(p), civ, 59) == 1) { vec_push(result, p); }
     }
     return result;
 }

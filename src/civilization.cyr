@@ -22,6 +22,7 @@ fn civ_found(p) { return load64(p+CIV_FOUND); }
 #must_use
 fn civ_end(p) { return load64(p+CIV_END); }
 
+# Build the civilization table (53 rows). Called once by the lazy initializer.
 fn build_civs() {
     var v = vec_new();
     vec_push(v, civ_new("Mesopotamia","Near East","Bronze Age",(0-3500),(0-539),"cuneiform writing;irrigation;law codes;astronomy","Cuneiform","akk;sux"));
@@ -71,7 +72,7 @@ fn build_civs() {
     vec_push(v, civ_new("Sassanid Empire","Near East","Classical Antiquity",224,651,"Zoroastrian state religion;academy of Gondishapur;rock reliefs;heavy cavalry","Pahlavi script","pal"));
     vec_push(v, civ_new("Arab Caliphates","Near East","Middle Ages",632,1517,"Islamic scholarship;algebra and optics;trade networks;architectural innovation","Arabic script","ar"));
     vec_push(v, civ_new("Timurid Empire","Central Asia","Middle Ages",1370,1507,"Timurid Renaissance;astronomical observatories;miniature painting;Persian literature","Persian/Arabic script","fa"));
-    vec_push(v, civ_new("Chola Dynasty","South Asia","Middle Ages",300,1279,"naval power;bronze sculpture;temple architecture;maritime trade","Tamil script","ta"));
+    vec_push(v, civ_new("Chola Dynasty","South Asia","Middle Ages",848,1279,"naval power;bronze sculpture;temple architecture;maritime trade","Tamil script","ta"));
     vec_push(v, civ_new("Vijayanagara Empire","South Asia","Middle Ages",1336,1646,"Hindu patronage;Hampi architecture;diamond trade;irrigation systems","Kannada script","kn"));
     vec_push(v, civ_new("Maratha Empire","South Asia","Age of Enlightenment",1674,1818,"guerrilla warfare;naval innovation;decentralized governance","Modi script","mr"));
     vec_push(v, civ_new("Sikh Empire","South Asia","Industrial Age",1799,1849,"military modernization;religious pluralism;Khalsa governance","Gurmukhi script","pa"));
@@ -93,6 +94,9 @@ fn civ_get(idx) { return vec_get(all_civilizations(), idx); }
 #must_use
 fn civs_by_region(region: Str) {
     var result = vec_new();
+    # str_contains reports a match for a zero-length needle, so an empty region
+    # used to return every civilization rather than none.
+    if (str_len(region) == 0) { return result; }
     var v = all_civilizations(); var n = vec_len(v);
     for (var i = 0; i < n; i = i + 1) {
         var p = vec_get(v, i);

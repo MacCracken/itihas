@@ -1,6 +1,6 @@
 # Development Roadmap
 
-> **Status**: v2.4.1 released | **Current**: 2.4.1 | **Compiler**: cyrius 6.5.36
+> **Status**: v2.4.2 released | **Current**: 2.4.2 | **Compiler**: cyrius 6.5.36
 
 Completed items are in [CHANGELOG.md](../../CHANGELOG.md).
 Rust benchmark baseline in [benchmarks-rust-v-cyrius.md](../../benchmarks-rust-v-cyrius.md).
@@ -22,7 +22,7 @@ Rust benchmark baseline in [benchmarks-rust-v-cyrius.md](../../benchmarks-rust-v
 | # | Item | Effort | Details |
 |---|------|--------|---------|
 | 1 | **Restore description fields** | Medium | cc3 v4.0.0 raised str_data to 256KB (was 32KB). Restore inline descriptions to all 10 data modules from Rust source. |
-| 2 | **Case-insensitive lookups** | Low | Add `str_lower()` to lib/str.cyr, update all `by_name()` functions. |
+| 2 | **Case-insensitive lookups** | Low | ✅ Shipped as `str_eq_lower()` in `src/util.cyr` (allocation-free; no `lib/str.cyr` change was needed), applied to the `by_name()` functions. Extended to causality/interaction lookups in 2.4.2. |
 | 3 | **Chronological sort** | Low | Add `vec_sort()` to lib/vec.cyr, apply to `events_between()` and other range queries. |
 | 4 | **argonaut integration** | Medium | JSON serialization for all types. argonaut v1.2.0 is ported; needs itihas struct integration. |
 | 5 | **`.bcyr` benchmark harness** | Medium | Port 28 criterion benchmarks to Cyrius bench format. Enables direct Rust-vs-Cyrius timing comparison. |
@@ -65,6 +65,21 @@ Sibling avatara has completed two stdlib modernizations itihas has not. Both are
 | **Checked allocation (`xalloc`) — CWE-690** | Medium | itihas has ~21 raw `alloc()` sites that write into the result unchecked; the stdlib `alloc()` returns `0` on OOM (near-NULL write / UB under exhaustion). Route heap allocation through a checked `xalloc(n)` that aborts with a diagnostic, per avatara 2.5.4 / its ADR-009 (Rust/Go abort-on-OOM policy). |
 | **Native `#derive(accessors)` struct migration** | Large | The 10 data modules + serial address fields via ~242 manual `load64(p+OFFSET)` / `store64` calls against hand-maintained offset enums. avatara (2.5.3) migrated its profile to a named-field `#derive(accessors)` `struct` once the 6.x struct field cap was raised (32 → 256), making offset-collision bugs a compile error while keeping `prof_*` compat shims. The same applies here: convert each module's offset layout to a native struct, keep the public getters as shims. Touches all 11 modules — strictly one module per cycle, each behind the cleanliness + benchmark gates. |
 
+## Completed in 2.4.2 — P(-1) scaffold hardening
+
+Full audit/refactor/security sweep, no new features. Ten review dimensions with
+adversarial verification produced 49 confirmed findings; all were repaired and
+each defect was reproduced before it was fixed. See CHANGELOG for detail.
+
+- [x] **hoosh untrusted-input hardening** — stringified tool `arguments` are now decoded (the raw span parsed to zero pairs, silently disabling the entire structured-data path against the only server hoosh talks to); out-of-bounds reads and a negative-length `str_new` on truncated responses fixed; escaped-quote terminator now counts backslash parity; object/string argument branches no longer fall through
+- [x] **hoosh wire correctness** — `Content-Type` header was one byte short of `json`; `hoosh_post` now uses `SYS_CLOSE` (the bare `3` was `io_cancel` on aarch64), sets 30s send/recv timeouts, loops short writes, refuses truncated responses instead of parsing them, and logs each failure via `sakshi_warn`
+- [x] **RFC 8259 JSON escaping extracted to `util.cyr`** — three copies escaped only `"`, `\` and LF (and `model` was interpolated unescaped); rule of three satisfied
+- [x] **Query semantics** — token-aware matching on `;`-delimited fields (`campaigns_by_civilization("Roman Empire")` used to return only the Thirty Years' War, matched inside "Holy Roman Empire"); case-insensitive causality/interaction lookups; `causal_chain` honours `max_depth < 1`; empty region needle no longer matches every record
+- [x] **7 historical data corrections**, each contradicted by the repo's own tables (Mongol/Abbasid, Punic Wars/Carthage, Viking/Norse, Great Zimbabwe, Hebrew epoch, Maya Long Count, Chola founding); no entity counts changed
+- [x] **Tests 153 → 285 assertions; reference coverage 54% → 96%** (gate target is 80%) — the whole hoosh wire path, serializer escaping/round-trip, and every public accessor and constructor now have assertions
+- [x] **`cyrius audit` gates** — fmt failing → clean, docs 14 undocumented → clean, `util.cyr` lint-clean
+- [x] **Benchmark gate** — net −4.5% across all 28 benchmarks (10,277 → 9,812 ns). 4 wins led by `events_between` −28%; 6 regressions accepted as the measured cost of the correctness fixes, with two recovery attempts tried and reported
+
 ## Completed in 2.4.1 — Toolchain bump 6.4.69 → 6.5.36
 
 - [x] Cyrius compiler pin `6.4.69` → `6.5.36` (`cyrius.cyml` `[package].cyrius`); local `lib/` snapshot resynced via `cyrius lib sync` (25 declared `[deps].stdlib` modules), clearing the toolchain-drift warning
@@ -77,6 +92,22 @@ Sibling avatara has completed two stdlib modernizations itihas has not. Both are
 - [x] Cyrius compiler pin `6.2.11` → `6.4.69` (`cyrius.cyml` `[package].cyrius`); local `lib/` snapshot resynced via `cyrius lib sync` (25 declared `[deps].stdlib` modules), clearing the toolchain-drift warning
 - [x] `[deps].stdlib` unchanged; `net` + `http` remain load-bearing (hoosh's self-contained HTTP client); `dist/itihas.cyr` regenerated (v2.4.0)
 - [x] Source behavior unchanged; 153 tests pass. Benchmark gate recorded a **codegen recovery** — vec/str-heavy query paths 10–36% faster vs 6.2.11, O(1) accessors flat; reverses the 6.0.50 → 6.2.11 creep (see CHANGELOG / `benchmarks.md`)
+
+## Deferred from the 2.4.2 hardening sweep
+
+Confirmed by the audit, each needing its own work-loop cycle rather than a batch:
+
+| Item | Effort | Why deferred |
+|------|--------|--------------|
+| **Precomputed year-sorted views for range queries** | Large | `events_between` still re-sorts immutable data on every call. Changes data-structure lifetime and touches the four hottest benchmarks; needs its own before/after CSV, not a batched edit. |
+| **`*_to_json_into(sb, p)` serializer variants** | Large | Every `*_to_json` allocates a private builder and Str, so `_json_array` copies each record's bytes twice. Adds ~11 functions and rewrites every call site; byte-identical output must be proven per type. |
+| **Generic filter/lookup helpers** | Large | ~31 near-identical filter bodies across the 10 data modules. One shape per cycle behind the benchmark gate. Must not start until the 2.4.2 token-membership semantics have settled. |
+| **Full tracing restoration** | Medium | The Rust original had 52 `tracing::` sites; 2.4.2 added emission only on the hoosh failure paths, where the audit gap was concrete. The rest is a cross-module sweep. |
+| **`ERR_*` enum namespace** | Medium | `cyrius lint` flags all 10 bare `ERR_*` members as colliding across libs for a leaf library (`<LIB>_ERR_*` is the convention). itihas is included by 7 consumers, so renaming is a breaking change — it belongs in a minor release, not a patch. The codes are currently unused by itihas itself. |
+| **Carthage / Khwarezmian civilization records** | Medium | Would move `civ_count` 53→54 and the 338-entity total, cascading into tests, `lib.cyr`, README and overview. A data cycle, not a hardening cycle. |
+| **Referential-integrity policy for civ-name fields** | Medium | Many figure/site/route records reference names with no civilization record; most are deliberate free-text culture labels, not broken keys. Needs a documented decision on whether these are foreign keys before any validation test is written. |
+| **Line-length lint (366 warnings)** | Low | Almost entirely data-table rows whose long description strings are more readable unwrapped. Would need a project decision on the limit for data modules. |
+| **`xalloc` migration (CWE-690)** | Medium | ~21 unchecked `alloc()` sites; unchanged by this cycle, still tracked below. |
 
 ## v2.5.0 — Tool Integration (blocked on bote)
 
@@ -120,6 +151,7 @@ These Cyrius ports must happen in other repos before itihas can integrate:
 | `trade.rs` | `trade.cyr` | 12 | Complete |
 | `error.rs` | `error.cyr` | 0 (enum only) | Complete |
 | `logging.rs` | `logging.cyr` | 2 | Complete (sakshi) |
-| `hoosh.rs` | — | — | Blocked on hoosh port |
+| `hoosh.rs` | `hoosh.cyr` | 24 | Complete (ported in 2.2.0) |
 | `mcp.rs` | — | — | Blocked on bote port |
-| `lib.rs` | `main.cyr` | 3 (test harness) | Complete |
+| `lib.rs` | `lib.cyr` | 0 (module aggregator) | Complete |
+| — | `main.cyr` | 0 (smoke test) | Complete — slimmed in 2.3.1 |

@@ -83,7 +83,7 @@ Also feeds:
 ## Development
 
 ```bash
-cyrius test tests/itihas.tcyr   # Full 153-assertion suite
+cyrius test tests/itihas.tcyr   # Full 285-assertion suite
 ./scripts/bench-history.sh      # Benchmarks + history (mandatory per release)
 cyrius lint src/*.cyr           # Lint
 cyrius distlib                  # Regenerate dist/itihas.cyr
@@ -92,7 +92,8 @@ cyrius distlib                  # Regenerate dist/itihas.cyr
 ## Port History
 
 Ported from Rust v1.5.0 (8,846 lines) to Cyrius v2.0.0 (1,591 lines, 128 functions, 97 tests) on 2026-04-12.
-141KB static ELF binary. Previous Rust source preserved in `rust-old/` for reference.
+That release produced a 141KB static ELF binary; the current build is 674KB, having grown with the
+stdlib snapshot. Previous Rust source preserved in `rust-old/` for reference.
 See [benchmarks-rust-v-cyrius.md](benchmarks-rust-v-cyrius.md) for comparison.
 
 ## License
