@@ -54,7 +54,7 @@ linear scan over cached `&'static [T]`.
 | `figures_by_domain_scientist` | 223.75 | 52 figures, enum match |
 | `causes_of_french_revolution` | 241.57 | 13 links, case-insensitive string match |
 | `chain_writing_depth3` | 1820.20 | BFS over 13 links, depth 3 |
-| `interactions_for_rome` | 906.90 | 22 interactions, case-insensitive match |
+| `interactions_for_rome` | 906.90 | 21 interactions, case-insensitive match |
 | `influence_score_egypt_hittite` | 911.28 | double scan + weight sum |
 | `sites_by_region_near_east` | 1085.90 | 32 sites, case-insensitive substring |
 | `sites_active_at_500bce` | 165.81 | 32 sites, year range |
@@ -123,20 +123,24 @@ Additional Cyrius functions not in Rust benchmarks:
   `campaigns_active_at()`, `interactions_by_type()`, `interaction_neighbors()`,
   `region_proximity()`, `itihas_log_init()`
 
-## Not Yet Ported
+## Port gaps recorded at the time — and what happened to them
 
-| Rust feature | Reason | Plan |
-|-------------|--------|------|
-| Serde roundtrip (JSON) | No JSON serialization yet | v2.2.0: argonaut integration |
-| Case-insensitive lookups | Cyrius has no `to_lowercase` | v2.1.0: add `str_lower` to stdlib |
-| Description fields | 32KB str_data compiler limit | v2.1.0: external data file or cc3 limit bump |
-| Display impls | No `Display` trait in Cyrius | Future: `_to_str()` format functions |
-| `hoosh` module (6 fns) | Needs hoosh Cyrius port | v2.3.0: blocked on hoosh repo |
-| `mcp` module (4 fns) | Needs bote Cyrius port | v2.3.0: blocked on bote repo |
-| `daimon` module (3 fns) | Needs bote Cyrius port | v2.3.0: blocked on bote repo |
-| `.bcyr` benchmarks | Need timing harness | v2.1.0: port criterion benchmarks |
+This table is part of the 2026-04-12 snapshot. It is kept for the record; every
+row's current status is in the right-hand column.
+
+| Rust feature | Reason recorded then | Status now |
+|-------------|--------------------|------------|
+| Serde roundtrip (JSON) | No JSON serialization yet | **Shipped** — `src/serial.cyr`, `*_to_json` for all 11 types |
+| Case-insensitive lookups | Cyrius has no `to_lowercase` | **Shipped** — `str_eq_lower` in `src/util.cyr` (allocation-free; no stdlib change needed) |
+| Description fields | 32KB `str_data` compiler limit | **Shipped** — every record carries its description |
+| Display impls | No `Display` trait in Cyrius | **Open** — demand-gated; see the roadmap |
+| `hoosh` module | Needs hoosh Cyrius port | **Shipped in 2.2.0** — `src/hoosh.cyr`, 27 functions |
+| `mcp` module | Needs bote Cyrius port | **Unblocked** — bote 3.3.7 ships the surface; see the roadmap and `docs/development/mcp-port-reference.md` |
+| `daimon` module | Needs bote Cyrius port | **Unblocked** — same |
+| `.bcyr` benchmarks | Need timing harness | **Shipped** — 28 benchmarks in `tests/itihas.bcyr` |
 
 ---
 
 Generated during Cyrius port, 2026-04-12. Updated 2026-04-12.
-Rust data from `rust-old/bench-history.csv`.
+Rust data captured from the v1.5.0 criterion suite before the port. That tree
+(`rust-old/`) was removed once the port completed and lives in git history.

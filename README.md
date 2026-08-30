@@ -33,7 +33,7 @@ Used by [sankhya](https://github.com/MacCracken/sankhya) (ancient math), [avatar
 | Interactions | 21 |
 | Calendars | 8 |
 | Figures | 52 |
-| Campaigns | 14 (40+ battles) |
+| Campaigns | 14 (35 battles) |
 | Sites | 32 |
 | Trade routes | 15 |
 
@@ -93,7 +93,9 @@ cyrius distlib                  # Regenerate dist/itihas.cyr
 
 Ported from Rust v1.5.0 (8,846 lines) to Cyrius v2.0.0 (1,591 lines, 128 functions, 97 tests) on 2026-04-12.
 That release produced a 141KB static ELF binary; the current build is 674KB, having grown with the
-stdlib snapshot. Previous Rust source preserved in `rust-old/` for reference.
+stdlib snapshot. The Rust v1.5.0 source lives in git history only — it was removed once
+the port completed; see `docs/development/mcp-port-reference.md` for the one module that
+had not shipped.
 See [benchmarks-rust-v-cyrius.md](benchmarks-rust-v-cyrius.md) for comparison.
 
 ## License

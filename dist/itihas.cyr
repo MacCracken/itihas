@@ -1335,7 +1335,7 @@ fn region_proximity(ca: Str, cb: Str) {
 
 # --- campaign.cyr ---
 
-# itihas — military campaigns (14 campaigns, 40+ battles)
+# itihas — military campaigns (14 campaigns, 35 battles)
 
 enum CampaignOutcome { OUT_VICTORY; OUT_DEFEAT; OUT_STALEMATE; OUT_TREATY; OUT_INCONCLUSIVE; }
 enum CampOff { CAMP_NAME=0; CAMP_REGION=8; CAMP_START=16; CAMP_END=24; CAMP_BELLA=32; CAMP_BELLB=40; CAMP_CMDS=48; CAMP_BATTLES=56; CAMP_OUT=64; CAMP_DESC=72; CAMP_SIZE=80; }
@@ -2627,7 +2627,7 @@ fn llm_answer(port, question: Str, model: Str) {
 #   event        - 105 events (category/significance/year/range queries)
 #   causality    - 13 causal links (causes_of, effects_of, causal_chain BFS)
 #   interaction  - 21 inter-civilization interactions (influence_score, neighbors)
-#   campaign     - 14 military campaigns (40+ battles)
+#   campaign     - 14 military campaigns (35 battles)
 #   site         - 32 historical sites
 #   trade        - 15 trade routes (commodity/region/type queries)
 #   logging      - sakshi logging init (itihas_log_init)

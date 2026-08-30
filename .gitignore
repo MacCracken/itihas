@@ -1,19 +1,10 @@
 # Build
 /build/
-/target/
-**/*.rs.bk
-
-# Rust old (ported to Cyrius)
-/rust-old/target/
-/rust-old/Cargo.lock
 
 # Cyrius stdlib — no longer vendored. cyrius regenerates ./lib/ from the
 # version-pinned snapshot (the `[package].cyrius` pin) on build/deps, so a
 # committed copy would only go stale and shadow the matched snapshot.
 /lib/
-
-# Cargo
-Cargo.lock
 
 # IDE
 .idea/
@@ -26,18 +17,11 @@ Cargo.lock
 .DS_Store
 Thumbs.db
 
-# Coverage / profiling
+# Coverage (cyrius coverage)
 /coverage/
-*.profraw
-*.profdata
-lcov.info
-tarpaulin-report.*
 
 # Claude Code
 .claude/
-
-# Benchmarks (CSV history is tracked, raw criterion output is not)
-/target/criterion/
 
 # Environment / secrets
 .env

@@ -7,6 +7,68 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+Documentation and repository housekeeping. No source behaviour change; 285 tests
+pass and the benchmark suite is untouched.
+
+### Removed
+
+- **`rust-old/`** — the preserved Rust v1.5.0 tree (29 files, 10,842 lines).
+  A per-function audit confirmed the port is complete: every `pub fn` in the 14
+  Rust modules has a Cyrius counterpart, and the Cyrius modules carry *more*
+  functions than their originals because the port split accessors out. The two
+  apparent gaps were naming, not omissions — `civilizations_at` survives as the
+  hoosh tool name (resolving through `civs_active_at`), and `init_with_level`
+  became `itihas_log_init_level`. Everything the Rust tests, examples and
+  benchmarks exercised maps to a Cyrius equivalent.
+
+  `mcp.rs` was the one module never ported, so its reference value is preserved
+  as **`docs/development/mcp-port-reference.md`** — public surface, all five tool
+  schemas, handler-to-query mappings, and porting notes — rather than as 714
+  lines of un-buildable Rust. The full tree remains in git history.
+
+- **Rust-era `.gitignore` entries** — `**/*.rs.bk`, `Cargo.lock`, `/target/`,
+  `/target/criterion/`, and the Rust/LLVM coverage artifacts (`*.profraw`,
+  `*.profdata`, `lcov.info`, `tarpaulin-report.*`). None can be produced by this
+  repository any more.
+
+### Changed
+
+- **`docs/development/roadmap.md` rewritten** (157 → 116 lines). It now tracks
+  **open work only** — every "Completed in X" section was duplicating the
+  CHANGELOG, which the file's own header said it would not do. Open items are
+  organised into arcs: **2.4.x** hardening (the 2.4.2 audit's un-batched
+  findings), **2.5.0** tool integration, **2.6.x** performance, **2.7.x**
+  structural, plus demand-gated data work.
+
+- **bote is no longer a blocker.** The roadmap recorded v2.5.0 as "blocked on
+  bote toolchain bring-up". That is stale: bote **3.3.7** is pinned to cyrius
+  6.5.35, builds clean, and `dist/bote.cyr` exports the whole surface itihas
+  needs. The roadmap now carries a verified API mapping (`tool_def_new`,
+  `schema_new`, `ann_read_only`, `registry_register`, `dispatcher_handle`,
+  `host_registry_*`) and points at `bote/src/libro_tools.cyr ::
+  libro_tools_register()` as a working reference for the same pattern. The mcp
+  and daimon modules are now ordinary scheduled work.
+
+- **`benchmarks-rust-v-cyrius.md`** — the "Not Yet Ported" table was a
+  2026-04-12 snapshot in which six of eight rows had since shipped (JSON
+  serialization, case-insensitive lookups, description fields, the hoosh module,
+  the `.bcyr` harness) or become unblocked (mcp, daimon). Each row now carries
+  its current status. Its `interactions_for_rome` note also still said 22
+  interactions; the table has held 21 since 2.4.2.
+
+### Fixed — stale documentation
+
+- **Battle count corrected 40+ → 35** in `README.md`, `src/lib.cyr`,
+  `src/campaign.cyr` and `docs/guides/usage.md`. Counted directly from the
+  `bat_add` rows. All ten entity counts were re-verified against the data and
+  are correct at 338 total.
+- **`docs/architecture/overview.md`** — dropped the `rust-old/` row from the
+  source tree and added the `dist/itihas.deps` sidecar that 2.4.1 introduced.
+- **`SECURITY.md`** — the 1.x row pointed at a directory that no longer exists.
+- **`CLAUDE.md`** — the documented docs layout omitted `docs/sources/` (nine
+  files of data provenance) and described `roadmap.md` as holding completed
+  items, which is the opposite of the convention now in force.
+
 ## [2.4.2] - 2026-08-29
 
 P(-1) scaffold-hardening release — a full audit/refactor/security sweep with no

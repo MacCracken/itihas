@@ -1,4 +1,4 @@
-# itihas — military campaigns (14 campaigns, 40+ battles)
+# itihas — military campaigns (14 campaigns, 35 battles)
 
 enum CampaignOutcome { OUT_VICTORY; OUT_DEFEAT; OUT_STALEMATE; OUT_TREATY; OUT_INCONCLUSIVE; }
 enum CampOff { CAMP_NAME=0; CAMP_REGION=8; CAMP_START=16; CAMP_END=24; CAMP_BELLA=32; CAMP_BELLB=40; CAMP_CMDS=48; CAMP_BATTLES=56; CAMP_OUT=64; CAMP_DESC=72; CAMP_SIZE=80; }

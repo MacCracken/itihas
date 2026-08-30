@@ -506,7 +506,7 @@ fn main() {
     check(vec_len(effects_of("invention of writing")), vec_len(effects_of("Invention of Writing")), "effects_of folds case");
     check(vec_len(interactions_for("roman empire")), vec_len(interactions_for("Roman Empire")), "interactions_for folds case");
     check(vec_len(interactions_between("roman empire", "ancient egypt")),
-          vec_len(interactions_between("Roman Empire", "Ancient Egypt")), "interactions_between folds case");
+      vec_len(interactions_between("Roman Empire", "Ancient Egypt")), "interactions_between folds case");
     zero(vec_len(causes_of("No Such Event")), "causes_of unknown = 0");
     zero(vec_len(effects_of("No Such Event")), "effects_of unknown = 0");
 
@@ -541,7 +541,7 @@ fn main() {
     # ---------------------------------------------------------------
     println("--- json escaping ---");
     var hostile = era_new(str_from("Tab\tAnd \"Quote\""), 1, 2, str_from("R"),
-                          str_from("back\\slash\r\nlines"), ANCIENT, SCOPE_GLOBAL);
+      str_from("back\\slash\r\nlines"), ANCIENT, SCOPE_GLOBAL);
     var hj = era_to_json(hostile);
     ok(json_parse(hj), "hostile era json parses");
     ok(str_contains_cstr(hj, "\\t"), "hostile era escapes tab");

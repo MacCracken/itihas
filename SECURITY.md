@@ -18,7 +18,7 @@ Itihas is a pure historical data library providing civilization, era, event, cam
 | Version | Supported |
 |---------|-----------|
 | 0.1.x (Cyrius) | Yes |
-| 1.x (Rust, rust-old/) | Reference only, not maintained |
+| 1.x (Rust) | Unsupported. The source is in git history only (`rust-old/`, removed after the port completed) |
 
 ## Reporting
 

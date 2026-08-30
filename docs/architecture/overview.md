@@ -38,8 +38,8 @@ itihas/
 │   ├── itihas.tcyr       — full 285-assertion suite (cyrius test)
 │   └── itihas.bcyr       — 28-benchmark suite (cyrius bench)
 ├── dist/
-│   └── itihas.cyr        — single-file consumer bundle (cyrius distlib)
-└── rust-old/             — preserved Rust v1.5.0 source (reference)
+│   ├── itihas.cyr        — single-file consumer bundle (cyrius distlib)
+│   └── itihas.deps       — stdlib leaves the bundle needs in scope (cyrius deps)
 ```
 
 ## Data Flow

@@ -96,13 +96,20 @@ docs/ (required):
   architecture/
     overview.md      — module map, data flow, consumers, dependency stack
   development/
-    roadmap.md       — completed items, backlog, future features, v1.0 criteria
+    roadmap.md       — OPEN work only (arcs + backlog). Completed releases live
+                       in CHANGELOG.md and are not duplicated here.
+
+docs/ (present):
+  development/
+    mcp-port-reference.md — spec for the one module not yet ported (mcp/daimon)
+  guides/
+    usage.md         — patterns, philosophy, code examples
+  sources/
+    README.md + one file per data module — provenance for the historical data
 
 docs/ (when earned — not scaffolded empty):
   adr/
     NNN-title.md     — architectural decision records
-  guides/
-    usage.md         — patterns, philosophy, code examples
 ```
 
 ## CHANGELOG Format

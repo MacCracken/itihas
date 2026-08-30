@@ -1,0 +1,78 @@
+# MCP / daimon port reference
+
+This is the specification for the two modules still unported from the Rust
+original: `mcp` and its `daimon` submodule (roadmap **v2.5.0**, items 8 and 9).
+
+It exists because `rust-old/` was removed once every other module had shipped.
+`mcp.rs` was the only file with reference value left, so its surface, tool
+schemas and handler mappings are captured here rather than kept as 714 lines of
+un-buildable Rust. The original remains in git history if the full text is ever
+needed:
+
+```
+git log --all -- rust-old/src/mcp.rs
+git show <commit>:rust-old/src/mcp.rs
+```
+
+**Status**: blocked on the bote Cyrius port reaching toolchain parity. Nothing
+in itihas needs to change before then.
+
+## Public surface
+
+Six functions across two modules.
+
+| Module | Function | Purpose |
+|--------|----------|---------|
+| `mcp` | `tool_definitions()` | The five tool definitions below, all read-only |
+| `mcp` | `register_handlers(dispatcher)` | Bind each tool name to its handler |
+| `mcp` | `register_all(dispatcher)` | `tool_definitions()` + `register_handlers()` in one call |
+| `mcp::daimon` | `register_tools(registry)` | Register the tools on an `McpHostRegistry` |
+| `mcp::daimon` | `host_tool_descriptions()` | The same defs in daimon's description format |
+| `mcp::daimon` | `invoke(name, arguments)` | Dispatch by tool name; `None` for an unknown name |
+
+`ToolResult` was a two-variant enum — success carrying a JSON value, or an error
+carrying a message. In Cyrius that maps to the existing packed-pointer
+convention rather than a tagged union.
+
+## Tool definitions
+
+All five are **read-only** lookups over static data, and every parameter is
+optional — a call with no arguments returns the full collection. Year fields are
+signed, negative meaning BCE, matching the rest of itihas.
+
+| Tool | Parameters | Backing queries |
+|------|-----------|-----------------|
+| `itihas_era` | `name`, `year`, `region` | `era_by_name`, `eras_containing`, `eras_by_region`, `all_eras` |
+| `itihas_civilization` | `name`, `year`, `region` | `civ_by_name`, `civs_active_at`, `civs_by_region`, `all_civilizations` |
+| `itihas_event` | `name`, `start_year`, `end_year`, `category` | `event_by_name`, `events_between`, `events_by_category`, `all_events` |
+| `itihas_figure` | `name`, `domain` | `figure_by_name`, `figures_by_domain`, `all_figures` |
+| `itihas_timeline` | `start_year`, `end_year` | `events_between`, `eras_containing`, `civs_active_at` |
+
+Descriptions as originally written:
+
+- `itihas_era` — "Look up historical eras by name, year, scope, or region"
+- `itihas_civilization` — "Look up civilizations by name, region, or active year"
+- `itihas_event` — "Look up historical events by name, year range, or category"
+- `itihas_figure` — "Look up historical figures by name or domain"
+- `itihas_timeline` — "Get a timeline of events, eras, and civilizations for a year range"
+
+## Handler dispatch
+
+Each handler selects a query by which parameters are present, most specific
+first (`name` before `year` before `region`), falling back to the full
+collection. Results serialize through the existing `*_to_json` functions in
+`src/serial.cyr`, so no new serialization is required.
+
+`itihas_timeline` is the only composite: it unions events, eras and
+civilizations for the requested range into one object.
+
+## Notes for the Cyrius port
+
+- `src/hoosh.cyr` already implements the same *shape* for a different transport
+  — `hoosh_tool_defs_json()` emits six tool definitions and `parse_tool_call()`
+  dispatches by name. That is the closest working model; the MCP tool names and
+  parameter sets differ, but the dispatch structure carries over directly.
+- The Rust version used `#[must_use]` on the pure functions. In Cyrius that is
+  the bare `#must_use` attribute — see CLAUDE.md.
+- `tracing::info!` / `tracing::debug!` calls in `register_tools` map to the
+  `sakshi` wrappers in `src/logging.cyr`.

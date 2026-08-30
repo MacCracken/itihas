@@ -147,7 +147,7 @@ var aristotle = figure_by_name("Aristotle");
 
 ### Campaigns
 
-14 military campaigns with 40+ battles.
+14 military campaigns with 35 battles.
 
 ```cyrius
 var count = campaign_count();    # 14
