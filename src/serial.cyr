@@ -27,29 +27,64 @@ fn _json_int(sb, key, val) {
 fn _json_sep(sb) { str_builder_add_cstr(sb, ", "); return 0; }
 
 # ----------------------------------------------------------------
+# Arrays
+# ----------------------------------------------------------------
+# Lived in hoosh.cyr until the _to_json_into split; it is a serialization
+# primitive, and mcp.cyr uses it too, so it belongs beside the record writers.
+# Appends the array to a caller-supplied builder. `into_fn` is an
+# `X_to_json_into` from serial.cyr, so each record is written straight into `sb`
+# — the older shape called `X_to_json`, which built a private builder and a
+# finished Str per record, then copied every byte a second time.
+fn _json_array_into(sb, v, into_fn) {
+    str_builder_add_cstr(sb, "[");
+    var n = vec_len(v);
+    for (var i = 0; i < n; i = i + 1) {
+        if (i > 0) { str_builder_add_cstr(sb, ", "); }
+        fncall2(into_fn, sb, vec_get(v, i));
+    }
+    str_builder_add_cstr(sb, "]");
+    return 0;
+}
+
+fn _json_array(v, into_fn) {
+    var sb = str_builder_new();
+    _json_array_into(sb, v, into_fn);
+    return str_builder_build(sb);
+}
+
+# ----------------------------------------------------------------
 # Era
 # ----------------------------------------------------------------
+# Appends the object to a caller-supplied builder. era_to_json is the
+# allocating wrapper; prefer this one when the result is going straight into
+# another builder, which saves a throwaway Str and a second copy of every byte.
+fn era_to_json_into(sb, p) {
+    str_builder_add_cstr(sb, "{");
+    _json_str(sb, "name", era_name(p));
+    _json_sep(sb); _json_int(sb, "start_year", era_start(p));
+    _json_sep(sb); _json_int(sb, "end_year", era_end(p));
+    _json_sep(sb); _json_str(sb, "region", era_region(p));
+    _json_sep(sb); _json_str(sb, "description", era_desc(p));
+    _json_sep(sb); _json_int(sb, "category", era_cat(p));
+    _json_sep(sb); _json_int(sb, "scope", era_scope(p));
+    str_builder_add_cstr(sb, "}");
+    return 0;
+}
+
 #must_use
 fn era_to_json(p) {
     var sb = str_builder_new();
-    str_builder_add_cstr(sb, "{");
-    _json_str(sb, "name", load64(p+ERA_NAME));
-    _json_sep(sb); _json_int(sb, "start_year", load64(p+ERA_START));
-    _json_sep(sb); _json_int(sb, "end_year", load64(p+ERA_END));
-    _json_sep(sb); _json_str(sb, "region", load64(p+ERA_REGION));
-    _json_sep(sb); _json_str(sb, "description", load64(p+ERA_DESC));
-    _json_sep(sb); _json_int(sb, "category", load64(p+ERA_CAT));
-    _json_sep(sb); _json_int(sb, "scope", load64(p+ERA_SCOPE));
-    str_builder_add_cstr(sb, "}");
+    era_to_json_into(sb, p);
     return str_builder_build(sb);
 }
 
 # ----------------------------------------------------------------
 # Civilization
 # ----------------------------------------------------------------
-#must_use
-fn civ_to_json(p) {
-    var sb = str_builder_new();
+# Appends the object to a caller-supplied builder. civ_to_json is the
+# allocating wrapper; prefer this one when the result is going straight into
+# another builder, which saves a throwaway Str and a second copy of every byte.
+fn civ_to_json_into(sb, p) {
     str_builder_add_cstr(sb, "{");
     _json_str(sb, "name", load64(p+CIV_NAME));
     _json_sep(sb); _json_str(sb, "region", load64(p+CIV_REGION));
@@ -60,15 +95,23 @@ fn civ_to_json(p) {
     _json_sep(sb); _json_str(sb, "script", load64(p+CIV_SCRIPT));
     _json_sep(sb); _json_str(sb, "language", load64(p+CIV_LANG));
     str_builder_add_cstr(sb, "}");
+    return 0;
+}
+
+#must_use
+fn civ_to_json(p) {
+    var sb = str_builder_new();
+    civ_to_json_into(sb, p);
     return str_builder_build(sb);
 }
 
 # ----------------------------------------------------------------
 # Event
 # ----------------------------------------------------------------
-#must_use
-fn event_to_json(p) {
-    var sb = str_builder_new();
+# Appends the object to a caller-supplied builder. event_to_json is the
+# allocating wrapper; prefer this one when the result is going straight into
+# another builder, which saves a throwaway Str and a second copy of every byte.
+fn event_to_json_into(sb, p) {
     str_builder_add_cstr(sb, "{");
     _json_str(sb, "name", load64(p+EVT_NAME));
     _json_sep(sb); _json_int(sb, "year", load64(p+EVT_YEAR));
@@ -78,15 +121,23 @@ fn event_to_json(p) {
     _json_sep(sb); _json_str(sb, "civilizations", load64(p+EVT_CIVS));
     _json_sep(sb); _json_int(sb, "significance", load64(p+EVT_SIG));
     str_builder_add_cstr(sb, "}");
+    return 0;
+}
+
+#must_use
+fn event_to_json(p) {
+    var sb = str_builder_new();
+    event_to_json_into(sb, p);
     return str_builder_build(sb);
 }
 
 # ----------------------------------------------------------------
 # Figure
 # ----------------------------------------------------------------
-#must_use
-fn figure_to_json(p) {
-    var sb = str_builder_new();
+# Appends the object to a caller-supplied builder. figure_to_json is the
+# allocating wrapper; prefer this one when the result is going straight into
+# another builder, which saves a throwaway Str and a second copy of every byte.
+fn figure_to_json_into(sb, p) {
     str_builder_add_cstr(sb, "{");
     _json_str(sb, "name", load64(p+FIG_NAME));
     _json_sep(sb); _json_int(sb, "birth_year", load64(p+FIG_BIRTH));
@@ -95,15 +146,23 @@ fn figure_to_json(p) {
     _json_sep(sb); _json_int(sb, "domain", load64(p+FIG_DOM));
     _json_sep(sb); _json_str(sb, "description", load64(p+FIG_DESC));
     str_builder_add_cstr(sb, "}");
+    return 0;
+}
+
+#must_use
+fn figure_to_json(p) {
+    var sb = str_builder_new();
+    figure_to_json_into(sb, p);
     return str_builder_build(sb);
 }
 
 # ----------------------------------------------------------------
 # Calendar
 # ----------------------------------------------------------------
-#must_use
-fn calendar_to_json(p) {
-    var sb = str_builder_new();
+# Appends the object to a caller-supplied builder. calendar_to_json is the
+# allocating wrapper; prefer this one when the result is going straight into
+# another builder, which saves a throwaway Str and a second copy of every byte.
+fn calendar_to_json_into(sb, p) {
     str_builder_add_cstr(sb, "{");
     _json_str(sb, "name", load64(p+CAL_NAME));
     _json_sep(sb); _json_int(sb, "type", load64(p+CAL_TYPE));
@@ -111,27 +170,43 @@ fn calendar_to_json(p) {
     _json_sep(sb); _json_int(sb, "months", load64(p+CAL_MONTHS));
     _json_sep(sb); _json_str(sb, "leap", load64(p+CAL_LEAP));
     str_builder_add_cstr(sb, "}");
+    return 0;
+}
+
+#must_use
+fn calendar_to_json(p) {
+    var sb = str_builder_new();
+    calendar_to_json_into(sb, p);
     return str_builder_build(sb);
 }
 
 # ----------------------------------------------------------------
 # Campaign (with nested battles array)
 # ----------------------------------------------------------------
-#must_use
-fn battle_to_json(b) {
-    var sb = str_builder_new();
+# Appends the object to a caller-supplied builder. battle_to_json is the
+# allocating wrapper; prefer this one when the result is going straight into
+# another builder, which saves a throwaway Str and a second copy of every byte.
+fn battle_to_json_into(sb, b) {
     str_builder_add_cstr(sb, "{");
     _json_str(sb, "name", load64(b+BAT_NAME));
     _json_sep(sb); _json_int(sb, "year", load64(b+BAT_YEAR));
     _json_sep(sb); _json_str(sb, "location", load64(b+BAT_LOC));
     _json_sep(sb); _json_str(sb, "description", load64(b+BAT_DESC));
     str_builder_add_cstr(sb, "}");
-    return str_builder_build(sb);
+    return 0;
 }
 
 #must_use
-fn campaign_to_json(p) {
+fn battle_to_json(b) {
     var sb = str_builder_new();
+    battle_to_json_into(sb, b);
+    return str_builder_build(sb);
+}
+
+# Appends the object to a caller-supplied builder. campaign_to_json is the
+# allocating wrapper; prefer this one when the result is going straight into
+# another builder, which saves a throwaway Str and a second copy of every byte.
+fn campaign_to_json_into(sb, p) {
     str_builder_add_cstr(sb, "{");
     _json_str(sb, "name", load64(p+CAMP_NAME));
     _json_sep(sb); _json_str(sb, "region", load64(p+CAMP_REGION));
@@ -149,19 +224,27 @@ fn campaign_to_json(p) {
     var bn = vec_len(bats);
     for (var bi = 0; bi < bn; bi = bi + 1) {
         if (bi > 0) { str_builder_add_cstr(sb, ", "); }
-        str_builder_add(sb, battle_to_json(vec_get(bats, bi)));
+        battle_to_json_into(sb, vec_get(bats, bi));
     }
     str_builder_add_cstr(sb, "]");
     str_builder_add_cstr(sb, "}");
+    return 0;
+}
+
+#must_use
+fn campaign_to_json(p) {
+    var sb = str_builder_new();
+    campaign_to_json_into(sb, p);
     return str_builder_build(sb);
 }
 
 # ----------------------------------------------------------------
 # Site
 # ----------------------------------------------------------------
-#must_use
-fn site_to_json(p) {
-    var sb = str_builder_new();
+# Appends the object to a caller-supplied builder. site_to_json is the
+# allocating wrapper; prefer this one when the result is going straight into
+# another builder, which saves a throwaway Str and a second copy of every byte.
+fn site_to_json_into(sb, p) {
     str_builder_add_cstr(sb, "{");
     _json_str(sb, "name", load64(p+SITE_NAME));
     _json_sep(sb); _json_str(sb, "location", load64(p+SITE_LOC));
@@ -173,15 +256,23 @@ fn site_to_json(p) {
     _json_sep(sb); _json_int(sb, "discovered", load64(p+SITE_DISC));
     _json_sep(sb); _json_str(sb, "description", load64(p+SITE_DESC));
     str_builder_add_cstr(sb, "}");
+    return 0;
+}
+
+#must_use
+fn site_to_json(p) {
+    var sb = str_builder_new();
+    site_to_json_into(sb, p);
     return str_builder_build(sb);
 }
 
 # ----------------------------------------------------------------
 # Trade Route
 # ----------------------------------------------------------------
-#must_use
-fn route_to_json(p) {
-    var sb = str_builder_new();
+# Appends the object to a caller-supplied builder. route_to_json is the
+# allocating wrapper; prefer this one when the result is going straight into
+# another builder, which saves a throwaway Str and a second copy of every byte.
+fn route_to_json_into(sb, p) {
     str_builder_add_cstr(sb, "{");
     _json_str(sb, "name", load64(p+ROUTE_NAME));
     _json_sep(sb); _json_str(sb, "regions", load64(p+ROUTE_REGIONS));
@@ -192,30 +283,46 @@ fn route_to_json(p) {
     _json_sep(sb); _json_int(sb, "end_year", load64(p+ROUTE_END));
     _json_sep(sb); _json_str(sb, "description", load64(p+ROUTE_DESC));
     str_builder_add_cstr(sb, "}");
+    return 0;
+}
+
+#must_use
+fn route_to_json(p) {
+    var sb = str_builder_new();
+    route_to_json_into(sb, p);
     return str_builder_build(sb);
 }
 
 # ----------------------------------------------------------------
 # Causality
 # ----------------------------------------------------------------
-#must_use
-fn causality_to_json(p) {
-    var sb = str_builder_new();
+# Appends the object to a caller-supplied builder. causality_to_json is the
+# allocating wrapper; prefer this one when the result is going straight into
+# another builder, which saves a throwaway Str and a second copy of every byte.
+fn causality_to_json_into(sb, p) {
     str_builder_add_cstr(sb, "{");
     _json_str(sb, "cause", load64(p+CAUS_CAUSE));
     _json_sep(sb); _json_str(sb, "effect", load64(p+CAUS_EFFECT));
     _json_sep(sb); _json_int(sb, "strength", load64(p+CAUS_STR));
     _json_sep(sb); _json_str(sb, "description", load64(p+CAUS_DESC));
     str_builder_add_cstr(sb, "}");
+    return 0;
+}
+
+#must_use
+fn causality_to_json(p) {
+    var sb = str_builder_new();
+    causality_to_json_into(sb, p);
     return str_builder_build(sb);
 }
 
 # ----------------------------------------------------------------
 # Interaction
 # ----------------------------------------------------------------
-#must_use
-fn interaction_to_json(p) {
-    var sb = str_builder_new();
+# Appends the object to a caller-supplied builder. interaction_to_json is the
+# allocating wrapper; prefer this one when the result is going straight into
+# another builder, which saves a throwaway Str and a second copy of every byte.
+fn interaction_to_json_into(sb, p) {
     str_builder_add_cstr(sb, "{");
     _json_str(sb, "civilization_a", load64(p+INT_CIVA));
     _json_sep(sb); _json_str(sb, "civilization_b", load64(p+INT_CIVB));
@@ -224,5 +331,12 @@ fn interaction_to_json(p) {
     _json_sep(sb); _json_int(sb, "end_year", load64(p+INT_END));
     _json_sep(sb); _json_str(sb, "description", load64(p+INT_DESC));
     str_builder_add_cstr(sb, "}");
+    return 0;
+}
+
+#must_use
+fn interaction_to_json(p) {
+    var sb = str_builder_new();
+    interaction_to_json_into(sb, p);
     return str_builder_build(sb);
 }

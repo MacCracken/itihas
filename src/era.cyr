@@ -12,38 +12,63 @@ enum EraOff { ERA_NAME = 0; ERA_START = 8; ERA_END = 16; ERA_REGION = 24; ERA_DE
 # presentation layers should render it as "present" rather than the digits.
 enum EraSentinel { ERA_ONGOING = 2147483647; }
 
+# --- Era struct (native view over the 56-byte layout) ---
+# NOTE: hot paths call the generated Era_<field> accessors directly rather than
+# the era_* wrappers. Cyrius does not inline, so era_start -> Era_start_year is
+# two calls where the old load64 body was one; routing eras_containing and
+# _era_upper_bound through the wrappers cost a measured +12.3% on
+# eras_containing_500bce. The era_* names remain the public, stable API.
+# Field order MUST match the EraOff offsets above (declaration order x 8, all
+# fields i64). #derive(accessors) generates Era_<field>(p) / Era_set_<field>(p,
+# v); the era_* accessors below delegate to these and era_new sets fields via
+# the generated setters. Named fields make an offset collision a compile error
+# rather than a silent aliasing bug — the EraOff enum was the only thing
+# keeping the seven offsets distinct, and nothing checked it.
+#
+# The EraOff enum is retained: serial.cyr and the sorted-view comparators still
+# address fields by offset, and tests/itihas.tcyr pins each field to its offset.
+#derive(accessors)
+struct Era {
+    name; start_year; end_year; region; description; category; scope;
+}
+
 var era_vec = 0;
 var era_init_done = 0;
 
 #must_use
 fn era_new(name: Str, sy, ey, region: Str, desc: Str, cat, scope) {
     var p = xalloc(ERA_SIZE);
-    store64(p + ERA_NAME, name);
-    store64(p + ERA_START, sy);
-    store64(p + ERA_END, ey);
-    store64(p + ERA_REGION, region);
-    store64(p + ERA_DESC, desc);
-    store64(p + ERA_CAT, cat);
-    store64(p + ERA_SCOPE, scope);
+    Era_set_name(p, name);
+    Era_set_start_year(p, sy);
+    Era_set_end_year(p, ey);
+    Era_set_region(p, region);
+    Era_set_description(p, desc);
+    Era_set_category(p, cat);
+    Era_set_scope(p, scope);
     return p;
 }
 
 #must_use
-fn era_name(p) { return load64(p + ERA_NAME); }
+fn era_name(p) { return Era_name(p); }
 #must_use
-fn era_start(p) { return load64(p + ERA_START); }
+fn era_start(p) { return Era_start_year(p); }
 #must_use
-fn era_end(p) { return load64(p + ERA_END); }
+fn era_end(p) { return Era_end_year(p); }
 
 # True when this era has no end year yet (end == ERA_ONGOING).
 #must_use
-fn era_is_ongoing(p) { return load64(p + ERA_END) == ERA_ONGOING; }
+fn era_is_ongoing(p) { return Era_end_year(p) == ERA_ONGOING; }
 #must_use
-fn era_region(p) { return load64(p + ERA_REGION); }
+fn era_region(p) { return Era_region(p); }
+
+# The description had no accessor at all until the struct migration — serial.cyr
+# reached through `load64(p + ERA_DESC)` directly.
 #must_use
-fn era_cat(p) { return load64(p + ERA_CAT); }
+fn era_desc(p) { return Era_description(p); }
 #must_use
-fn era_scope(p) { return load64(p + ERA_SCOPE); }
+fn era_cat(p) { return Era_category(p); }
+#must_use
+fn era_scope(p) { return Era_scope(p); }
 
 # Build the era table (25 rows). Called once by the lazy initializer.
 fn build_eras() {
@@ -85,6 +110,43 @@ fn all_eras() {
     if (era_init_done == 0) { era_vec = build_eras(); era_init_done = 1; }
     return era_vec;
 }
+
+var era_start_vec = 0;
+var era_start_done = 0;
+
+# The table in ascending start-year order, built once. See all_events_by_year
+# in event.cyr for the rationale; the ordering is a property of the immutable
+# table, so deriving it per query was pure waste.
+#
+# Scanning this view in order means the result comes out start-sorted for free,
+# which is what removes the per-call insertion sort. Order matches the old
+# filter-then-stable-sort exactly.
+#must_use
+fn all_eras_by_start() {
+    if (era_start_done == 0) {
+        var src = all_eras();
+        var out = vec_new();
+        var n = vec_len(src);
+        for (var i = 0; i < n; i = i + 1) { vec_push(out, vec_get(src, i)); }
+        vec_sort(out, &_cmp_era_start);
+        era_start_vec = out;
+        era_start_done = 1;
+    }
+    return era_start_vec;
+}
+
+# Index of the first record starting AFTER `y` — the exclusive end of the
+# prefix that can possibly contain `y`.
+fn _era_upper_bound(v, y) {
+    var lo = 0;
+    var hi = vec_len(v);
+    while (lo < hi) {
+        var mid = lo + (hi - lo) / 2;
+        if (Era_start_year(vec_get(v, mid)) <= y) { lo = mid + 1; }
+        else { hi = mid; }
+    }
+    return lo;
+}
 #must_use
 fn era_count() { return vec_len(all_eras()); }
 #must_use
@@ -96,13 +158,14 @@ fn _cmp_era_start(a, b) { return load64(a+ERA_START) - load64(b+ERA_START); }
 fn eras_containing(year) {
     itrace_i("looking up eras containing year", "year", year);
     var result = vec_new();
-    var v = all_eras();
-    var n = vec_len(v);
-    for (var i = 0; i < n; i = i + 1) {
+    var v = all_eras_by_start();
+    var ub = _era_upper_bound(v, year);
+    var i = 0;
+    while (i < ub) {
         var p = vec_get(v, i);
-        if (year >= era_start(p) && year <= era_end(p)) { vec_push(result, p); }
+        if (year <= Era_end_year(p)) { vec_push(result, p); }
+        i = i + 1;
     }
-    vec_sort(result, &_cmp_era_start);
     return result;
 }
 

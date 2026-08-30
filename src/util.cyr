@@ -199,18 +199,27 @@ fn itrace_pair(msg, key, a: Str, b: Str) {
 fn json_escape_into(sb, val: Str) {
     var vlen = str_len(val);
     var vd = str_data(val);
+    # Bytes needing no escape are copied in runs rather than one call per byte.
+    # Historical prose escapes essentially nothing, so the common case is a
+    # single memcpy of the whole string instead of ~400 str_builder_add_byte
+    # calls. `run` is the start of the current clean run.
+    var run = 0;
     var i = 0;
     while (i < vlen) {
         var c = load8(vd + i);
-        if (c == 34) { str_builder_add_cstr(sb, "\\\""); }
-        else { if (c == 92) { str_builder_add_cstr(sb, "\\\\"); }
-            else { if (c == 8)  { str_builder_add_cstr(sb, "\\b"); }
-                else { if (c == 9)  { str_builder_add_cstr(sb, "\\t"); }
-                    else { if (c == 10) { str_builder_add_cstr(sb, "\\n"); }
-                        else { if (c == 12) { str_builder_add_cstr(sb, "\\f"); }
-                            else { if (c == 13) { str_builder_add_cstr(sb, "\\r"); }
-                                else { if (c >= 0 && c < 32) {
-                                        # Remaining C0 controls have no shorthand — emit \u00XX.
+        # load8 is unsigned, so the three tests below cover everything JSON
+        # requires escaping: the C0 controls, the quote, and the backslash.
+        if (c < 32 || c == 34 || c == 92) {
+            if (i > run) { str_builder_add(sb, str_new(vd + run, i - run)); }
+            if (c == 34) { str_builder_add_cstr(sb, "\\\""); }
+            else { if (c == 92) { str_builder_add_cstr(sb, "\\\\"); }
+                else { if (c == 8)  { str_builder_add_cstr(sb, "\\b"); }
+                    else { if (c == 9)  { str_builder_add_cstr(sb, "\\t"); }
+                        else { if (c == 10) { str_builder_add_cstr(sb, "\\n"); }
+                            else { if (c == 12) { str_builder_add_cstr(sb, "\\f"); }
+                                else { if (c == 13) { str_builder_add_cstr(sb, "\\r"); }
+                                    else {
+                                        # Remaining C0 controls have no shorthand.
                                         str_builder_add_cstr(sb, "\\u00");
                                         var hi = c / 16;
                                         var lo = c - hi * 16;
@@ -218,10 +227,12 @@ fn json_escape_into(sb, val: Str) {
                                         else { str_builder_add_byte(sb, 87 + hi); }
                                         if (lo < 10) { str_builder_add_byte(sb, 48 + lo); }
                                         else { str_builder_add_byte(sb, 87 + lo); }
-                                    }
-                                    else { str_builder_add_byte(sb, c); } } } } } } } }
+                                    } } } } } } }
+            run = i + 1;
+        }
         i = i + 1;
     }
+    if (vlen > run) { str_builder_add(sb, str_new(vd + run, vlen - run)); }
     return 0;
 }
 

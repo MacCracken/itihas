@@ -112,6 +112,37 @@ fn all_campaigns() {
     if (camp_init_done == 0) { camp_vec = build_campaigns(); camp_init_done = 1; }
     return camp_vec;
 }
+
+var camp_start_vec = 0;
+var camp_start_done = 0;
+
+# The campaign table in ascending start-year order, built once. Same rationale
+# as all_events_by_year in event.cyr.
+#must_use
+fn all_campaigns_by_start() {
+    if (camp_start_done == 0) {
+        var src = all_campaigns();
+        var out = vec_new();
+        var n = vec_len(src);
+        for (var i = 0; i < n; i = i + 1) { vec_push(out, vec_get(src, i)); }
+        vec_sort(out, &_cmp_camp_start);
+        camp_start_vec = out;
+        camp_start_done = 1;
+    }
+    return camp_start_vec;
+}
+
+# Index of the first campaign starting AFTER `y`.
+fn _camp_upper_bound(v, y) {
+    var lo = 0;
+    var hi = vec_len(v);
+    while (lo < hi) {
+        var mid = lo + (hi - lo) / 2;
+        if (load64(vec_get(v, mid) + CAMP_START) <= y) { lo = mid + 1; }
+        else { hi = mid; }
+    }
+    return lo;
+}
 #must_use
 fn campaign_count() { return vec_len(all_campaigns()); }
 
@@ -194,11 +225,17 @@ fn _cmp_camp_start(a, b) { return load64(a+CAMP_START) - load64(b+CAMP_START); }
 fn campaigns_between(sy, ey) {
     itrace_range("looking up campaigns between years", sy, ey);
     var result = vec_new();
-    var v = all_campaigns(); var n = vec_len(v);
-    for (var i = 0; i < n; i = i + 1) {
+    var v = all_campaigns_by_start();
+    # Interval OVERLAP, not containment: a campaign matches when it starts on or
+    # before `ey` and ends on or after `sy`. Only the prefix starting at or
+    # before `ey` can qualify, and within it each end year is still checked —
+    # ends are not ordered by start.
+    var ub = _camp_upper_bound(v, ey);
+    var i = 0;
+    while (i < ub) {
         var p = vec_get(v, i);
-        if (load64(p+CAMP_START) <= ey && load64(p+CAMP_END) >= sy) { vec_push(result, p); }
+        if (load64(p + CAMP_END) >= sy) { vec_push(result, p); }
+        i = i + 1;
     }
-    vec_sort(result, &_cmp_camp_start);
     return result;
 }

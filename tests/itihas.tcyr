@@ -36,6 +36,26 @@ fn main() {
     println("=== itihas test suite ===");
 
     # ---------------------------------------------------------------
+    # Era struct layout — the #derive(accessors) Era struct must map
+    # field-for-field onto the EraOff offsets, and sizeof must be 56.
+    # This is what makes an offset renumber a test failure instead of
+    # silent field aliasing; serial.cyr and the comparators still read
+    # some fields by offset, so the two views have to stay in step.
+    # ---------------------------------------------------------------
+    println("--- era struct layout ---");
+    check(ERA_SIZE, 56, "ERA_SIZE=56");
+    var lp = xalloc(ERA_SIZE);
+    Era_set_name(lp, 11);        check(load64(lp + ERA_NAME), 11, "Era_set_name -> ERA_NAME");
+    Era_set_start_year(lp, 22);  check(load64(lp + ERA_START), 22, "Era_set_start_year -> ERA_START");
+    Era_set_end_year(lp, 33);    check(load64(lp + ERA_END), 33, "Era_set_end_year -> ERA_END");
+    Era_set_region(lp, 44);      check(load64(lp + ERA_REGION), 44, "Era_set_region -> ERA_REGION");
+    Era_set_description(lp, 55); check(load64(lp + ERA_DESC), 55, "Era_set_description -> ERA_DESC");
+    Era_set_category(lp, 66);    check(load64(lp + ERA_CAT), 66, "Era_set_category -> ERA_CAT");
+    Era_set_scope(lp, 77);       check(load64(lp + ERA_SCOPE), 77, "Era_set_scope -> ERA_SCOPE");
+    store64(lp + ERA_START, 99); check(Era_start_year(lp), 99, "Era_start_year reads ERA_START");
+    store64(lp + ERA_DESC, 88);  check(era_desc(lp), 88, "era_desc reads ERA_DESC");
+
+    # ---------------------------------------------------------------
     # Module counts
     # ---------------------------------------------------------------
     println("--- counts ---");

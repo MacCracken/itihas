@@ -58,14 +58,18 @@ fn _mcp_err(msg) {
 
 # One record, or a not-found object rather than a bare null, so the agent gets
 # a reason instead of having to infer one.
-fn _mcp_one(p, to_json_fn, what) {
+# `into_fn` is an `X_to_json_into` from serial.cyr throughout, so a record is
+# written once into the builder that becomes the reply.
+fn _mcp_one(p, into_fn, what) {
     if (p == 0) { return _mcp_err(what); }
-    return str_data(fncall1(to_json_fn, p));
+    var sb = str_builder_new();
+    fncall2(into_fn, sb, p);
+    return str_data(str_builder_build(sb));
 }
 
 # A vec of records as a JSON array (reuses hoosh's array builder).
-fn _mcp_many(v, to_json_fn) {
-    return str_data(_json_array(v, to_json_fn));
+fn _mcp_many(v, into_fn) {
+    return str_data(_json_array(v, into_fn));
 }
 
 # Event category name -> CAT_*, or -1 when unrecognised.
@@ -110,56 +114,56 @@ var MCP_NO_YEAR = 0 - 9223372036854775807;
 # it, no argument -> all 25.
 fn itihas_mcp_handle_era(args, claims) {
     var name = _mcp_arg_str(args, "name");
-    if (name != 0) { return _mcp_one(era_by_name(name), &era_to_json, "no era with that name"); }
+    if (name != 0) { return _mcp_one(era_by_name(name), &era_to_json_into, "no era with that name"); }
     var year = _mcp_arg_int(args, "year", MCP_NO_YEAR);
-    if (year != MCP_NO_YEAR) { return _mcp_many(eras_containing(year), &era_to_json); }
+    if (year != MCP_NO_YEAR) { return _mcp_many(eras_containing(year), &era_to_json_into); }
     var region = _mcp_arg_str(args, "region");
-    if (region != 0) { return _mcp_many(eras_by_region(region), &era_to_json); }
-    return _mcp_many(all_eras(), &era_to_json);
+    if (region != 0) { return _mcp_many(eras_by_region(region), &era_to_json_into); }
+    return _mcp_many(all_eras(), &era_to_json_into);
 }
 
 # itihas_civilization: name -> the civilization, year -> those active then,
 # region -> those in it, no argument -> all 53.
 fn itihas_mcp_handle_civilization(args, claims) {
     var name = _mcp_arg_str(args, "name");
-    if (name != 0) { return _mcp_one(civ_by_name(name), &civ_to_json, "no civilization with that name"); }
+    if (name != 0) { return _mcp_one(civ_by_name(name), &civ_to_json_into, "no civilization with that name"); }
     var year = _mcp_arg_int(args, "year", MCP_NO_YEAR);
-    if (year != MCP_NO_YEAR) { return _mcp_many(civs_active_at(year), &civ_to_json); }
+    if (year != MCP_NO_YEAR) { return _mcp_many(civs_active_at(year), &civ_to_json_into); }
     var region = _mcp_arg_str(args, "region");
-    if (region != 0) { return _mcp_many(civs_by_region(region), &civ_to_json); }
-    return _mcp_many(all_civilizations(), &civ_to_json);
+    if (region != 0) { return _mcp_many(civs_by_region(region), &civ_to_json_into); }
+    return _mcp_many(all_civilizations(), &civ_to_json_into);
 }
 
 # itihas_event: name -> the event, start_year+end_year -> the range (BOTH are
 # required for a range query), category -> that category, no argument -> all 105.
 fn itihas_mcp_handle_event(args, claims) {
     var name = _mcp_arg_str(args, "name");
-    if (name != 0) { return _mcp_one(event_by_name(name), &event_to_json, "no event with that name"); }
+    if (name != 0) { return _mcp_one(event_by_name(name), &event_to_json_into, "no event with that name"); }
     var sy = _mcp_arg_int(args, "start_year", MCP_NO_YEAR);
     var ey = _mcp_arg_int(args, "end_year", MCP_NO_YEAR);
     if (sy != MCP_NO_YEAR && ey != MCP_NO_YEAR) {
-        return _mcp_many(events_between(sy, ey), &event_to_json);
+        return _mcp_many(events_between(sy, ey), &event_to_json_into);
     }
     var cat = _mcp_arg_str(args, "category");
     if (cat != 0) {
         var c = _mcp_category_from(cat);
         if (c < 0) { return _mcp_err("unknown event category"); }
-        return _mcp_many(events_by_category(c), &event_to_json);
+        return _mcp_many(events_by_category(c), &event_to_json_into);
     }
-    return _mcp_many(all_events(), &event_to_json);
+    return _mcp_many(all_events(), &event_to_json_into);
 }
 
 # itihas_figure: name -> the figure, domain -> that domain, no argument -> all 52.
 fn itihas_mcp_handle_figure(args, claims) {
     var name = _mcp_arg_str(args, "name");
-    if (name != 0) { return _mcp_one(figure_by_name(name), &figure_to_json, "no figure with that name"); }
+    if (name != 0) { return _mcp_one(figure_by_name(name), &figure_to_json_into, "no figure with that name"); }
     var dom = _mcp_arg_str(args, "domain");
     if (dom != 0) {
         var d = _mcp_domain_from(dom);
         if (d < 0) { return _mcp_err("unknown figure domain"); }
-        return _mcp_many(figures_by_domain(d), &figure_to_json);
+        return _mcp_many(figures_by_domain(d), &figure_to_json_into);
     }
-    return _mcp_many(all_figures(), &figure_to_json);
+    return _mcp_many(all_figures(), &figure_to_json_into);
 }
 
 # The one composite tool: events, eras and civilizations for a year range,
@@ -177,17 +181,17 @@ fn itihas_mcp_handle_timeline(args, claims) {
     str_builder_add_cstr(sb, ", \"end_year\": ");
     str_builder_add_int(sb, ey);
     str_builder_add_cstr(sb, ", \"events\": ");
-    str_builder_add(sb, _json_array(events_between(sy, ey), &event_to_json));
+    str_builder_add(sb, _json_array(events_between(sy, ey), &event_to_json_into));
     # Eras and civilizations are point-in-time queries, so the range is
     # represented by what was live at each endpoint.
     str_builder_add_cstr(sb, ", \"eras_at_start\": ");
-    str_builder_add(sb, _json_array(eras_containing(sy), &era_to_json));
+    str_builder_add(sb, _json_array(eras_containing(sy), &era_to_json_into));
     str_builder_add_cstr(sb, ", \"eras_at_end\": ");
-    str_builder_add(sb, _json_array(eras_containing(ey), &era_to_json));
+    str_builder_add(sb, _json_array(eras_containing(ey), &era_to_json_into));
     str_builder_add_cstr(sb, ", \"civilizations_at_start\": ");
-    str_builder_add(sb, _json_array(civs_active_at(sy), &civ_to_json));
+    str_builder_add(sb, _json_array(civs_active_at(sy), &civ_to_json_into));
     str_builder_add_cstr(sb, ", \"civilizations_at_end\": ");
-    str_builder_add(sb, _json_array(civs_active_at(ey), &civ_to_json));
+    str_builder_add(sb, _json_array(civs_active_at(ey), &civ_to_json_into));
     str_builder_add_cstr(sb, "}");
     return str_data(str_builder_build(sb));
 }

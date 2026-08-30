@@ -140,6 +140,48 @@ fn all_events() {
     if (evt_init_done == 0) { evt_vec = build_events(); evt_init_done = 1; }
     return evt_vec;
 }
+
+var evt_year_vec = 0;
+var evt_year_done = 0;
+
+# Every event in ascending year order, built once.
+#
+# The event table is immutable after build_events(), so the year ordering is a
+# property of the data, not of any one query — but events_between re-derived it
+# on every call, filtering into a fresh vec and then insertion-sorting it.
+# Sorting the whole table once and binary-searching it turns that into a
+# logarithmic seek plus a linear copy of exactly the matches.
+#
+# Order is IDENTICAL to the old path, not merely equivalent: vec_sort is a
+# stable insertion sort and this sorts the table in its build order, so events
+# sharing a year keep the same relative position they had when the filter ran
+# first and the sort second.
+#must_use
+fn all_events_by_year() {
+    if (evt_year_done == 0) {
+        var src = all_events();
+        var out = vec_new();
+        var n = vec_len(src);
+        for (var i = 0; i < n; i = i + 1) { vec_push(out, vec_get(src, i)); }
+        vec_sort(out, &_cmp_evt_year);
+        evt_year_vec = out;
+        evt_year_done = 1;
+    }
+    return evt_year_vec;
+}
+
+# Index of the first event whose year is >= `y`, or vec_len when none is.
+# Plain lower-bound binary search over the sorted view.
+fn _evt_lower_bound(v, y) {
+    var lo = 0;
+    var hi = vec_len(v);
+    while (lo < hi) {
+        var mid = lo + (hi - lo) / 2;
+        if (evt_year(vec_get(v, mid)) < y) { lo = mid + 1; }
+        else { hi = mid; }
+    }
+    return lo;
+}
 #must_use
 fn event_count() { return vec_len(all_events()); }
 
@@ -173,12 +215,16 @@ fn _cmp_evt_year(a, b) { return load64(a+EVT_YEAR) - load64(b+EVT_YEAR); }
 fn events_between(sy, ey) {
     itrace_range("looking up events between years", sy, ey);
     var result = vec_new();
-    var v = all_events(); var n = vec_len(v);
-    for (var i = 0; i < n; i = i + 1) {
+    if (sy > ey) { return result; }
+    var v = all_events_by_year();
+    var n = vec_len(v);
+    var i = _evt_lower_bound(v, sy);
+    while (i < n) {
         var p = vec_get(v, i);
-        if (evt_year(p) >= sy && evt_year(p) <= ey) { vec_push(result, p); }
+        if (evt_year(p) > ey) { return result; }
+        vec_push(result, p);
+        i = i + 1;
     }
-    vec_sort(result, &_cmp_evt_year);
     return result;
 }
 

@@ -1,4 +1,5 @@
-# itihas.bcyr — itihas benchmarks (28 benchmarks, ported from Rust criterion)
+# itihas.bcyr — itihas benchmarks (32 benchmarks; 28 ported from Rust criterion,
+# plus four JSON serialization rows added with the _to_json_into split)
 # Run: cyrius build tests/itihas.bcyr build/itihas_bench && ./build/itihas_bench
 # (or via scripts/bench-history.sh to record the CSV/markdown history)
 
@@ -19,6 +20,12 @@ include "src/serial.cyr"
 
 var BATCH = 10000;
 var ROUNDS = 100;
+
+# Serializing a whole collection is ~4 orders of magnitude dearer than a lookup,
+# so the JSON rows get their own iteration count. 1000 iterations each keeps the
+# suite under a second of extra runtime while still averaging out scheduler noise.
+var SER_BATCH = 20;
+var SER_ROUNDS = 50;
 
 # ----------------------------------------------------------------
 # Wrapper functions for fncall0 dispatch
@@ -53,6 +60,11 @@ fn _b_routes_by_region() { return routes_by_region("East Asia"); }
 fn _b_routes_by_comm() { return routes_by_commodity("silk"); }
 fn _b_camps_by_cmd() { return campaigns_by_commander("Napoleon"); }
 fn _b_camps_between() { return campaigns_between((0-500), 500); }
+
+fn _b_era_to_json() { return era_to_json(vec_get(all_eras(), 0)); }
+fn _b_json_eras() { return _json_array(all_eras(), &era_to_json_into); }
+fn _b_json_events() { return _json_array(all_events(), &event_to_json_into); }
+fn _b_json_campaigns() { return _json_array(all_campaigns(), &campaign_to_json_into); }
 
 # ----------------------------------------------------------------
 # Top-level execution
@@ -187,6 +199,24 @@ vec_push(benches, b);
 
 b = bench_new("campaigns_between_500bce_500ce");
 bench_run_batch(b, &_b_camps_between, BATCH, ROUNDS);
+vec_push(benches, b);
+
+# Serialization — the _to_json_into path. Nested battles make campaigns the
+# heaviest per-record type; events are the largest collection.
+b = bench_new("era_to_json");
+bench_run_batch(b, &_b_era_to_json, BATCH, ROUNDS);
+vec_push(benches, b);
+
+b = bench_new("json_array_eras");
+bench_run_batch(b, &_b_json_eras, SER_BATCH, SER_ROUNDS);
+vec_push(benches, b);
+
+b = bench_new("json_array_events");
+bench_run_batch(b, &_b_json_events, SER_BATCH, SER_ROUNDS);
+vec_push(benches, b);
+
+b = bench_new("json_array_campaigns");
+bench_run_batch(b, &_b_json_campaigns, SER_BATCH, SER_ROUNDS);
 vec_push(benches, b);
 
 bench_report_all(benches);

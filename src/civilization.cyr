@@ -86,6 +86,43 @@ fn all_civilizations() {
     if (civ_init_done == 0) { civ_vec = build_civs(); civ_init_done = 1; }
     return civ_vec;
 }
+
+var civ_found_vec = 0;
+var civ_found_done = 0;
+
+# The table in ascending start-year order, built once. See all_events_by_year
+# in event.cyr for the rationale; the ordering is a property of the immutable
+# table, so deriving it per query was pure waste.
+#
+# Scanning this view in order means the result comes out start-sorted for free,
+# which is what removes the per-call insertion sort. Order matches the old
+# filter-then-stable-sort exactly.
+#must_use
+fn all_civs_by_founded() {
+    if (civ_found_done == 0) {
+        var src = all_civilizations();
+        var out = vec_new();
+        var n = vec_len(src);
+        for (var i = 0; i < n; i = i + 1) { vec_push(out, vec_get(src, i)); }
+        vec_sort(out, &_cmp_civ_found);
+        civ_found_vec = out;
+        civ_found_done = 1;
+    }
+    return civ_found_vec;
+}
+
+# Index of the first record starting AFTER `y` — the exclusive end of the
+# prefix that can possibly contain `y`.
+fn _civ_upper_bound(v, y) {
+    var lo = 0;
+    var hi = vec_len(v);
+    while (lo < hi) {
+        var mid = lo + (hi - lo) / 2;
+        if (civ_found(vec_get(v, mid)) <= y) { lo = mid + 1; }
+        else { hi = mid; }
+    }
+    return lo;
+}
 #must_use
 fn civ_count() { return vec_len(all_civilizations()); }
 #must_use
@@ -112,12 +149,17 @@ fn _cmp_civ_found(a, b) { return load64(a+CIV_FOUND) - load64(b+CIV_FOUND); }
 fn civs_active_at(year) {
     itrace_i("looking up civilizations active at year", "year", year);
     var result = vec_new();
-    var v = all_civilizations(); var n = vec_len(v);
-    for (var i = 0; i < n; i = i + 1) {
+    var v = all_civs_by_founded();
+    # Everything past the first record founded AFTER `year` is out of range, so
+    # only the prefix can match. Within it the end year still has to be checked
+    # individually — ends are not ordered by founding.
+    var ub = _civ_upper_bound(v, year);
+    var i = 0;
+    while (i < ub) {
         var p = vec_get(v, i);
-        if (year >= civ_found(p) && year <= civ_end(p)) { vec_push(result, p); }
+        if (year <= civ_end(p)) { vec_push(result, p); }
+        i = i + 1;
     }
-    vec_sort(result, &_cmp_civ_found);
     return result;
 }
 

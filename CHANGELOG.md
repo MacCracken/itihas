@@ -7,6 +7,136 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **`era_desc(p)` accessor.** The era description was the one field with no
+  accessor — `src/serial.cyr` reached through `load64(p + ERA_DESC)` directly.
+  Surfaced by the struct migration below.
+
+### Changed
+
+- **`src/era.cyr` migrated to a native `#derive(accessors)` struct** — the first
+  module of the 2.7.x structural arc, which is done strictly one module per
+  cycle. `struct Era` declares the seven fields in offset order and the compiler
+  generates `Era_<field>` / `Era_set_<field>`; `era_new` sets through the
+  generated setters and the `era_*` accessors delegate to the generated getters,
+  so the public API is unchanged. Duplicate field names are now a compile error,
+  which the hand-maintained `EraOff` enum could never enforce — nothing had been
+  checking it. `EraOff` is retained because the comparators still address fields
+  by offset.
+
+  Ten layout assertions in `tests/itihas.tcyr` pin every field to its `EraOff`
+  offset in both directions and pin `ERA_SIZE` at 56, so an offset renumber
+  fails the suite instead of silently aliasing fields. Suite 299 → 309 tests.
+
+  **Hot paths call the generated `Era_<field>` accessors directly, not the
+  `era_*` wrappers.** Cyrius does not inline, so `era_start` → `Era_start_year`
+  is two calls where the old `load64` body was one. Routing `eras_containing`
+  and `_era_upper_bound` through the wrappers measured **+12.3%** on
+  `eras_containing_500bce` (191 → 214 ns, spread 4.2%); calling the generated
+  accessors directly put it back at 194 vs 194 ns — flat. The remaining nine
+  modules must follow the same rule. Interleaved A/B, 6 rounds: 0 regressions
+  across all 32 benchmarks.
+
+- **`_json_array` moved from `src/hoosh.cyr` to `src/serial.cyr`.** It is a
+  serialization primitive and `src/mcp.cyr` uses it too, so it belongs beside
+  the record writers rather than inside the LLM query module. `serial.cyr` is
+  included before `hoosh.cyr` at every entry point, so the move is transparent.
+
+- **Benchmark suite grew from 28 to 32 rows.** JSON serialization had no
+  coverage at all, which is why the double copy went unmeasured for so long.
+  Added `era_to_json`, `json_array_eras`, `json_array_events` and
+  `json_array_campaigns`; the array rows carry their own iteration count
+  (`SER_BATCH`/`SER_ROUNDS`) since one iteration serializes a whole collection.
+
+### Performance
+
+- **`json_escape_into` copies clean runs instead of single bytes.** It ran a
+  cascade of eight comparisons and one `str_builder_add_byte` call *per byte*,
+  even though historical prose escapes essentially nothing — a 400-byte
+  description meant 400 calls to emit 400 unchanged bytes. It now scans for the
+  next byte that actually needs escaping and bulk-appends the run before it, so
+  the common case is a single `memcpy`. The per-byte test also narrowed from
+  eight comparisons to three (`c < 32`, `c == 34`, `c == 92`), which is
+  sufficient because `load8` is unsigned.
+
+  Measured against the same suite with only `json_escape_into` reverted,
+  6 interleaved rounds, medians vs spread (2.0–5.3%):
+
+  | Benchmark | Before | After | Delta |
+  |-----------|--------|-------|-------|
+  | `json_array_campaigns` | 191.5 us | 133.9 us | **−30.1%** |
+  | `era_to_json` | 3.7 us | 2.6 us | **−27.8%** |
+  | `json_array_events` | 403.0 us | 296.1 us | **−26.5%** |
+  | `json_array_eras` | 84.8 us | 66.0 us | **−22.1%** |
+  | suite sum | 690.8 us | 506.4 us | **−26.7%** |
+
+  No regressions across the other 28 benchmarks. Escaping is proven unchanged
+  exhaustively rather than by corpus: every one of the 256 single-byte strings
+  and all 65 536 ordered byte pairs — which covers every clean/escape run
+  boundary — plus the empty string and hand-picked bracketing cases. 65 798
+  strings, 204 259 output bytes, 0 differences.
+
+- **`*_to_json_into(sb, p)` serializer variants.** Every `X_to_json` built a
+  private `str_builder`, finished it into a `Str`, and handed that to the caller
+  — who copied all of it into *their* builder. Serializing a collection
+  therefore wrote every byte twice and allocated two objects per record. All 11
+  serializers now have an `_into` form that appends to a caller-supplied
+  builder; `X_to_json` remains as the allocating wrapper over it, so no existing
+  call site had to change to keep working.
+
+  `_json_array` takes an `_into` function pointer and writes records straight
+  through, and gained a `_json_array_into` for nesting. `campaign_to_json_into`
+  writes its nested battles the same way. `src/hoosh.cyr` and `src/mcp.cyr`
+  (including `_mcp_one` and `_mcp_many`) use the `_into` path throughout.
+
+  Old and new array serialization compiled into one binary and measured side by
+  side, 5 rounds, medians (spread 1.0–4.3%):
+
+  | Collection | Before | After | Delta |
+  |------------|--------|-------|-------|
+  | eras | 116.1 us | 86.0 us | **−25.9%** |
+  | civilizations | 284.0 us | 213.1 us | **−25.0%** |
+  | events | 547.1 us | 408.7 us | **−25.3%** |
+  | campaigns | 256.5 us | 193.6 us | **−24.5%** |
+  | sites | 185.6 us | 143.3 us | **−22.8%** |
+  | total | 1389.2 us | 1044.6 us | **−24.8%** |
+
+  Output is byte-identical: all 338 records across all 10 collection types,
+  84 916 bytes compared against the old double-copy path, 0 differences.
+
+- **Precomputed year-sorted views for the four range queries.** `events_between`,
+  `civs_active_at`, `eras_containing` and `campaigns_between` each filtered the
+  full table and then insertion-sorted the result on *every* call — re-deriving
+  an ordering that is a fixed property of immutable static data. Each module now
+  builds its sorted view once, lazily (`all_events_by_year`,
+  `all_civs_by_founded`, `all_eras_by_start`, `all_campaigns_by_start`), and the
+  queries binary-search into it:
+
+  - `events_between` is a point-in-range query, so it seeks the lower bound of
+    the start year and walks forward until the end year is passed.
+  - The other three are interval queries. They bound the scan at the first
+    record starting after the year asked for, then check each end year
+    individually — ends are not ordered by start. Walking a start-sorted view in
+    order means the result is already sorted, which is what removes the sort.
+
+  Interleaved A/B against `81a5999`, 6 rounds each, medians vs per-benchmark
+  run-to-run spread (2.1–3.6%):
+
+  | Benchmark | Before | After | Delta |
+  |-----------|--------|-------|-------|
+  | `events_between_500bce_500ce` | 1898 ns | 466 ns | **−75.4%** |
+  | `civs_active_at_500bce` | 720 ns | 277 ns | **−61.5%** |
+  | `eras_containing_500bce` | 359 ns | 192 ns | **−46.4%** |
+  | `campaigns_between_500bce_500ce` | 204 ns | 140 ns | **−31.2%** |
+  | suite sum | 9926 ns | 7815 ns | **−21.3%** |
+
+  No regressions across the other 24 benchmarks. Output is proven identical to
+  the old filter-then-sort path pointer-for-pointer: 680 ranges / 17 668 elements
+  for `events_between`, and 470 point queries per function plus 593 campaign
+  ranges for the other three — 0 mismatches, inverted ranges included. 299 tests
+  pass; lint, fmt and build gates clean.
+
 ## [2.5.0] - 2026-08-30
 
 **MCP tool integration** — the last unported module from the Rust original — and

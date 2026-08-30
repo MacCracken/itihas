@@ -81,18 +81,6 @@ fn _names_from_vec(v, name_fn) {
     return str_builder_build(sb);
 }
 
-fn _json_array(v, to_json_fn) {
-    var sb = str_builder_new();
-    str_builder_add_cstr(sb, "[");
-    var n = vec_len(v);
-    for (var i = 0; i < n; i = i + 1) {
-        if (i > 0) { str_builder_add_cstr(sb, ", "); }
-        str_builder_add(sb, fncall1(to_json_fn, vec_get(v, i)));
-    }
-    str_builder_add_cstr(sb, "]");
-    return str_builder_build(sb);
-}
-
 #must_use
 fn answer_from_data(q) {
     var qt = load64(q+Q_TYPE);
@@ -104,7 +92,7 @@ fn answer_from_data(q) {
             return resp_new(SRC_DATA, str_from("No events found in the specified range."), str_from("[]"));
         }
         var names = _names_from_vec(events, &evt_name);
-        var data = _json_array(events, &event_to_json);
+        var data = _json_array(events, &event_to_json_into);
         return resp_new(SRC_DATA, names, data);
     }
 
@@ -114,7 +102,7 @@ fn answer_from_data(q) {
             return resp_new(SRC_DATA, str_from("No civilizations found active at that year."), str_from("[]"));
         }
         var names = _names_from_vec(civs, &civ_name);
-        var data = _json_array(civs, &civ_to_json);
+        var data = _json_array(civs, &civ_to_json_into);
         return resp_new(SRC_DATA, names, data);
     }
 
@@ -128,7 +116,7 @@ fn answer_from_data(q) {
             str_builder_add(sb, load64(vec_get(causes, i)+CAUS_DESC));
         }
         var content = str_builder_build(sb);
-        var data = _json_array(causes, &causality_to_json);
+        var data = _json_array(causes, &causality_to_json_into);
         return resp_new(SRC_DATA, content, data);
     }
 
@@ -142,7 +130,7 @@ fn answer_from_data(q) {
             str_builder_add(sb, load64(vec_get(ints, i)+INT_DESC));
         }
         var content = str_builder_build(sb);
-        var data = _json_array(ints, &interaction_to_json);
+        var data = _json_array(ints, &interaction_to_json_into);
         return resp_new(SRC_DATA, content, data);
     }
 
@@ -194,7 +182,7 @@ fn resolve_era_lookup(args) {
                 return resp_new(SRC_DATA, str_from("No eras found containing that year."), str_from("[]"));
             }
             var names = _names_from_vec(eras, &era_name);
-            var data = _json_array(eras, &era_to_json);
+            var data = _json_array(eras, &era_to_json_into);
             return resp_new(SRC_DATA, names, data);
         }
     }
