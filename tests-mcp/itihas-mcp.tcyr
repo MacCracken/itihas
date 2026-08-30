@@ -1,0 +1,123 @@
+# itihas-mcp.tcyr — MCP surface tests (src/mcp.cyr).
+#
+# NOT part of `cyrius tests`, which sweeps tests/ only: this file needs bote in
+# scope, and bote is behind the optional `mcp` feature so the default build
+# stays 696 KB instead of 2.8 MB. Run it with:
+#
+#     cyrius build --features mcp tests-mcp/itihas-mcp.tcyr build/itihas_mcp_test
+#     ./build/itihas_mcp_test
+
+include "src/util.cyr"
+include "src/error.cyr"
+include "src/era.cyr"
+include "src/calendar.cyr"
+include "src/civilization.cyr"
+include "src/figure.cyr"
+include "src/event.cyr"
+include "src/causality.cyr"
+include "src/interaction.cyr"
+include "src/campaign.cyr"
+include "src/site.cyr"
+include "src/trade.cyr"
+include "src/logging.cyr"
+include "src/serial.cyr"
+include "src/hoosh.cyr"
+include "src/mcp.cyr"
+
+fn check(val, expected, name) { return assert_eq(val, expected, name); }
+fn ok(val, name) { return assert_neq(val, 0, name); }
+fn has(hay, needle, name) { return assert_eq(str_contains(str_from(hay), str_from(needle)), 1, name); }
+
+fn main() {
+    alloc_init();
+    println("=== itihas MCP suite ===");
+
+    println("--- tool definitions ---");
+    var defs = itihas_mcp_tool_definitions();
+    check(vec_len(defs), 5, "five tools defined");
+    check(itihas_mcp_tool_count(), 5, "tool_count agrees");
+    check(streq(tool_def_name(vec_get(defs, 0)), "itihas_era"), 1, "tool 0 is itihas_era");
+    check(streq(tool_def_name(vec_get(defs, 4)), "itihas_timeline"), 1, "tool 4 is itihas_timeline");
+    ok(tool_def_description(vec_get(defs, 1)), "civilization tool has a description");
+    ok(tool_def_input_schema(vec_get(defs, 2)), "event tool has a schema");
+    # Every tool is a read-only lookup over static data.
+    var i = 0;
+    var all_ro = 1;
+    while (i < vec_len(defs)) {
+        var ann = tool_def_annotations(vec_get(defs, i));
+        if (ann == 0) { all_ro = 0; }
+        i = i + 1;
+    }
+    check(all_ro, 1, "every tool carries annotations");
+
+    println("--- itihas_era ---");
+    var e1 = itihas_mcp_handle_era("{\"name\":\"Bronze Age\"}", 0);
+    has(e1, "Bronze Age", "era by name returns the record");
+    has(e1, "start_year", "era JSON carries fields");
+    var e2 = itihas_mcp_handle_era("{\"year\":-500}", 0);
+    check(load8(e2), 91, "era by year returns a JSON array");
+    var e3 = itihas_mcp_handle_era("{\"region\":\"Near East\"}", 0);
+    check(load8(e3), 91, "era by region returns an array");
+    var e4 = itihas_mcp_handle_era("{}", 0);
+    check(load8(e4), 91, "era with no args returns the whole collection");
+    var e5 = itihas_mcp_handle_era("{\"name\":\"Space Age\"}", 0);
+    has(e5, "\"ok\":false", "unknown era name is a structured error");
+
+    println("--- itihas_civilization ---");
+    has(itihas_mcp_handle_civilization("{\"name\":\"Roman Empire\"}", 0), "Roman Empire", "civ by name");
+    check(load8(itihas_mcp_handle_civilization("{\"year\":-500}", 0)), 91, "civ by year is an array");
+    check(load8(itihas_mcp_handle_civilization("{}", 0)), 91, "civ with no args is an array");
+
+    println("--- itihas_event ---");
+    has(itihas_mcp_handle_event("{\"name\":\"French Revolution\"}", 0), "French Revolution", "event by name");
+    check(load8(itihas_mcp_handle_event("{\"start_year\":-500,\"end_year\":500}", 0)), 91, "event range is an array");
+    check(load8(itihas_mcp_handle_event("{\"category\":\"war\"}", 0)), 91, "event by category is an array");
+    has(itihas_mcp_handle_event("{\"category\":\"nonsense\"}", 0), "unknown event category", "bad category is an error");
+    # A one-sided range must not be mistaken for a range query.
+    check(load8(itihas_mcp_handle_event("{\"start_year\":-500}", 0)), 91, "start_year alone falls through to all events");
+
+    println("--- itihas_figure ---");
+    has(itihas_mcp_handle_figure("{\"name\":\"Aristotle\"}", 0), "Aristotle", "figure by name");
+    check(load8(itihas_mcp_handle_figure("{\"domain\":\"scientist\"}", 0)), 91, "figure by domain is an array");
+    has(itihas_mcp_handle_figure("{\"domain\":\"wizard\"}", 0), "unknown figure domain", "bad domain is an error");
+    # Domain names are matched case-insensitively.
+    check(load8(itihas_mcp_handle_figure("{\"domain\":\"SCIENTIST\"}", 0)), 91, "domain match folds case");
+
+    println("--- itihas_timeline ---");
+    var t1 = itihas_mcp_handle_timeline("{\"start_year\":-500,\"end_year\":500}", 0);
+    has(t1, "\"events\"", "timeline carries events");
+    has(t1, "\"eras_at_start\"", "timeline carries eras at the start");
+    has(t1, "\"civilizations_at_end\"", "timeline carries civilizations at the end");
+    has(itihas_mcp_handle_timeline("{}", 0), "both required", "timeline without a range is an error");
+    has(itihas_mcp_handle_timeline("{\"start_year\":500,\"end_year\":-500}", 0), "must not exceed", "inverted range is an error");
+
+    println("--- year sentinel ---");
+    # Year 0 is a real value and must not read as absent. The dataset has no
+    # year-0 records, so an empty array is the correct answer — what matters is
+    # that it took the by-year branch rather than returning all 25 eras.
+    var z = itihas_mcp_handle_era("{\"year\":0}", 0);
+    check(load8(z), 91, "year 0 takes the by-year branch");
+    check(str_len(str_from(z)) < str_len(str_from(itihas_mcp_handle_era("{}", 0))), 1,
+      "year 0 is not treated as 'no argument'");
+
+    println("--- daimon ---");
+    var descs = itihas_daimon_host_tool_descriptions();
+    check(vec_len(descs), 5, "daimon sees five descriptions");
+    var reg = host_registry_new();
+    itihas_daimon_register_tools(reg);
+    check(host_registry_count(reg), 5, "five tools registered on the host registry");
+    check(host_registry_has(reg, "itihas_era"), 1, "itihas_era is registered");
+    has(itihas_daimon_invoke("itihas_era", "{\"name\":\"Bronze Age\"}"), "Bronze Age", "daimon invoke dispatches");
+    check(itihas_daimon_invoke("not_an_itihas_tool", "{}"), 0, "unknown tool returns 0, not an error object");
+
+    println("--- dispatcher registration ---");
+    var d = dispatcher_new(tool_registry_new());
+    itihas_mcp_register_all(d);
+    check(registry_len(dispatcher_registry(d)), 5, "register_all registers five tools");
+    check(registry_contains(dispatcher_registry(d), "itihas_timeline"), 1, "timeline is in the registry");
+
+    return assert_summary();
+}
+
+var rc = main();
+syscall(60, rc);

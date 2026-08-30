@@ -7,6 +7,87 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.5.0] - 2026-08-30
+
+**MCP tool integration** — the last unported module from the Rust original — and
+the breaking namespace renames that come with linking a second library into a
+flat symbol space. 299 data tests plus a new **39-assertion MCP suite**; lint,
+fmt, docs and dist gates clean.
+
+### Added
+
+- **`src/mcp.cyr` — five read-only Model Context Protocol tools over bote.**
+  `itihas_era`, `itihas_civilization`, `itihas_event`, `itihas_figure` and
+  `itihas_timeline`, each dispatching most-specific-argument-first (name, then
+  year, then region) and falling back to the whole collection, exactly as the
+  Rust original did. Results serialize through the existing `*_to_json`
+  functions, so no new serialization was needed. `itihas_timeline` is the one
+  composite, unioning events with the eras and civilizations live at each
+  endpoint of the range.
+
+  Registration follows bote's own `libro_tools_register` pattern:
+  `itihas_mcp_register_all(dispatcher)` registers definitions and handlers
+  together, or `itihas_mcp_tool_definitions()` / `itihas_mcp_register_handlers()`
+  separately. The daimon side —`itihas_daimon_register_tools(registry)`,
+  `itihas_daimon_host_tool_descriptions()`, `itihas_daimon_invoke(name, args)` —
+  goes through bote's host registry. An unknown name returns 0 rather than an
+  error object, so an orchestrator can tell "not mine" from "failed".
+
+- **`tests-mcp/itihas-mcp.tcyr`** — 39 assertions over the tool definitions,
+  every handler branch, both error shapes, the daimon surface and dispatcher
+  registration. It lives outside `tests/` because `cyrius tests` sweeps that
+  directory and this file needs the `mcp` feature:
+
+  ```sh
+  cyrius build --features mcp tests-mcp/itihas-mcp.tcyr build/itihas_mcp_test
+  ./build/itihas_mcp_test
+  ```
+
+### Breaking
+
+- **`ERR_*` → `ITIHAS_ERR_*`** (all ten members of `ItihasError`). Cyrius has one
+  flat enum-constant namespace and `cyrius lint` flags bare `ERR_*` in a leaf
+  library for exactly that reason: sakshi reserves the unprefixed form, and two
+  libraries a consumer links that both define `ERR_NONE` resolve to whichever was
+  included last. itihas is included by seven consumers, which is why this waited
+  for a minor rather than riding a patch.
+
+- **`query_new` → `hoosh_query_new`.** Not a theoretical clash: bote's `libro`
+  module exports `query_new` too, and building `src/mcp.cyr` surfaced it as a
+  `duplicate fn (last definition wins)` warning. itihas's won by include order,
+  so libro's would have been silently shadowed for any consumer linking both.
+
+- **`RT_*` → `ROUTE_*`** (the trade-route type and offset enums). `RT_SIZE`
+  collided with `lib/async_win.cyr` and `lib/async_agnos.cyr`, which define it as
+  a plain `var RT_SIZE = 48` — a **conflicting value**, resolved by include
+  order. itihas's won, so the async path would have read the wrong struct size on
+  Windows and AGNOS once bote (which pulls `async`) was linked. The whole set was
+  renamed rather than the one symbol, to keep the namespace consistent.
+
+### Changed
+
+- **bote is an optional, feature-gated dependency, and `src/mcp.cyr` is not in
+  the default bundle.** `dist/itihas.cyr` references no bote symbol, so the seven
+  existing consumers are entirely unaffected — they neither resolve bote nor link
+  it. A consumer wanting MCP includes `src/mcp.cyr` and declares bote itself.
+
+  The feature is deliberately **not** in `[features] default`. A dep's modules
+  are auto-prepended to every build that resolves it, and measuring showed that
+  defaulting it on linked **2,122,960 bytes** of bote into `build/itihas` — a
+  binary that never calls a single bote function (696 KB → 2.8 MB). itihas's own
+  MCP build and tests name the feature explicitly instead.
+
+  This is the ai-hwaccel 2.3.19 lesson applied before shipping rather than after:
+  a library must not decide its consumers' dependency graph for them.
+
+### Performance
+
+Interleaved A/B against 2.4.3 (`e516dd7`), 4 rounds each, same machine and
+session. **No regressions and no wins**, aggregate **+0.4%** across all 28
+(9,823 → 9,862 ns summed medians) — within noise, and the expected result: the
+three renames are compile-time only, and `src/mcp.cyr` is not linked into the
+default build at all.
+
 ## [2.4.3] - 2026-08-30
 
 Two 2.4.x hardening-arc items — checked allocation and query tracing — plus the

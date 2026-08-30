@@ -1,33 +1,33 @@
 # Benchmarks
 
-Latest: **2026-08-30T22:22:03Z** -- commit `fcbeb4a`
+Latest: **2026-08-30T22:39:06Z** -- commit `e516dd7`
 
-Tracking: `0ec104c` (baseline) -> `68313be` (mid) -> `fcbeb4a` (current)
+Tracking: `0ec104c` (baseline) -> `68313be` (mid) -> `e516dd7` (current)
 
-| Benchmark | Baseline (`0ec104c`) | Mid (`68313be`) | Current (`fcbeb4a`) |
+| Benchmark | Baseline (`0ec104c`) | Mid (`68313be`) | Current (`e516dd7`) |
 |-----------|------|------|------|
-| `all_eras` | 6.00 ns | 5.00 ns **-17%** | 4.00 ns **-33%** |
-| `eras_containing_500bce` | 441.0 ns | 346.0 ns **-22%** | 352.0 ns **-20%** |
+| `all_eras` | 6.00 ns | 5.00 ns **-17%** | 5.00 ns **-17%** |
+| `eras_containing_500bce` | 441.0 ns | 346.0 ns **-22%** | 356.0 ns **-19%** |
 | `all_civilizations` | 5.00 ns | 5.00 ns | 5.00 ns |
-| `civs_active_at_500bce` | 944.0 ns | 705.0 ns **-25%** | 706.0 ns **-25%** |
-| `civs_by_region_mediterranean` | 1000.0 ns | 836.0 ns **-16%** | 829.0 ns **-17%** |
-| `all_events` | 5.00 ns | 5.00 ns | 5.00 ns |
-| `events_by_category_war` | 930.0 ns | 948.0 ns | 960.0 ns +3% |
-| `events_at_year_476` | 840.0 ns | 792.0 ns **-6%** | 793.0 ns **-6%** |
-| `events_between_500bce_500ce` | 2000.0 ns | 1876.0 ns **-6%** | 1898.0 ns **-5%** |
+| `civs_active_at_500bce` | 944.0 ns | 705.0 ns **-25%** | 717.0 ns **-24%** |
+| `civs_by_region_mediterranean` | 1000.0 ns | 836.0 ns **-16%** | 840.0 ns **-16%** |
+| `all_events` | 5.00 ns | 5.00 ns | 4.00 ns **-20%** |
+| `events_by_category_war` | 930.0 ns | 948.0 ns | 942.0 ns |
+| `events_at_year_476` | 840.0 ns | 792.0 ns **-6%** | 794.0 ns **-5%** |
+| `events_between_500bce_500ce` | 2000.0 ns | 1876.0 ns **-6%** | 1900.0 ns **-5%** |
 | `all_calendars` | 6.00 ns | 5.00 ns **-17%** | 5.00 ns **-17%** |
 | `calendar_by_name_gregorian` | 85.00 ns | 124.0 ns +46% | 129.0 ns +52% |
 | `all_figures` | 6.00 ns | 4.00 ns **-33%** | 5.00 ns **-17%** |
-| `figures_by_domain_scientist` | 494.0 ns | 498.0 ns | 510.0 ns +3% |
-| `all_causalities` | 5.00 ns | 5.00 ns | 5.00 ns |
-| `causes_of_french_revolution` | 316.0 ns | 235.0 ns **-26%** | 246.0 ns **-22%** |
-| `chain_writing_depth3` | 2000.0 ns | 381.0 ns **-81%** | 400.0 ns **-80%** |
-| `all_interactions` | 6.00 ns | 5.00 ns **-17%** | 5.00 ns **-17%** |
-| `interactions_for_rome` | 543.0 ns | 579.0 ns +7% | 591.0 ns +9% |
+| `figures_by_domain_scientist` | 494.0 ns | 498.0 ns | 500.0 ns |
+| `all_causalities` | 5.00 ns | 5.00 ns | 4.00 ns **-20%** |
+| `causes_of_french_revolution` | 316.0 ns | 235.0 ns **-26%** | 248.0 ns **-22%** |
+| `chain_writing_depth3` | 2000.0 ns | 381.0 ns **-81%** | 403.0 ns **-80%** |
+| `all_interactions` | 6.00 ns | 5.00 ns **-17%** | 4.00 ns **-33%** |
+| `interactions_for_rome` | 543.0 ns | 579.0 ns +7% | 590.0 ns +9% |
 | `influence_score_egypt_hittite` | 728.0 ns | 541.0 ns **-26%** | 552.0 ns **-24%** |
 | `all_sites` | 6.00 ns | 5.00 ns **-17%** | 5.00 ns **-17%** |
-| `sites_by_region_near_east` | 1000.0 ns | 518.0 ns **-48%** | 536.0 ns **-46%** |
-| `sites_active_at_500bce` | 296.0 ns | 301.0 ns | 310.0 ns +5% |
+| `sites_by_region_near_east` | 1000.0 ns | 518.0 ns **-48%** | 535.0 ns **-46%** |
+| `sites_active_at_500bce` | 296.0 ns | 301.0 ns | 306.0 ns +3% |
 | `all_routes` | 6.00 ns | 5.00 ns **-17%** | 5.00 ns **-17%** |
 | `routes_by_region_east_asia` | 1000.0 ns | 235.0 ns **-76%** | 240.0 ns **-76%** |
 | `routes_by_commodity_silk` | 2000.0 ns | 308.0 ns **-85%** | 319.0 ns **-84%** |

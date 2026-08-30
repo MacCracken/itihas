@@ -1,7 +1,11 @@
 # MCP / daimon port reference
 
-This is the specification for the two modules still unported from the Rust
-original: `mcp` and its `daimon` submodule (roadmap **v2.5.0**, items 8 and 9).
+The specification for the `mcp` module and its `daimon` integration, ported
+from the Rust original in 2.5.0.
+
+**Status: IMPLEMENTED in 2.5.0** as `src/mcp.cyr`. This file is kept as the
+specification the implementation was written against, and as the record of what
+the Rust original did.
 
 It exists because `rust-old/` was removed once every other module had shipped.
 `mcp.rs` was the only file with reference value left, so its surface, tool
@@ -14,8 +18,23 @@ git log --all -- rust-old/src/mcp.rs
 git show <commit>:rust-old/src/mcp.rs
 ```
 
-**Status**: blocked on the bote Cyrius port reaching toolchain parity. Nothing
-in itihas needs to change before then.
+## How the shipped module differs from this spec
+
+Three deliberate departures, each recorded because a reader comparing the two
+will notice them:
+
+- **Everything is `itihas_`-prefixed.** Cyrius has one flat function namespace,
+  so a bare `tool_definitions()` in a library linked beside others is a
+  collision waiting to happen. Building this module proved the point: it
+  surfaced two real clashes in itihas's own code — `query_new` against bote's
+  `libro`, and `RT_SIZE` against `lib/async_win.cyr` with a *different value* —
+  both renamed in 2.5.0.
+- **`ToolResult` is not a tagged union.** Handlers return a JSON cstr, matching
+  bote's own handler convention; failures are `{"ok":false,"error":"..."}`.
+- **`src/mcp.cyr` is not in the default bundle.** It is absent from
+  `src/lib.cyr` and `[lib].modules`, so `dist/itihas.cyr` references no bote
+  symbol. bote sits behind the optional `mcp` feature, because measuring showed
+  that defaulting it on linked 2.1 MB of bote into a binary that never calls it.
 
 ## Public surface
 

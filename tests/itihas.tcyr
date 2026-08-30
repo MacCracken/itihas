@@ -177,7 +177,7 @@ fn main() {
     zero(route_by_name("Route 66"), "route Route 66 not found");
     ok(vec_len(routes_by_commodity("silk")) > 0, "routes commodity silk");
     ok(vec_len(routes_by_region("East Asia")) > 0, "routes region East Asia");
-    ok(vec_len(routes_by_type(RT_MARITIME)) > 0, "routes type Maritime");
+    ok(vec_len(routes_by_type(ROUTE_MARITIME)) > 0, "routes type Maritime");
     ok(vec_len(routes_by_civilization("Roman Empire")) > 0, "routes civ Rome");
     ok(vec_len(routes_active_at(1000)) > 0, "routes active 1000");
 
@@ -232,7 +232,7 @@ fn main() {
     var rn = vec_len(rv);
     for (var rti = 0; rti < rn; rti = rti + 1) {
         var p = vec_get(rv, rti);
-        if (load64(p+RT_START) > load64(p+RT_END)) { route_dates_ok = 0; }
+        if (load64(p+ROUTE_START) > load64(p+ROUTE_END)) { route_dates_ok = 0; }
     }
     ok(route_dates_ok, "route start <= end for all");
 
@@ -743,7 +743,7 @@ fn main() {
     check(int_type(ni), INT_TRADE, "int_new");
     var ns = site_new(str_from("Test Site"), str_from("X"), str_from("R"), ST_SETTLEMENT, str_from("C"), 1, 2, 3, str_from("d"));
     ok(str_eq(site_name(ns), str_from("Test Site")), "site_new");
-    var nr = rt_new(str_from("Test Route"), str_from("R"), RT_LAND, str_from("C"), str_from("goods"), 1, 2, str_from("d"));
+    var nr = rt_new(str_from("Test Route"), str_from("R"), ROUTE_LAND, str_from("C"), str_from("goods"), 1, 2, str_from("d"));
     ok(str_eq(rt_name(nr), str_from("Test Route")), "rt_new");
     var nm = camp_new(str_from("Test Camp"), str_from("R"), 1, 2, str_from("A"), str_from("B"), str_from("C"), OUT_VICTORY, str_from("d"));
     bat_add(nm, str_from("Test Battle"), 1, str_from("Loc"), str_from("d"));

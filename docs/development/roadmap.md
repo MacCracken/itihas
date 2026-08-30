@@ -1,6 +1,6 @@
 # Development Roadmap
 
-> **Current**: 2.4.3 | **Compiler**: cyrius 6.5.36 | **Tests**: 299 | **Coverage**: 94% | **Lint**: clean
+> **Current**: 2.5.0 | **Compiler**: cyrius 6.5.36 | **Tests**: 299 + 39 MCP | **Coverage**: 94% | **Lint**: clean
 
 This file tracks **open work only**. Completed releases are recorded in
 [CHANGELOG.md](../../CHANGELOG.md) — they are not duplicated here.
@@ -33,33 +33,16 @@ Decisions taken, recorded here because they govern future work:
   *code* lines were wrapped instead. `cyrius lint` on `src/` went 364 warnings →
   **0**, so the count is a usable gate again rather than a permanent backlog.
 
-## 2.5.0 — Tool integration (unblocked)
+## 2.5.0 — Tool integration (complete)
 
-**bote 3.3.7 ships everything required.** The former "blocked on bote toolchain
-bring-up" note is resolved: bote is pinned to cyrius 6.5.35, builds clean, and
-`dist/bote.cyr` exports the full surface. This is ordinary work now, not a wait.
+Shipped: `src/mcp.cyr` exposes the dataset as five read-only MCP tools over
+bote, with the daimon host-registry integration alongside. The `ERR_*` rename
+landed with it. See CHANGELOG `[2.5.0]` and
+[mcp-port-reference.md](mcp-port-reference.md).
 
-Port specification: [mcp-port-reference.md](mcp-port-reference.md).
-
-| # | Item | Effort | Detail |
-|---|------|--------|--------|
-| 1 | **mcp module** | Medium | `tool_definitions()`, `register_handlers()`, `register_all()`. Five read-only tools: `itihas_era`, `itihas_civilization`, `itihas_event`, `itihas_figure`, `itihas_timeline`. |
-| 2 | **daimon module** | Medium | `register_tools()`, `host_tool_descriptions()`, `invoke()`. Agent-orchestrator integration via bote's host registry. |
-| 3 | **`ERR_*` → `ITIHAS_ERR_*`** | Medium | `cyrius lint` flags all 10 bare `ERR_*` members: a leaf library must prefix, or the flat enum constants collide across libs. itihas is included by 7 consumers, so this is **breaking** and belongs with the minor bump rather than a patch. The codes are currently unused by itihas itself. |
-
-bote API mapping, verified against bote 3.3.7:
-
-| itihas needs | bote provides |
-|--------------|---------------|
-| `ToolDef::new` | `tool_def_new(name, description, input_schema)` |
-| `ToolSchema::new` | `schema_new(schema_type, properties_vec, required_vec)` + `schema_prop_new(key, value)` |
-| `ToolAnnotations::read_only()` | `ann_read_only()` |
-| `registry.register(def)` | `registry_register(registry, tool_def)` |
-| handler binding | `dispatcher_handle(dispatcher, name, &fn)`, `dispatcher_registry(dispatcher)` |
-| `McpHostRegistry` | `host_registry_new()`, `host_registry_add(r, entry)`, `host_entry_new(name, url)` |
-
-`bote/src/libro_tools.cyr :: libro_tools_register()` is a complete working
-example of this exact registration pattern — use it as the reference.
+Consumer note, because it is easy to get wrong: **MCP is opt-in.**
+`dist/itihas.cyr` carries no bote dependency. A consumer that wants the tools
+includes `src/mcp.cyr` explicitly and declares bote itself.
 
 ## 2.6.x — Performance arc
 

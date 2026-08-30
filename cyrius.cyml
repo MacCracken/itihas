@@ -44,3 +44,35 @@ modules = [
 # for bayan_json_*). Replaces the former standalone "json" dep, which no longer
 # exists. result + io are bayan's internal prereqs.
 stdlib = ["string", "fmt", "alloc", "vec", "str", "syscalls", "assert", "tagged", "result", "io", "fnptr", "bench", "net", "http", "bayan", "sakshi"]
+
+# bote — MCP tool definitions, registry and dispatcher, for src/mcp.cyr.
+#
+# OPTIONAL and feature-gated. cyrius resolves `[features]` from the ROOT
+# manifest only (v6.3.1 lever 2), so this repo's own builds and tests activate
+# it via `[features] default` below, while a DOWNSTREAM build that does not name
+# `bote` skips the dep entirely — no clone, no module copy.
+#
+# That gate is the whole point. itihas is included by seven consumers, and
+# ai-hwaccel 2.3.19 showed what happens when a library decides its consumers'
+# dependency graph: its focused bayan dep resolved transitively and handed every
+# consumer 131 duplicate function definitions. `src/mcp.cyr` is likewise absent
+# from `[lib].modules`, so `dist/itihas.cyr` references no bote symbol at all —
+# a consumer wanting MCP includes `src/mcp.cyr` and declares bote itself.
+[deps.bote]
+optional = true
+git = "https://github.com/MacCracken/bote.git"
+tag = "3.3.7"
+modules = ["dist/bote.cyr"]
+
+# `mcp` activates the optional bote dep. It is deliberately NOT in `default`:
+# a dep's modules are auto-prepended to every build that resolves it, and
+# measured here, defaulting it on linked 2,122,960 bytes of bote into
+# `build/itihas` — a binary that never calls a single bote function (696 KB ->
+# 2.8 MB). Build and test the MCP surface with the feature named explicitly:
+#
+#     cyrius build --features mcp tests/itihas-mcp.tcyr build/itihas_mcp
+#
+# Downstream builds are unaffected either way, since cyrius resolves
+# `[features]` from the root manifest only.
+[features]
+mcp = ["bote"]

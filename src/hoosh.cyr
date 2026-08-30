@@ -19,7 +19,10 @@ enum QueryType {
 enum QueryOff { Q_TYPE=0; Q_ARG1=8; Q_ARG2=16; Q_SIZE=24; }
 
 #must_use
-fn query_new(qtype, a1, a2) {
+# Prefixed as of 2.5.0: bote's libro module also exports `query_new`, and
+# Cyrius has one flat function namespace — the unprefixed name silently
+# shadowed libro's for any consumer linking both.
+fn hoosh_query_new(qtype, a1, a2) {
     var q = xalloc(Q_SIZE);
     store64(q+Q_TYPE, qtype);
     store64(q+Q_ARG1, a1);
@@ -28,17 +31,17 @@ fn query_new(qtype, a1, a2) {
 }
 
 #must_use
-fn query_events_in_range(start, end) { return query_new(QT_EVENTS_IN_RANGE, start, end); }
+fn query_events_in_range(start, end) { return hoosh_query_new(QT_EVENTS_IN_RANGE, start, end); }
 #must_use
-fn query_civs_at(year) { return query_new(QT_CIVS_AT, year, 0); }
+fn query_civs_at(year) { return hoosh_query_new(QT_CIVS_AT, year, 0); }
 #must_use
-fn query_causes_of(event: Str) { return query_new(QT_CAUSES_OF, event, 0); }
+fn query_causes_of(event: Str) { return hoosh_query_new(QT_CAUSES_OF, event, 0); }
 #must_use
-fn query_interactions_between(ca: Str, cb: Str) { return query_new(QT_INTERACTIONS_BETWEEN, ca, cb); }
+fn query_interactions_between(ca: Str, cb: Str) { return hoosh_query_new(QT_INTERACTIONS_BETWEEN, ca, cb); }
 #must_use
-fn query_figure_lookup(name: Str) { return query_new(QT_FIGURE_LOOKUP, name, 0); }
+fn query_figure_lookup(name: Str) { return hoosh_query_new(QT_FIGURE_LOOKUP, name, 0); }
 #must_use
-fn query_free_form(question: Str) { return query_new(QT_FREE_FORM, question, 0); }
+fn query_free_form(question: Str) { return hoosh_query_new(QT_FREE_FORM, question, 0); }
 
 # ----------------------------------------------------------------
 # Response types

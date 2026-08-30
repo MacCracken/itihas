@@ -183,14 +183,14 @@ fn site_to_json(p) {
 fn route_to_json(p) {
     var sb = str_builder_new();
     str_builder_add_cstr(sb, "{");
-    _json_str(sb, "name", load64(p+RT_NAME));
-    _json_sep(sb); _json_str(sb, "regions", load64(p+RT_REGIONS));
-    _json_sep(sb); _json_int(sb, "type", load64(p+RT_TYPE));
-    _json_sep(sb); _json_str(sb, "civilizations", load64(p+RT_CIVS));
-    _json_sep(sb); _json_str(sb, "commodities", load64(p+RT_COMM));
-    _json_sep(sb); _json_int(sb, "start_year", load64(p+RT_START));
-    _json_sep(sb); _json_int(sb, "end_year", load64(p+RT_END));
-    _json_sep(sb); _json_str(sb, "description", load64(p+RT_DESC));
+    _json_str(sb, "name", load64(p+ROUTE_NAME));
+    _json_sep(sb); _json_str(sb, "regions", load64(p+ROUTE_REGIONS));
+    _json_sep(sb); _json_int(sb, "type", load64(p+ROUTE_TYPE));
+    _json_sep(sb); _json_str(sb, "civilizations", load64(p+ROUTE_CIVS));
+    _json_sep(sb); _json_str(sb, "commodities", load64(p+ROUTE_COMM));
+    _json_sep(sb); _json_int(sb, "start_year", load64(p+ROUTE_START));
+    _json_sep(sb); _json_int(sb, "end_year", load64(p+ROUTE_END));
+    _json_sep(sb); _json_str(sb, "description", load64(p+ROUTE_DESC));
     str_builder_add_cstr(sb, "}");
     return str_builder_build(sb);
 }

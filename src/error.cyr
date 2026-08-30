@@ -1,14 +1,21 @@
 # itihas — error codes
+#
+# 2.5.0: renamed ERR_* -> ITIHAS_ERR_*. Cyrius has one FLAT enum-constant
+# namespace, and `cyrius lint` flags bare `ERR_*` in a leaf library for exactly
+# that reason: sakshi reserves the unprefixed form, and any two libraries a
+# consumer links that both define `ERR_NONE` silently resolve to whichever was
+# included last. itihas is included by seven consumers, so this is a BREAKING
+# rename — hence the minor bump rather than a patch.
 
 enum ItihasError {
-    ERR_NONE = 0;
-    ERR_UNKNOWN_ERA = 1;
-    ERR_UNKNOWN_CIVILIZATION = 2;
-    ERR_UNKNOWN_CALENDAR = 3;
-    ERR_INVALID_YEAR = 4;
-    ERR_EVENT_NOT_FOUND = 5;
-    ERR_FIGURE_NOT_FOUND = 6;
-    ERR_SITE_NOT_FOUND = 7;
-    ERR_ROUTE_NOT_FOUND = 8;
-    ERR_CAMPAIGN_NOT_FOUND = 9;
+    ITIHAS_ERR_NONE = 0;
+    ITIHAS_ERR_UNKNOWN_ERA = 1;
+    ITIHAS_ERR_UNKNOWN_CIVILIZATION = 2;
+    ITIHAS_ERR_UNKNOWN_CALENDAR = 3;
+    ITIHAS_ERR_INVALID_YEAR = 4;
+    ITIHAS_ERR_EVENT_NOT_FOUND = 5;
+    ITIHAS_ERR_FIGURE_NOT_FOUND = 6;
+    ITIHAS_ERR_SITE_NOT_FOUND = 7;
+    ITIHAS_ERR_ROUTE_NOT_FOUND = 8;
+    ITIHAS_ERR_CAMPAIGN_NOT_FOUND = 9;
 }

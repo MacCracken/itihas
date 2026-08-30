@@ -1,0 +1,319 @@
+# mcp.cyr — Model Context Protocol tools for itihas, over bote.
+#
+# Exposes the historical dataset as five read-only MCP tools so an agent can
+# query it directly. Ported from the Rust original's `mcp` module and its
+# `daimon` submodule; the specification lives in
+# docs/development/mcp-port-reference.md.
+#
+# ── NOT IN THE DEFAULT BUNDLE ──────────────────────────────────────────   #skip-lint
+# This module is deliberately absent from `src/lib.cyr` and from
+# `[lib].modules`, so `dist/itihas.cyr` carries no bote dependency at all. A
+# consumer that wants MCP opts in explicitly:
+#
+#     include "itihas/dist/itihas.cyr"     # the data library
+#     include "itihas/src/mcp.cyr"         # + MCP, needs bote in scope
+#
+# and declares bote itself. That is the lesson from ai-hwaccel 2.3.19, which
+# pulled its own focused dep transitively and handed every consumer 131
+# duplicate definitions: a library must not decide its consumers' dependency
+# graph for them. itihas's own builds activate bote through the `[features]
+# default` entry in cyrius.cyml, which cyrius resolves from the ROOT manifest
+# only — so nothing downstream inherits it.
+#
+# Every public name is `itihas_`-prefixed. Cyrius has one flat function
+# namespace, so an unprefixed `tool_definitions()` in a library included
+# alongside others is a collision waiting to happen — the same reasoning that
+# renames the error enum in this release.
+
+# ----------------------------------------------------------------
+# Argument helpers
+# ----------------------------------------------------------------
+# bote hands a handler the arguments as a JSON object cstr. Absent is 0
+# throughout, matching bote's own convention (see its libro_tools).
+
+# Integer argument, or `missing` when absent. A real 0 is indistinguishable
+# from absent in bote's raw getter, so callers that need to tell them apart
+# pass a sentinel they can recognise.
+fn _mcp_arg_int(args, key, missing) {
+    var raw = jsonx_get_raw(args, key);
+    if (raw == 0) { return missing; }
+    return str_to_int(str_from(raw));
+}
+
+# Str argument, or 0 when absent.
+fn _mcp_arg_str(args, key) {
+    var s = jsonx_get_str(args, key);
+    if (s == 0) { return 0; }
+    return str_from(s);
+}
+
+# `{"ok":false,"error":"..."}` — a handler failure the agent can read.
+fn _mcp_err(msg) {
+    var sb = str_builder_new();
+    str_builder_add_cstr(sb, "{\"ok\":false,\"error\":\"");
+    json_escape_into(sb, str_from(msg));
+    str_builder_add_cstr(sb, "\"}");
+    return str_data(str_builder_build(sb));
+}
+
+# One record, or a not-found object rather than a bare null, so the agent gets
+# a reason instead of having to infer one.
+fn _mcp_one(p, to_json_fn, what) {
+    if (p == 0) { return _mcp_err(what); }
+    return str_data(fncall1(to_json_fn, p));
+}
+
+# A vec of records as a JSON array (reuses hoosh's array builder).
+fn _mcp_many(v, to_json_fn) {
+    return str_data(_json_array(v, to_json_fn));
+}
+
+# Event category name -> CAT_*, or -1 when unrecognised.
+fn _mcp_category_from(name: Str) {
+    if (str_eq_lower(name, str_from("war")) == 1) { return CAT_WAR; }
+    if (str_eq_lower(name, str_from("treaty")) == 1) { return CAT_TREATY; }
+    if (str_eq_lower(name, str_from("discovery")) == 1) { return CAT_DISCOVERY; }
+    if (str_eq_lower(name, str_from("invention")) == 1) { return CAT_INVENTION; }
+    if (str_eq_lower(name, str_from("revolution")) == 1) { return CAT_REVOLUTION; }
+    if (str_eq_lower(name, str_from("migration")) == 1) { return CAT_MIGRATION; }
+    if (str_eq_lower(name, str_from("founding")) == 1) { return CAT_FOUNDING; }
+    if (str_eq_lower(name, str_from("collapse")) == 1) { return CAT_COLLAPSE; }
+    return 0 - 1;
+}
+
+# Figure domain name -> DOM_*, or -1 when unrecognised.
+fn _mcp_domain_from(name: Str) {
+    if (str_eq_lower(name, str_from("ruler")) == 1) { return DOM_RULER; }
+    if (str_eq_lower(name, str_from("philosopher")) == 1) { return DOM_PHILOSOPHER; }
+    if (str_eq_lower(name, str_from("scientist")) == 1) { return DOM_SCIENTIST; }
+    if (str_eq_lower(name, str_from("artist")) == 1) { return DOM_ARTIST; }
+    if (str_eq_lower(name, str_from("military")) == 1) { return DOM_MILITARY; }
+    if (str_eq_lower(name, str_from("religious")) == 1) { return DOM_RELIGIOUS; }
+    if (str_eq_lower(name, str_from("explorer")) == 1) { return DOM_EXPLORER; }
+    if (str_eq_lower(name, str_from("inventor")) == 1) { return DOM_INVENTOR; }
+    return 0 - 1;
+}
+
+# Sentinel for "no year given". Chosen far outside the dataset's range
+# (-3400..2025) and distinct from ERA_ONGOING.
+var MCP_NO_YEAR = 0 - 9223372036854775807;
+
+# ----------------------------------------------------------------
+# Handlers
+# ----------------------------------------------------------------
+# Each selects a query by which arguments are present, most specific first
+# (name, then year, then region), falling back to the whole collection — the
+# dispatch order the Rust original used. `claims` is bote's auth context and is
+# unused: every tool here is a read-only lookup over static data.
+
+# itihas_era: name -> the era, year -> eras containing it, region -> eras in
+# it, no argument -> all 25.
+fn itihas_mcp_handle_era(args, claims) {
+    var name = _mcp_arg_str(args, "name");
+    if (name != 0) { return _mcp_one(era_by_name(name), &era_to_json, "no era with that name"); }
+    var year = _mcp_arg_int(args, "year", MCP_NO_YEAR);
+    if (year != MCP_NO_YEAR) { return _mcp_many(eras_containing(year), &era_to_json); }
+    var region = _mcp_arg_str(args, "region");
+    if (region != 0) { return _mcp_many(eras_by_region(region), &era_to_json); }
+    return _mcp_many(all_eras(), &era_to_json);
+}
+
+# itihas_civilization: name -> the civilization, year -> those active then,
+# region -> those in it, no argument -> all 53.
+fn itihas_mcp_handle_civilization(args, claims) {
+    var name = _mcp_arg_str(args, "name");
+    if (name != 0) { return _mcp_one(civ_by_name(name), &civ_to_json, "no civilization with that name"); }
+    var year = _mcp_arg_int(args, "year", MCP_NO_YEAR);
+    if (year != MCP_NO_YEAR) { return _mcp_many(civs_active_at(year), &civ_to_json); }
+    var region = _mcp_arg_str(args, "region");
+    if (region != 0) { return _mcp_many(civs_by_region(region), &civ_to_json); }
+    return _mcp_many(all_civilizations(), &civ_to_json);
+}
+
+# itihas_event: name -> the event, start_year+end_year -> the range (BOTH are
+# required for a range query), category -> that category, no argument -> all 105.
+fn itihas_mcp_handle_event(args, claims) {
+    var name = _mcp_arg_str(args, "name");
+    if (name != 0) { return _mcp_one(event_by_name(name), &event_to_json, "no event with that name"); }
+    var sy = _mcp_arg_int(args, "start_year", MCP_NO_YEAR);
+    var ey = _mcp_arg_int(args, "end_year", MCP_NO_YEAR);
+    if (sy != MCP_NO_YEAR && ey != MCP_NO_YEAR) {
+        return _mcp_many(events_between(sy, ey), &event_to_json);
+    }
+    var cat = _mcp_arg_str(args, "category");
+    if (cat != 0) {
+        var c = _mcp_category_from(cat);
+        if (c < 0) { return _mcp_err("unknown event category"); }
+        return _mcp_many(events_by_category(c), &event_to_json);
+    }
+    return _mcp_many(all_events(), &event_to_json);
+}
+
+# itihas_figure: name -> the figure, domain -> that domain, no argument -> all 52.
+fn itihas_mcp_handle_figure(args, claims) {
+    var name = _mcp_arg_str(args, "name");
+    if (name != 0) { return _mcp_one(figure_by_name(name), &figure_to_json, "no figure with that name"); }
+    var dom = _mcp_arg_str(args, "domain");
+    if (dom != 0) {
+        var d = _mcp_domain_from(dom);
+        if (d < 0) { return _mcp_err("unknown figure domain"); }
+        return _mcp_many(figures_by_domain(d), &figure_to_json);
+    }
+    return _mcp_many(all_figures(), &figure_to_json);
+}
+
+# The one composite tool: events, eras and civilizations for a year range,
+# unioned into a single object.
+fn itihas_mcp_handle_timeline(args, claims) {
+    var sy = _mcp_arg_int(args, "start_year", MCP_NO_YEAR);
+    var ey = _mcp_arg_int(args, "end_year", MCP_NO_YEAR);
+    if (sy == MCP_NO_YEAR || ey == MCP_NO_YEAR) {
+        return _mcp_err("start_year and end_year are both required");
+    }
+    if (sy > ey) { return _mcp_err("start_year must not exceed end_year"); }
+    var sb = str_builder_new();
+    str_builder_add_cstr(sb, "{\"start_year\": ");
+    str_builder_add_int(sb, sy);
+    str_builder_add_cstr(sb, ", \"end_year\": ");
+    str_builder_add_int(sb, ey);
+    str_builder_add_cstr(sb, ", \"events\": ");
+    str_builder_add(sb, _json_array(events_between(sy, ey), &event_to_json));
+    # Eras and civilizations are point-in-time queries, so the range is
+    # represented by what was live at each endpoint.
+    str_builder_add_cstr(sb, ", \"eras_at_start\": ");
+    str_builder_add(sb, _json_array(eras_containing(sy), &era_to_json));
+    str_builder_add_cstr(sb, ", \"eras_at_end\": ");
+    str_builder_add(sb, _json_array(eras_containing(ey), &era_to_json));
+    str_builder_add_cstr(sb, ", \"civilizations_at_start\": ");
+    str_builder_add(sb, _json_array(civs_active_at(sy), &civ_to_json));
+    str_builder_add_cstr(sb, ", \"civilizations_at_end\": ");
+    str_builder_add(sb, _json_array(civs_active_at(ey), &civ_to_json));
+    str_builder_add_cstr(sb, "}");
+    return str_data(str_builder_build(sb));
+}
+
+# ----------------------------------------------------------------
+# Tool definitions
+# ----------------------------------------------------------------
+# All five are read-only and every parameter is optional, so a call with no
+# arguments returns the whole collection. Year fields are signed, negative
+# meaning BCE, matching the rest of itihas.
+
+fn _mcp_prop(props, key, json_literal) {
+    vec_push(props, schema_prop_new(key, json_literal));
+    return 0;
+}
+
+fn _mcp_schema(props) {
+    return schema_new("object", props, vec_new());
+}
+
+#must_use
+fn itihas_mcp_tool_definitions() {
+    var defs = vec_new();
+
+    var era_props = vec_new();
+    _mcp_prop(era_props, "name", "{\"type\":\"string\",\"description\":\"Era name (case-insensitive)\"}");
+    _mcp_prop(era_props, "year", "{\"type\":\"integer\",\"description\":\"Year to find containing eras (negative = BCE)\"}");   #skip-lint
+    _mcp_prop(era_props, "region", "{\"type\":\"string\",\"description\":\"Region substring filter\"}");
+    vec_push(defs, tool_def_with_annotations(
+        tool_def_new("itihas_era", "Look up historical eras by name, year, scope, or region",
+          _mcp_schema(era_props)), ann_read_only()));
+
+    var civ_props = vec_new();
+    _mcp_prop(civ_props, "name", "{\"type\":\"string\",\"description\":\"Civilization name (case-insensitive)\"}");
+    _mcp_prop(civ_props, "year", "{\"type\":\"integer\",\"description\":\"Year the civilization was active (negative = BCE)\"}");   #skip-lint
+    _mcp_prop(civ_props, "region", "{\"type\":\"string\",\"description\":\"Region substring filter\"}");
+    vec_push(defs, tool_def_with_annotations(
+        tool_def_new("itihas_civilization", "Look up civilizations by name, region, or active year",
+          _mcp_schema(civ_props)), ann_read_only()));
+
+    var evt_props = vec_new();
+    _mcp_prop(evt_props, "name", "{\"type\":\"string\",\"description\":\"Event name (case-insensitive)\"}");
+    _mcp_prop(evt_props, "start_year", "{\"type\":\"integer\",\"description\":\"Range start (negative = BCE)\"}");
+    _mcp_prop(evt_props, "end_year", "{\"type\":\"integer\",\"description\":\"Range end (negative = BCE)\"}");
+    _mcp_prop(evt_props, "category", "{\"type\":\"string\",\"description\":\"war, treaty, discovery, invention, revolution, migration, founding, collapse\"}");   #skip-lint
+    vec_push(defs, tool_def_with_annotations(
+        tool_def_new("itihas_event", "Look up historical events by name, year range, or category",
+          _mcp_schema(evt_props)), ann_read_only()));
+
+    var fig_props = vec_new();
+    _mcp_prop(fig_props, "name", "{\"type\":\"string\",\"description\":\"Figure name (case-insensitive)\"}");
+    _mcp_prop(fig_props, "domain", "{\"type\":\"string\",\"description\":\"ruler, philosopher, scientist, artist, military, religious, explorer, inventor\"}");   #skip-lint
+    vec_push(defs, tool_def_with_annotations(
+        tool_def_new("itihas_figure", "Look up historical figures by name or domain",
+          _mcp_schema(fig_props)), ann_read_only()));
+
+    var tl_props = vec_new();
+    _mcp_prop(tl_props, "start_year", "{\"type\":\"integer\",\"description\":\"Range start (negative = BCE)\"}");
+    _mcp_prop(tl_props, "end_year", "{\"type\":\"integer\",\"description\":\"Range end (negative = BCE)\"}");
+    vec_push(defs, tool_def_with_annotations(
+        tool_def_new("itihas_timeline", "Get a timeline of events, eras, and civilizations for a year range",
+          _mcp_schema(tl_props)), ann_read_only()));
+
+    return defs;
+}
+
+#must_use
+fn itihas_mcp_tool_count() { return 5; }
+
+# Bind each tool name to its handler on an existing dispatcher.
+fn itihas_mcp_register_handlers(dispatcher) {
+    dispatcher_handle(dispatcher, "itihas_era", &itihas_mcp_handle_era);
+    dispatcher_handle(dispatcher, "itihas_civilization", &itihas_mcp_handle_civilization);
+    dispatcher_handle(dispatcher, "itihas_event", &itihas_mcp_handle_event);
+    dispatcher_handle(dispatcher, "itihas_figure", &itihas_mcp_handle_figure);
+    dispatcher_handle(dispatcher, "itihas_timeline", &itihas_mcp_handle_timeline);
+    return 0;
+}
+
+# Register definitions AND handlers on a dispatcher in one call — the usual
+# entry point. Mirrors bote's own libro_tools_register.
+fn itihas_mcp_register_all(dispatcher) {
+    var reg = dispatcher_registry(dispatcher);
+    var defs = itihas_mcp_tool_definitions();
+    var i = 0;
+    while (i < vec_len(defs)) {
+        registry_register(reg, vec_get(defs, i));
+        i = i + 1;
+    }
+    itihas_mcp_register_handlers(dispatcher);
+    return 0;
+}
+
+# ----------------------------------------------------------------
+# daimon — agent-orchestrator integration
+# ----------------------------------------------------------------
+# daimon reaches itihas through bote's HOST registry rather than a dispatcher:
+# the tools are described to the orchestrator, which invokes them by name.
+
+# The tool definitions in the host registry's description shape.
+#must_use
+fn itihas_daimon_host_tool_descriptions() {
+    return itihas_mcp_tool_definitions();
+}
+
+# Register itihas's tools on a daimon/bote host registry.
+fn itihas_daimon_register_tools(registry) {
+    var defs = itihas_daimon_host_tool_descriptions();
+    var i = 0;
+    while (i < vec_len(defs)) {
+        var d = vec_get(defs, i);
+        host_registry_add(registry, host_entry_new(tool_def_name(d), tool_def_description(d)));
+        i = i + 1;
+    }
+    return 0;
+}
+
+# Invoke a tool by name with a JSON arguments object. Returns the JSON result,
+# or 0 when the name is not one of itihas's — the caller distinguishes "not
+# mine" from "failed", which is why an unknown name is not an error object.
+#must_use
+fn itihas_daimon_invoke(name, args) {
+    if (streq(name, "itihas_era") == 1) { return itihas_mcp_handle_era(args, 0); }
+    if (streq(name, "itihas_civilization") == 1) { return itihas_mcp_handle_civilization(args, 0); }
+    if (streq(name, "itihas_event") == 1) { return itihas_mcp_handle_event(args, 0); }
+    if (streq(name, "itihas_figure") == 1) { return itihas_mcp_handle_figure(args, 0); }
+    if (streq(name, "itihas_timeline") == 1) { return itihas_mcp_handle_timeline(args, 0); }
+    return 0;
+}
