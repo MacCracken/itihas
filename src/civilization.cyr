@@ -7,7 +7,7 @@ var civ_init_done = 0;
 
 #must_use
 fn civ_new(name: Str, region: Str, peak: Str, fy, ey, traits: Str, script: Str, lang: Str) {
-    var p = alloc(CIV_SIZE);
+    var p = xalloc(CIV_SIZE);
     store64(p+CIV_NAME, name); store64(p+CIV_REGION, region); store64(p+CIV_PEAK, peak);
     store64(p+CIV_FOUND, fy); store64(p+CIV_END, ey);
     store64(p+CIV_TRAITS, traits); store64(p+CIV_SCRIPT, script); store64(p+CIV_LANG, lang);
@@ -93,6 +93,7 @@ fn civ_get(idx) { return vec_get(all_civilizations(), idx); }
 
 #must_use
 fn civs_by_region(region: Str) {
+    itrace_s("looking up civilizations by region", "region", region);
     var result = vec_new();
     # str_contains reports a match for a zero-length needle, so an empty region
     # used to return every civilization rather than none.
@@ -109,6 +110,7 @@ fn _cmp_civ_found(a, b) { return load64(a+CIV_FOUND) - load64(b+CIV_FOUND); }
 
 #must_use
 fn civs_active_at(year) {
+    itrace_i("looking up civilizations active at year", "year", year);
     var result = vec_new();
     var v = all_civilizations(); var n = vec_len(v);
     for (var i = 0; i < n; i = i + 1) {
@@ -121,6 +123,7 @@ fn civs_active_at(year) {
 
 #must_use
 fn civ_by_name(name: Str) {
+    itrace_s("looking up civilization by name", "name", name);
     var v = all_civilizations(); var n = vec_len(v);
     for (var i = 0; i < n; i = i + 1) {
         var p = vec_get(v, i);

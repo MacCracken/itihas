@@ -1,12 +1,48 @@
 # util.cyr — itihas utility functions
 # Case conversion, comparison, and sorting helpers
 
+# ----------------------------------------------------------------
+# Checked allocation
+# ----------------------------------------------------------------
+# alloc() returns 0 on exhaustion rather than aborting, and every allocation
+# site in itihas writes into the result immediately — a struct constructor
+# store64s its fields, a buffer builder store8s its bytes. So an unchecked
+# alloc under memory pressure is a write through a near-NULL pointer (CWE-690),
+# which faults at an address that tells you nothing about where it came from.
+#
+# Aborting is deliberate, and follows the AGNOS policy avatara set in its
+# ADR-009: it matches Rust and Go, whose allocators abort rather than return
+# null, because a library cannot invent a recovery its caller did not ask for.
+# Exit 134 is 128 + SIGABRT, the shell convention for "aborted".
+#
+# Use xalloc for any allocation whose failure has no local recovery. Where a
+# caller CAN degrade meaningfully — hoosh's network buffers, which return a
+# failure the caller already reports — check `alloc` explicitly instead.
+#must_use
+fn xalloc(n) {
+    # A non-positive size is a CALLER bug, not exhaustion, and the stdlib
+    # alloc() returns 0 for it — reporting that as "out of memory" would send
+    # the reader hunting the wrong problem entirely.
+    if (n <= 0) {
+        var bad = "itihas: fatal - xalloc called with a non-positive size\n";
+        syscall(SYS_WRITE, 2, bad, strlen(bad));
+        syscall(SYS_EXIT, 134);
+    }
+    var p = alloc(n);
+    if (p == 0) {
+        var msg = "itihas: fatal - heap allocation failed (out of memory)\n";
+        syscall(SYS_WRITE, 2, msg, strlen(msg));
+        syscall(SYS_EXIT, 134);
+    }
+    return p;
+}
+
 # Convert Str to lowercase (ASCII only, allocates new)
 #must_use
 fn str_lower(s) {
     var slen = str_len(s);
     var sd = str_data(s);
-    var buf = alloc(slen + 1);
+    var buf = xalloc(slen + 1);
     var li = 0;
     while (li < slen) {
         var c = load8(sd + li);
@@ -23,7 +59,7 @@ fn str_lower(s) {
 fn str_upper(s) {
     var slen = str_len(s);
     var sd = str_data(s);
-    var buf = alloc(slen + 1);
+    var buf = xalloc(slen + 1);
     var ui = 0;
     while (ui < slen) {
         var c = load8(sd + ui);
@@ -87,6 +123,64 @@ fn vec_sort(v, cmp) {
         store64(data + (j + 1) * 8, key);
         si = si + 1;
     }
+    return 0;
+}
+
+# ----------------------------------------------------------------
+# Query tracing
+# ----------------------------------------------------------------
+# The Rust original emitted a `tracing::debug!` on entry to every query,
+# carrying the lookup argument. The port kept the logging module but never
+# called it from anything, so `itihas_log_init` set a level that nothing
+# honoured and an operator had no way to see what a consumer was asking for.
+#
+# Each helper checks the level FIRST and returns before touching its arguments,
+# so a build with logging off pays one call plus one compare per query — the
+# argument is an integer or an already-materialised Str, never a construction.
+# That matters because these sit on the 200-900 ns query paths the benchmark
+# suite measures; see the CHANGELOG for the before/after.
+#
+# These live in util.cyr rather than logging.cyr because Cyrius resolves
+# forward references single-pass and logging.cyr is included after the ten data
+# modules that call them.
+
+# Trace a query with one integer argument (a year, a depth, an enum tag).
+fn itrace_i(msg, key, val) {
+    if (sakshi_get_level() < SK_DEBUG) { return 0; }
+    var b = xalloc(24);
+    var n = fmt_int_buf(val, b);
+    sakshi_log_kv(SK_DEBUG, msg, strlen(msg), key, strlen(key), b, n);
+    return 0;
+}
+
+# Trace a query with one Str argument (a name, a region, a civilization).
+fn itrace_s(msg, key, val: Str) {
+    if (sakshi_get_level() < SK_DEBUG) { return 0; }
+    sakshi_log_kv(SK_DEBUG, msg, strlen(msg), key, strlen(key), str_data(val), str_len(val));
+    return 0;
+}
+
+# Trace a query over an integer RANGE, emitted as `start..end`.
+fn itrace_range(msg, start, end) {
+    if (sakshi_get_level() < SK_DEBUG) { return 0; }
+    var sb = str_builder_new();
+    str_builder_add_int(sb, start);
+    str_builder_add_cstr(sb, "..");
+    str_builder_add_int(sb, end);
+    var v = str_builder_build(sb);
+    sakshi_log_kv(SK_DEBUG, msg, strlen(msg), "range", 5, str_data(v), str_len(v));
+    return 0;
+}
+
+# Trace a query over a PAIR of Str arguments, emitted as `a, b`.
+fn itrace_pair(msg, key, a: Str, b: Str) {
+    if (sakshi_get_level() < SK_DEBUG) { return 0; }
+    var sb = str_builder_new();
+    str_builder_add(sb, a);
+    str_builder_add_cstr(sb, ", ");
+    str_builder_add(sb, b);
+    var v = str_builder_build(sb);
+    sakshi_log_kv(SK_DEBUG, msg, strlen(msg), key, strlen(key), str_data(v), str_len(v));
     return 0;
 }
 

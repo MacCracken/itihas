@@ -449,6 +449,51 @@ fn main() {
 
 
     # ---------------------------------------------------------------
+    # Query tracing
+    # ---------------------------------------------------------------
+    println("--- tracing ---");
+    # The Rust original traced every query entry; the port kept the logging
+    # module but never called it. 45 sites are restored (42 data + 3 hoosh),
+    # each gated on the level so a build with logging off pays one call and one
+    # compare. The regression risk is a trace call breaking the query it sits
+    # in front of, so every traced shape is re-asserted with DEBUG on.
+    check(sakshi_get_level() >= 0, 1, "trace: sakshi level readable");
+    itihas_log_init_level(SK_DEBUG);
+    check(vec_len(eras_containing(500)) > 0, 1, "trace: eras_containing works at DEBUG");
+    ok(era_by_name("Bronze Age"), "trace: era_by_name works at DEBUG");
+    check(vec_len(civs_by_region("Mediterranean")) > 0, 1, "trace: civs_by_region works at DEBUG");
+    check(vec_len(events_between(-500, 500)) > 0, 1, "trace: events_between (range shape) works at DEBUG");
+    check(influence_score("Ancient Egypt", "Hittite Empire"), 7, "trace: influence_score (pair shape) unchanged at DEBUG");
+    check(vec_len(causes_of("French Revolution")), 2, "trace: causes_of unchanged at DEBUG");
+    check(vec_len(campaigns_by_commander("Napoleon")) > 0, 1, "trace: campaigns_by_commander works at DEBUG");
+    check(vec_len(routes_by_commodity("silk")), 2, "trace: routes_by_commodity unchanged at DEBUG");
+    check(vec_len(sites_by_region("Near East")) > 0, 1, "trace: sites_by_region works at DEBUG");
+    # Restore quiet so the rest of the suite is not noisy.
+    itihas_log_init_level(SK_ERROR);
+    check(vec_len(eras_containing(500)) > 0, 1, "trace: queries unchanged with tracing off");
+
+    # ---------------------------------------------------------------
+    # Checked allocation (CWE-690)
+    # ---------------------------------------------------------------
+    println("--- xalloc ---");
+    # Every allocation site in itihas writes into its result immediately, so an
+    # unchecked alloc under exhaustion is a near-NULL write. xalloc aborts
+    # instead (exit 134 = 128 + SIGABRT), following avatara's ADR-009.
+    # The abort path cannot be asserted from in-process — it exits — so this
+    # covers the success path and that the memory is actually usable.
+    var xa = xalloc(64);
+    ok(xa, "xalloc returns a pointer");
+    store64(xa, 0x1234);
+    check(load64(xa), 0x1234, "xalloc memory is writable and reads back");
+    var xb = xalloc(8);
+    ok(xb != xa, "xalloc hands out distinct blocks");
+    # xalloc(0) is NOT tested here: the stdlib alloc() returns 0 for a
+    # zero-size request, so xalloc aborts — deliberately, and with a distinct
+    # "non-positive size" diagnostic rather than a misleading OOM message,
+    # because that is a caller bug. No itihas call site can reach it: every
+    # size is either a positive struct-size constant or `len + 1`.
+
+    # ---------------------------------------------------------------
     # 2.4.2 regressions — util helpers
     # ---------------------------------------------------------------
     println("--- util helpers ---");

@@ -8,12 +8,48 @@
 # util.cyr — itihas utility functions
 # Case conversion, comparison, and sorting helpers
 
+# ----------------------------------------------------------------
+# Checked allocation
+# ----------------------------------------------------------------
+# alloc() returns 0 on exhaustion rather than aborting, and every allocation
+# site in itihas writes into the result immediately — a struct constructor
+# store64s its fields, a buffer builder store8s its bytes. So an unchecked
+# alloc under memory pressure is a write through a near-NULL pointer (CWE-690),
+# which faults at an address that tells you nothing about where it came from.
+#
+# Aborting is deliberate, and follows the AGNOS policy avatara set in its
+# ADR-009: it matches Rust and Go, whose allocators abort rather than return
+# null, because a library cannot invent a recovery its caller did not ask for.
+# Exit 134 is 128 + SIGABRT, the shell convention for "aborted".
+#
+# Use xalloc for any allocation whose failure has no local recovery. Where a
+# caller CAN degrade meaningfully — hoosh's network buffers, which return a
+# failure the caller already reports — check `alloc` explicitly instead.
+#must_use
+fn xalloc(n) {
+    # A non-positive size is a CALLER bug, not exhaustion, and the stdlib
+    # alloc() returns 0 for it — reporting that as "out of memory" would send
+    # the reader hunting the wrong problem entirely.
+    if (n <= 0) {
+        var bad = "itihas: fatal - xalloc called with a non-positive size\n";
+        syscall(SYS_WRITE, 2, bad, strlen(bad));
+        syscall(SYS_EXIT, 134);
+    }
+    var p = alloc(n);
+    if (p == 0) {
+        var msg = "itihas: fatal - heap allocation failed (out of memory)\n";
+        syscall(SYS_WRITE, 2, msg, strlen(msg));
+        syscall(SYS_EXIT, 134);
+    }
+    return p;
+}
+
 # Convert Str to lowercase (ASCII only, allocates new)
 #must_use
 fn str_lower(s) {
     var slen = str_len(s);
     var sd = str_data(s);
-    var buf = alloc(slen + 1);
+    var buf = xalloc(slen + 1);
     var li = 0;
     while (li < slen) {
         var c = load8(sd + li);
@@ -30,7 +66,7 @@ fn str_lower(s) {
 fn str_upper(s) {
     var slen = str_len(s);
     var sd = str_data(s);
-    var buf = alloc(slen + 1);
+    var buf = xalloc(slen + 1);
     var ui = 0;
     while (ui < slen) {
         var c = load8(sd + ui);
@@ -94,6 +130,64 @@ fn vec_sort(v, cmp) {
         store64(data + (j + 1) * 8, key);
         si = si + 1;
     }
+    return 0;
+}
+
+# ----------------------------------------------------------------
+# Query tracing
+# ----------------------------------------------------------------
+# The Rust original emitted a `tracing::debug!` on entry to every query,
+# carrying the lookup argument. The port kept the logging module but never
+# called it from anything, so `itihas_log_init` set a level that nothing
+# honoured and an operator had no way to see what a consumer was asking for.
+#
+# Each helper checks the level FIRST and returns before touching its arguments,
+# so a build with logging off pays one call plus one compare per query — the
+# argument is an integer or an already-materialised Str, never a construction.
+# That matters because these sit on the 200-900 ns query paths the benchmark
+# suite measures; see the CHANGELOG for the before/after.
+#
+# These live in util.cyr rather than logging.cyr because Cyrius resolves
+# forward references single-pass and logging.cyr is included after the ten data
+# modules that call them.
+
+# Trace a query with one integer argument (a year, a depth, an enum tag).
+fn itrace_i(msg, key, val) {
+    if (sakshi_get_level() < SK_DEBUG) { return 0; }
+    var b = xalloc(24);
+    var n = fmt_int_buf(val, b);
+    sakshi_log_kv(SK_DEBUG, msg, strlen(msg), key, strlen(key), b, n);
+    return 0;
+}
+
+# Trace a query with one Str argument (a name, a region, a civilization).
+fn itrace_s(msg, key, val: Str) {
+    if (sakshi_get_level() < SK_DEBUG) { return 0; }
+    sakshi_log_kv(SK_DEBUG, msg, strlen(msg), key, strlen(key), str_data(val), str_len(val));
+    return 0;
+}
+
+# Trace a query over an integer RANGE, emitted as `start..end`.
+fn itrace_range(msg, start, end) {
+    if (sakshi_get_level() < SK_DEBUG) { return 0; }
+    var sb = str_builder_new();
+    str_builder_add_int(sb, start);
+    str_builder_add_cstr(sb, "..");
+    str_builder_add_int(sb, end);
+    var v = str_builder_build(sb);
+    sakshi_log_kv(SK_DEBUG, msg, strlen(msg), "range", 5, str_data(v), str_len(v));
+    return 0;
+}
+
+# Trace a query over a PAIR of Str arguments, emitted as `a, b`.
+fn itrace_pair(msg, key, a: Str, b: Str) {
+    if (sakshi_get_level() < SK_DEBUG) { return 0; }
+    var sb = str_builder_new();
+    str_builder_add(sb, a);
+    str_builder_add_cstr(sb, ", ");
+    str_builder_add(sb, b);
+    var v = str_builder_build(sb);
+    sakshi_log_kv(SK_DEBUG, msg, strlen(msg), key, strlen(key), str_data(v), str_len(v));
     return 0;
 }
 
@@ -352,7 +446,7 @@ var era_init_done = 0;
 
 #must_use
 fn era_new(name: Str, sy, ey, region: Str, desc: Str, cat, scope) {
-    var p = alloc(ERA_SIZE);
+    var p = xalloc(ERA_SIZE);
     store64(p + ERA_NAME, name);
     store64(p + ERA_START, sy);
     store64(p + ERA_END, ey);
@@ -429,6 +523,7 @@ fn _cmp_era_start(a, b) { return load64(a+ERA_START) - load64(b+ERA_START); }
 
 #must_use
 fn eras_containing(year) {
+    itrace_i("looking up eras containing year", "year", year);
     var result = vec_new();
     var v = all_eras();
     var n = vec_len(v);
@@ -442,6 +537,7 @@ fn eras_containing(year) {
 
 #must_use
 fn eras_by_scope(scope) {
+    itrace_i("looking up eras by scope", "scope", scope);
     var result = vec_new();
     var v = all_eras();
     var n = vec_len(v);
@@ -454,6 +550,7 @@ fn eras_by_scope(scope) {
 
 #must_use
 fn eras_by_region(region: Str) {
+    itrace_s("looking up eras by region", "region", region);
     var result = vec_new();
     # Zero-length needle matches every string; return nothing instead of all.
     if (str_len(region) == 0) { return result; }
@@ -468,6 +565,7 @@ fn eras_by_region(region: Str) {
 
 #must_use
 fn era_by_name(name: Str) {
+    itrace_s("looking up era by name", "name", name);
     var v = all_eras();
     var n = vec_len(v);
     for (var i = 0; i < n; i = i + 1) {
@@ -492,7 +590,7 @@ var calendar_init_done = 0;
 
 #must_use
 fn cal_new(name: Str, ctype, epoch, months, leap: Str) {
-    var p = alloc(CAL_SIZE);
+    var p = xalloc(CAL_SIZE);
     store64(p + CAL_NAME, name);
     store64(p + CAL_TYPE, ctype);
     store64(p + CAL_EPOCH, epoch);
@@ -534,6 +632,7 @@ fn calendar_count() { return vec_len(all_calendars()); }
 
 #must_use
 fn calendar_by_name(name: Str) {
+    itrace_s("looking up calendar by name", "name", name);
     var v = all_calendars();
     var n = vec_len(v);
     for (var i = 0; i < n; i = i + 1) {
@@ -554,7 +653,7 @@ var civ_init_done = 0;
 
 #must_use
 fn civ_new(name: Str, region: Str, peak: Str, fy, ey, traits: Str, script: Str, lang: Str) {
-    var p = alloc(CIV_SIZE);
+    var p = xalloc(CIV_SIZE);
     store64(p+CIV_NAME, name); store64(p+CIV_REGION, region); store64(p+CIV_PEAK, peak);
     store64(p+CIV_FOUND, fy); store64(p+CIV_END, ey);
     store64(p+CIV_TRAITS, traits); store64(p+CIV_SCRIPT, script); store64(p+CIV_LANG, lang);
@@ -640,6 +739,7 @@ fn civ_get(idx) { return vec_get(all_civilizations(), idx); }
 
 #must_use
 fn civs_by_region(region: Str) {
+    itrace_s("looking up civilizations by region", "region", region);
     var result = vec_new();
     # str_contains reports a match for a zero-length needle, so an empty region
     # used to return every civilization rather than none.
@@ -656,6 +756,7 @@ fn _cmp_civ_found(a, b) { return load64(a+CIV_FOUND) - load64(b+CIV_FOUND); }
 
 #must_use
 fn civs_active_at(year) {
+    itrace_i("looking up civilizations active at year", "year", year);
     var result = vec_new();
     var v = all_civilizations(); var n = vec_len(v);
     for (var i = 0; i < n; i = i + 1) {
@@ -668,6 +769,7 @@ fn civs_active_at(year) {
 
 #must_use
 fn civ_by_name(name: Str) {
+    itrace_s("looking up civilization by name", "name", name);
     var v = all_civilizations(); var n = vec_len(v);
     for (var i = 0; i < n; i = i + 1) {
         var p = vec_get(v, i);
@@ -688,7 +790,7 @@ var fig_init_done = 0;
 
 #must_use
 fn fig_new(name: Str, by, dy, civ: Str, dom, desc: Str) {
-    var p = alloc(FIG_SIZE);
+    var p = xalloc(FIG_SIZE);
     store64(p+FIG_NAME,name); store64(p+FIG_BIRTH,by); store64(p+FIG_DEATH,dy);
     store64(p+FIG_CIV,civ); store64(p+FIG_DOM,dom); store64(p+FIG_DESC,desc);
     return p;
@@ -766,6 +868,7 @@ fn figure_count() { return vec_len(all_figures()); }
 
 #must_use
 fn figures_by_domain(dom) {
+    itrace_i("looking up figures by domain", "domain", dom);
     var result = vec_new();
     var v = all_figures(); var n = vec_len(v);
     for (var i = 0; i < n; i = i + 1) {
@@ -777,6 +880,7 @@ fn figures_by_domain(dom) {
 
 #must_use
 fn figure_by_name(name: Str) {
+    itrace_s("looking up figure by name", "name", name);
     var v = all_figures(); var n = vec_len(v);
     for (var i = 0; i < n; i = i + 1) {
         var p = vec_get(v, i);
@@ -798,7 +902,7 @@ var evt_init_done = 0;
 
 #must_use
 fn evt_new(name: Str, year, era: Str, cat, desc: Str, civs: Str, sig) {
-    var p = alloc(EVT_SIZE);
+    var p = xalloc(EVT_SIZE);
     store64(p+EVT_NAME,name); store64(p+EVT_YEAR,year); store64(p+EVT_ERA,era);
     store64(p+EVT_CAT,cat); store64(p+EVT_DESC,desc); store64(p+EVT_CIVS,civs); store64(p+EVT_SIG,sig);
     return p;
@@ -933,6 +1037,7 @@ fn event_count() { return vec_len(all_events()); }
 
 #must_use
 fn events_by_category(cat) {
+    itrace_i("looking up events by category", "category", cat);
     var result = vec_new();
     var v = all_events(); var n = vec_len(v);
     for (var i = 0; i < n; i = i + 1) {
@@ -944,6 +1049,7 @@ fn events_by_category(cat) {
 
 #must_use
 fn events_at_year(year) {
+    itrace_i("looking up events at year", "year", year);
     var result = vec_new();
     var v = all_events(); var n = vec_len(v);
     for (var i = 0; i < n; i = i + 1) {
@@ -957,6 +1063,7 @@ fn _cmp_evt_year(a, b) { return load64(a+EVT_YEAR) - load64(b+EVT_YEAR); }
 
 #must_use
 fn events_between(sy, ey) {
+    itrace_range("looking up events between years", sy, ey);
     var result = vec_new();
     var v = all_events(); var n = vec_len(v);
     for (var i = 0; i < n; i = i + 1) {
@@ -969,6 +1076,7 @@ fn events_between(sy, ey) {
 
 #must_use
 fn events_by_significance(sig) {
+    itrace_i("looking up events by significance", "significance", sig);
     var result = vec_new();
     var v = all_events(); var n = vec_len(v);
     for (var i = 0; i < n; i = i + 1) {
@@ -980,6 +1088,7 @@ fn events_by_significance(sig) {
 
 #must_use
 fn event_by_name(name: Str) {
+    itrace_s("looking up event by name", "name", name);
     var v = all_events(); var n = vec_len(v);
     for (var i = 0; i < n; i = i + 1) {
         var p = vec_get(v, i);
@@ -1000,7 +1109,7 @@ var caus_init_done = 0;
 
 #must_use
 fn caus_new(cause: Str, effect: Str, str, desc: Str) {
-    var p = alloc(CAUS_SIZE);
+    var p = xalloc(CAUS_SIZE);
     store64(p+CAUS_CAUSE,cause); store64(p+CAUS_EFFECT,effect);
     store64(p+CAUS_STR,str); store64(p+CAUS_DESC,desc);
     return p;
@@ -1039,6 +1148,7 @@ fn causality_count() { return vec_len(all_causalities()); }
 
 #must_use
 fn causes_of(event_name: Str) {
+    itrace_s("looking up causes of event", "event", event_name);
     var result = vec_new();
     var v = all_causalities(); var n = vec_len(v);
     for (var i = 0; i < n; i = i + 1) {
@@ -1050,6 +1160,7 @@ fn causes_of(event_name: Str) {
 
 #must_use
 fn effects_of(event_name: Str) {
+    itrace_s("looking up effects of event", "event", event_name);
     var result = vec_new();
     var v = all_causalities(); var n = vec_len(v);
     for (var i = 0; i < n; i = i + 1) {
@@ -1064,6 +1175,7 @@ enum ChainOff { CH_NAME=0; CH_DEPTH=8; CH_SIZE=16; }
 
 #must_use
 fn causal_chain(event_name: Str, max_depth) {
+    itrace_i("tracing causal chain", "max_depth", max_depth);
     var results = vec_new();
     var visited = vec_new();
     var frontier = vec_new();
@@ -1086,7 +1198,7 @@ fn causal_chain(event_name: Str, max_depth) {
         }
         if (already == 0) {
             vec_push(visited, ename);
-            var entry = alloc(CH_SIZE);
+            var entry = xalloc(CH_SIZE);
             store64(entry + CH_NAME, ename);
             store64(entry + CH_DEPTH, 1);
             vec_push(results, entry);
@@ -1113,7 +1225,7 @@ fn causal_chain(event_name: Str, max_depth) {
             }
             if (already2 == 0) {
                 vec_push(visited, ename2);
-                var entry2 = alloc(CH_SIZE);
+                var entry2 = xalloc(CH_SIZE);
                 store64(entry2 + CH_NAME, ename2);
                 store64(entry2 + CH_DEPTH, cdepth + 1);
                 vec_push(results, entry2);
@@ -1141,7 +1253,7 @@ var int_init_done = 0;
 
 #must_use
 fn int_new(ca: Str, cb: Str, itype, sy, ey, desc: Str) {
-    var p = alloc(INT_SIZE);
+    var p = xalloc(INT_SIZE);
     store64(p+INT_CIVA,ca); store64(p+INT_CIVB,cb); store64(p+INT_TYPE,itype);
     store64(p+INT_START,sy); store64(p+INT_END,ey); store64(p+INT_DESC,desc);
     return p;
@@ -1190,6 +1302,7 @@ fn interaction_count() { return vec_len(all_interactions()); }
 
 #must_use
 fn interactions_for(civ: Str) {
+    itrace_s("looking up interactions for civilization", "civ", civ);
     var result = vec_new();
     var v = all_interactions(); var n = vec_len(v);
     for (var i = 0; i < n; i = i + 1) {
@@ -1201,6 +1314,7 @@ fn interactions_for(civ: Str) {
 
 #must_use
 fn interactions_between(ca: Str, cb: Str) {
+    itrace_pair("looking up interactions between civilizations", "civs", ca, cb);
     var result = vec_new();
     var v = all_interactions(); var n = vec_len(v);
     for (var i = 0; i < n; i = i + 1) {
@@ -1214,6 +1328,7 @@ fn interactions_between(ca: Str, cb: Str) {
 
 #must_use
 fn interactions_by_type(itype) {
+    itrace_i("looking up interactions by type", "type", itype);
     var result = vec_new();
     var v = all_interactions(); var n = vec_len(v);
     for (var i = 0; i < n; i = i + 1) {
@@ -1225,6 +1340,7 @@ fn interactions_by_type(itype) {
 
 #must_use
 fn interaction_neighbors(civ: Str) {
+    itrace_s("looking up civilization neighbors", "civ", civ);
     var result = vec_new();
     var v = all_interactions(); var n = vec_len(v);
     for (var i = 0; i < n; i = i + 1) {
@@ -1246,6 +1362,7 @@ fn interaction_neighbors(civ: Str) {
 
 #must_use
 fn influence_score(ca: Str, cb: Str) {
+    itrace_pair("computing influence score", "civs", ca, cb);
     # Scans the interaction table directly rather than materializing the vec
     # interactions_between would build; the sum is order-independent, so the
     # intermediate collection was pure allocation.
@@ -1300,6 +1417,7 @@ fn split_regions(region_str) {
 # 100 = identical region strings, 50-99 = shared region components, 0 = no overlap
 #must_use
 fn region_proximity(ca: Str, cb: Str) {
+    itrace_pair("computing region proximity", "civs", ca, cb);
     var civ_a = civ_by_name(ca);
     var civ_b = civ_by_name(cb);
     if (civ_a == 0 || civ_b == 0) { return 0; }
@@ -1346,7 +1464,7 @@ var camp_init_done = 0;
 
 #must_use
 fn camp_new(name: Str, region: Str, sy, ey, ba: Str, bb: Str, cmds: Str, out, desc: Str) {
-    var p = alloc(CAMP_SIZE);
+    var p = xalloc(CAMP_SIZE);
     store64(p+CAMP_NAME,name); store64(p+CAMP_REGION,region);
     store64(p+CAMP_START,sy); store64(p+CAMP_END,ey);
     store64(p+CAMP_BELLA,ba); store64(p+CAMP_BELLB,bb); store64(p+CAMP_CMDS,cmds);
@@ -1368,7 +1486,7 @@ fn camp_bellb(p) { return load64(p+CAMP_BELLB); }
 
 # Append a battle record to `camp`. Used by build_campaigns while assembling the table.
 fn bat_add(camp, name: Str, year, loc: Str, desc: Str) {
-    var b = alloc(BAT_SIZE);
+    var b = xalloc(BAT_SIZE);
     store64(b+BAT_NAME,name); store64(b+BAT_YEAR,year);
     store64(b+BAT_LOC,loc); store64(b+BAT_DESC,desc);
     vec_push(load64(camp+CAMP_BATTLES), b);
@@ -1453,6 +1571,7 @@ fn campaign_count() { return vec_len(all_campaigns()); }
 
 #must_use
 fn campaign_by_name(name: Str) {
+    itrace_s("looking up campaign by name", "name", name);
     var v = all_campaigns(); var n = vec_len(v);
     for (var i = 0; i < n; i = i + 1) {
         var p = vec_get(v, i);
@@ -1463,6 +1582,7 @@ fn campaign_by_name(name: Str) {
 
 #must_use
 fn campaigns_by_region(region: Str) {
+    itrace_s("looking up campaigns by region", "region", region);
     var result = vec_new();
     var v = all_campaigns(); var n = vec_len(v);
     for (var i = 0; i < n; i = i + 1) {
@@ -1474,6 +1594,7 @@ fn campaigns_by_region(region: Str) {
 
 #must_use
 fn campaigns_by_outcome(outcome) {
+    itrace_i("looking up campaigns by outcome", "outcome", outcome);
     var result = vec_new();
     var v = all_campaigns(); var n = vec_len(v);
     for (var i = 0; i < n; i = i + 1) {
@@ -1485,6 +1606,7 @@ fn campaigns_by_outcome(outcome) {
 
 #must_use
 fn campaigns_by_commander(cmd: Str) {
+    itrace_s("looking up campaigns by commander", "commander", cmd);
     var result = vec_new();
     var v = all_campaigns(); var n = vec_len(v);
     for (var i = 0; i < n; i = i + 1) {
@@ -1496,6 +1618,7 @@ fn campaigns_by_commander(cmd: Str) {
 
 #must_use
 fn campaigns_by_civilization(civ: Str) {
+    itrace_s("looking up campaigns by civilization", "civ", civ);
     var result = vec_new();
     var v = all_campaigns(); var n = vec_len(v);
     for (var i = 0; i < n; i = i + 1) {
@@ -1507,6 +1630,7 @@ fn campaigns_by_civilization(civ: Str) {
 
 #must_use
 fn campaigns_active_at(year) {
+    itrace_i("looking up campaigns active at year", "year", year);
     var result = vec_new();
     var v = all_campaigns(); var n = vec_len(v);
     for (var i = 0; i < n; i = i + 1) {
@@ -1520,6 +1644,7 @@ fn _cmp_camp_start(a, b) { return load64(a+CAMP_START) - load64(b+CAMP_START); }
 
 #must_use
 fn campaigns_between(sy, ey) {
+    itrace_range("looking up campaigns between years", sy, ey);
     var result = vec_new();
     var v = all_campaigns(); var n = vec_len(v);
     for (var i = 0; i < n; i = i + 1) {
@@ -1542,7 +1667,7 @@ var site_init_done = 0;
 
 #must_use
 fn site_new(name: Str, loc: Str, reg: Str, st, civ: Str, sy, ey, disc, desc: Str) {
-    var p = alloc(SITE_SIZE);
+    var p = xalloc(SITE_SIZE);
     store64(p+SITE_NAME,name); store64(p+SITE_LOC,loc); store64(p+SITE_REG,reg);
     store64(p+SITE_TYPE,st); store64(p+SITE_CIV,civ);
     store64(p+SITE_START,sy); store64(p+SITE_END,ey); store64(p+SITE_DISC,disc); store64(p+SITE_DESC,desc);
@@ -1601,6 +1726,7 @@ fn site_count() { return vec_len(all_sites()); }
 
 #must_use
 fn sites_by_region(region: Str) {
+    itrace_s("looking up sites by region", "region", region);
     var result = vec_new();
     var v = all_sites(); var n = vec_len(v);
     for (var i = 0; i < n; i = i + 1) {
@@ -1612,6 +1738,7 @@ fn sites_by_region(region: Str) {
 
 #must_use
 fn sites_by_type(stype) {
+    itrace_i("looking up sites by type", "type", stype);
     var result = vec_new();
     var v = all_sites(); var n = vec_len(v);
     for (var i = 0; i < n; i = i + 1) {
@@ -1623,6 +1750,7 @@ fn sites_by_type(stype) {
 
 #must_use
 fn sites_by_civilization(civ: Str) {
+    itrace_s("looking up sites by civilization", "civ", civ);
     var result = vec_new();
     var v = all_sites(); var n = vec_len(v);
     for (var i = 0; i < n; i = i + 1) {
@@ -1634,6 +1762,7 @@ fn sites_by_civilization(civ: Str) {
 
 #must_use
 fn sites_active_at(year) {
+    itrace_i("looking up sites active at year", "year", year);
     var result = vec_new();
     var v = all_sites(); var n = vec_len(v);
     for (var i = 0; i < n; i = i + 1) {
@@ -1645,6 +1774,7 @@ fn sites_active_at(year) {
 
 #must_use
 fn site_by_name(name: Str) {
+    itrace_s("looking up site by name", "name", name);
     var v = all_sites(); var n = vec_len(v);
     for (var i = 0; i < n; i = i + 1) {
         var p = vec_get(v, i);
@@ -1665,7 +1795,7 @@ var route_init_done = 0;
 
 #must_use
 fn rt_new(name: Str, regions: Str, rtype, civs: Str, comm: Str, sy, ey, desc: Str) {
-    var p = alloc(RT_SIZE);
+    var p = xalloc(RT_SIZE);
     store64(p+RT_NAME,name); store64(p+RT_REGIONS,regions); store64(p+RT_TYPE,rtype);
     store64(p+RT_CIVS,civs); store64(p+RT_COMM,comm);
     store64(p+RT_START,sy); store64(p+RT_END,ey); store64(p+RT_DESC,desc);
@@ -1707,6 +1837,7 @@ fn route_count() { return vec_len(all_routes()); }
 
 #must_use
 fn route_by_name(name: Str) {
+    itrace_s("looking up trade route by name", "name", name);
     var v = all_routes(); var n = vec_len(v);
     for (var i = 0; i < n; i = i + 1) {
         var p = vec_get(v, i);
@@ -1717,6 +1848,7 @@ fn route_by_name(name: Str) {
 
 #must_use
 fn routes_by_commodity(comm: Str) {
+    itrace_s("looking up trade routes by commodity", "commodity", comm);
     var result = vec_new();
     var v = all_routes(); var n = vec_len(v);
     for (var i = 0; i < n; i = i + 1) {
@@ -1728,6 +1860,7 @@ fn routes_by_commodity(comm: Str) {
 
 #must_use
 fn routes_by_region(region: Str) {
+    itrace_s("looking up trade routes by region", "region", region);
     var result = vec_new();
     var v = all_routes(); var n = vec_len(v);
     for (var i = 0; i < n; i = i + 1) {
@@ -1739,6 +1872,7 @@ fn routes_by_region(region: Str) {
 
 #must_use
 fn routes_by_type(rtype) {
+    itrace_i("looking up trade routes by type", "type", rtype);
     var result = vec_new();
     var v = all_routes(); var n = vec_len(v);
     for (var i = 0; i < n; i = i + 1) {
@@ -1750,6 +1884,7 @@ fn routes_by_type(rtype) {
 
 #must_use
 fn routes_by_civilization(civ: Str) {
+    itrace_s("looking up trade routes by civilization", "civ", civ);
     var result = vec_new();
     var v = all_routes(); var n = vec_len(v);
     for (var i = 0; i < n; i = i + 1) {
@@ -1761,6 +1896,7 @@ fn routes_by_civilization(civ: Str) {
 
 #must_use
 fn routes_active_at(year) {
+    itrace_i("looking up trade routes active at year", "year", year);
     var result = vec_new();
     var v = all_routes(); var n = vec_len(v);
     for (var i = 0; i < n; i = i + 1) {
@@ -2045,7 +2181,7 @@ enum QueryOff { Q_TYPE=0; Q_ARG1=8; Q_ARG2=16; Q_SIZE=24; }
 
 #must_use
 fn query_new(qtype, a1, a2) {
-    var q = alloc(Q_SIZE);
+    var q = xalloc(Q_SIZE);
     store64(q+Q_TYPE, qtype);
     store64(q+Q_ARG1, a1);
     store64(q+Q_ARG2, a2);
@@ -2075,7 +2211,7 @@ enum RespOff { RESP_SRC=0; RESP_CONTENT=8; RESP_DATA=16; RESP_SIZE=24; }
 
 #must_use
 fn resp_new(src, content: Str, data: Str) {
-    var r = alloc(RESP_SIZE);
+    var r = xalloc(RESP_SIZE);
     store64(r+RESP_SRC, src);
     store64(r+RESP_CONTENT, content);
     store64(r+RESP_DATA, data);
@@ -2118,6 +2254,7 @@ fn _json_array(v, to_json_fn) {
 #must_use
 fn answer_from_data(q) {
     var qt = load64(q+Q_TYPE);
+    itrace_i("attempting to answer from itihas data", "query_type", qt);
 
     if (qt == QT_EVENTS_IN_RANGE) {
         var events = events_between(load64(q+Q_ARG1), load64(q+Q_ARG2));
@@ -2269,7 +2406,7 @@ fn _build_post_header(buf, path, host, body_len) {
     memcpy(buf + pos, "Connection: close", 17); pos = pos + 17;
     store8(buf + pos, 13); store8(buf + pos + 1, 10); pos = pos + 2;
     memcpy(buf + pos, "Content-Length: ", 16); pos = pos + 16;
-    var cl_buf = alloc(32);
+    var cl_buf = xalloc(32);
     var cl_len = fmt_int_buf(body_len, cl_buf);
     memcpy(buf + pos, cl_buf, cl_len); pos = pos + cl_len;
     store8(buf + pos, 13); store8(buf + pos + 1, 10); pos = pos + 2;
@@ -2322,7 +2459,14 @@ fn hoosh_post(port, body: Str) {
         _hoosh_warn("hoosh_post: connect() refused", 29);
         return 0;
     }
+    # Explicit check rather than xalloc: hoosh_post's caller already handles a
+    # 0 return and logs it, so a transient allocation failure on the network
+    # path should degrade, not take the process down.
     var hdr = alloc(HOOSH_HDR_CAP);
+    if (hdr == 0) {
+        _hoosh_warn("hoosh_post: header buffer allocation failed", 43);
+        return 0;
+    }
     var body_data = str_data(body);
     var body_len = str_len(body);
     var hlen = _build_post_header(hdr, "/v1/chat/completions", "localhost", body_len);
@@ -2339,6 +2483,10 @@ fn hoosh_post(port, body: Str) {
         return 0;
     }
     var rbuf = alloc(HOOSH_RESP_CAP);
+    if (rbuf == 0) {
+        _hoosh_warn("hoosh_post: response buffer allocation failed", 45);
+        return 0;
+    }
     var total = 0;
     var n = 1;
     # Distinguish the three ways this loop used to end identically: clean EOF,
@@ -2479,7 +2627,7 @@ fn _extract_tool_call(body, body_len) {
         } }
 
     # Return {name, args_str} packed in 16 bytes
-    var result = alloc(16);
+    var result = xalloc(16);
     store64(result, tool_name);
     store64(result + 8, args_str);
     return result;
@@ -2564,6 +2712,12 @@ fn _extract_content(body, body_len) {
 # Returns QueryResponse pointer, or 0 on error
 # ----------------------------------------------------------------
 fn llm_answer(port, question: Str, model: Str) {
+    # info, not debug: this is the one path that leaves the process and spends
+    # a consumer's tokens, so it is worth seeing at the default level.
+    if (sakshi_get_level() >= SK_INFO) {
+        sakshi_log_kv(SK_INFO, "answering via hoosh LLM", 23, "model", 5,
+          str_data(model), str_len(model));
+    }
     var req_body = _build_inference_request(question, model);
     var resp = hoosh_post(port, req_body);
     if (resp == 0) { return 0; }
@@ -2579,6 +2733,7 @@ fn llm_answer(port, question: Str, model: Str) {
     if (tc != 0) {
         var tool_name = load64(tc);
         var tool_args_str = load64(tc + 8);
+        itrace_s("LLM selected tool", "tool", tool_name);
 
         # era_lookup — special case
         if (str_eq_cstr(tool_name, "era_lookup") == 1) {

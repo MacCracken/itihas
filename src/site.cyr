@@ -8,7 +8,7 @@ var site_init_done = 0;
 
 #must_use
 fn site_new(name: Str, loc: Str, reg: Str, st, civ: Str, sy, ey, disc, desc: Str) {
-    var p = alloc(SITE_SIZE);
+    var p = xalloc(SITE_SIZE);
     store64(p+SITE_NAME,name); store64(p+SITE_LOC,loc); store64(p+SITE_REG,reg);
     store64(p+SITE_TYPE,st); store64(p+SITE_CIV,civ);
     store64(p+SITE_START,sy); store64(p+SITE_END,ey); store64(p+SITE_DISC,disc); store64(p+SITE_DESC,desc);
@@ -67,6 +67,7 @@ fn site_count() { return vec_len(all_sites()); }
 
 #must_use
 fn sites_by_region(region: Str) {
+    itrace_s("looking up sites by region", "region", region);
     var result = vec_new();
     var v = all_sites(); var n = vec_len(v);
     for (var i = 0; i < n; i = i + 1) {
@@ -78,6 +79,7 @@ fn sites_by_region(region: Str) {
 
 #must_use
 fn sites_by_type(stype) {
+    itrace_i("looking up sites by type", "type", stype);
     var result = vec_new();
     var v = all_sites(); var n = vec_len(v);
     for (var i = 0; i < n; i = i + 1) {
@@ -89,6 +91,7 @@ fn sites_by_type(stype) {
 
 #must_use
 fn sites_by_civilization(civ: Str) {
+    itrace_s("looking up sites by civilization", "civ", civ);
     var result = vec_new();
     var v = all_sites(); var n = vec_len(v);
     for (var i = 0; i < n; i = i + 1) {
@@ -100,6 +103,7 @@ fn sites_by_civilization(civ: Str) {
 
 #must_use
 fn sites_active_at(year) {
+    itrace_i("looking up sites active at year", "year", year);
     var result = vec_new();
     var v = all_sites(); var n = vec_len(v);
     for (var i = 0; i < n; i = i + 1) {
@@ -111,6 +115,7 @@ fn sites_active_at(year) {
 
 #must_use
 fn site_by_name(name: Str) {
+    itrace_s("looking up site by name", "name", name);
     var v = all_sites(); var n = vec_len(v);
     for (var i = 0; i < n; i = i + 1) {
         var p = vec_get(v, i);

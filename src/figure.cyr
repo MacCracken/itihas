@@ -8,7 +8,7 @@ var fig_init_done = 0;
 
 #must_use
 fn fig_new(name: Str, by, dy, civ: Str, dom, desc: Str) {
-    var p = alloc(FIG_SIZE);
+    var p = xalloc(FIG_SIZE);
     store64(p+FIG_NAME,name); store64(p+FIG_BIRTH,by); store64(p+FIG_DEATH,dy);
     store64(p+FIG_CIV,civ); store64(p+FIG_DOM,dom); store64(p+FIG_DESC,desc);
     return p;
@@ -86,6 +86,7 @@ fn figure_count() { return vec_len(all_figures()); }
 
 #must_use
 fn figures_by_domain(dom) {
+    itrace_i("looking up figures by domain", "domain", dom);
     var result = vec_new();
     var v = all_figures(); var n = vec_len(v);
     for (var i = 0; i < n; i = i + 1) {
@@ -97,6 +98,7 @@ fn figures_by_domain(dom) {
 
 #must_use
 fn figure_by_name(name: Str) {
+    itrace_s("looking up figure by name", "name", name);
     var v = all_figures(); var n = vec_len(v);
     for (var i = 0; i < n; i = i + 1) {
         var p = vec_get(v, i);

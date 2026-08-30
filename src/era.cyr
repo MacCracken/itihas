@@ -17,7 +17,7 @@ var era_init_done = 0;
 
 #must_use
 fn era_new(name: Str, sy, ey, region: Str, desc: Str, cat, scope) {
-    var p = alloc(ERA_SIZE);
+    var p = xalloc(ERA_SIZE);
     store64(p + ERA_NAME, name);
     store64(p + ERA_START, sy);
     store64(p + ERA_END, ey);
@@ -94,6 +94,7 @@ fn _cmp_era_start(a, b) { return load64(a+ERA_START) - load64(b+ERA_START); }
 
 #must_use
 fn eras_containing(year) {
+    itrace_i("looking up eras containing year", "year", year);
     var result = vec_new();
     var v = all_eras();
     var n = vec_len(v);
@@ -107,6 +108,7 @@ fn eras_containing(year) {
 
 #must_use
 fn eras_by_scope(scope) {
+    itrace_i("looking up eras by scope", "scope", scope);
     var result = vec_new();
     var v = all_eras();
     var n = vec_len(v);
@@ -119,6 +121,7 @@ fn eras_by_scope(scope) {
 
 #must_use
 fn eras_by_region(region: Str) {
+    itrace_s("looking up eras by region", "region", region);
     var result = vec_new();
     # Zero-length needle matches every string; return nothing instead of all.
     if (str_len(region) == 0) { return result; }
@@ -133,6 +136,7 @@ fn eras_by_region(region: Str) {
 
 #must_use
 fn era_by_name(name: Str) {
+    itrace_s("looking up era by name", "name", name);
     var v = all_eras();
     var n = vec_len(v);
     for (var i = 0; i < n; i = i + 1) {

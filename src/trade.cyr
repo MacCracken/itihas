@@ -8,7 +8,7 @@ var route_init_done = 0;
 
 #must_use
 fn rt_new(name: Str, regions: Str, rtype, civs: Str, comm: Str, sy, ey, desc: Str) {
-    var p = alloc(RT_SIZE);
+    var p = xalloc(RT_SIZE);
     store64(p+RT_NAME,name); store64(p+RT_REGIONS,regions); store64(p+RT_TYPE,rtype);
     store64(p+RT_CIVS,civs); store64(p+RT_COMM,comm);
     store64(p+RT_START,sy); store64(p+RT_END,ey); store64(p+RT_DESC,desc);
@@ -50,6 +50,7 @@ fn route_count() { return vec_len(all_routes()); }
 
 #must_use
 fn route_by_name(name: Str) {
+    itrace_s("looking up trade route by name", "name", name);
     var v = all_routes(); var n = vec_len(v);
     for (var i = 0; i < n; i = i + 1) {
         var p = vec_get(v, i);
@@ -60,6 +61,7 @@ fn route_by_name(name: Str) {
 
 #must_use
 fn routes_by_commodity(comm: Str) {
+    itrace_s("looking up trade routes by commodity", "commodity", comm);
     var result = vec_new();
     var v = all_routes(); var n = vec_len(v);
     for (var i = 0; i < n; i = i + 1) {
@@ -71,6 +73,7 @@ fn routes_by_commodity(comm: Str) {
 
 #must_use
 fn routes_by_region(region: Str) {
+    itrace_s("looking up trade routes by region", "region", region);
     var result = vec_new();
     var v = all_routes(); var n = vec_len(v);
     for (var i = 0; i < n; i = i + 1) {
@@ -82,6 +85,7 @@ fn routes_by_region(region: Str) {
 
 #must_use
 fn routes_by_type(rtype) {
+    itrace_i("looking up trade routes by type", "type", rtype);
     var result = vec_new();
     var v = all_routes(); var n = vec_len(v);
     for (var i = 0; i < n; i = i + 1) {
@@ -93,6 +97,7 @@ fn routes_by_type(rtype) {
 
 #must_use
 fn routes_by_civilization(civ: Str) {
+    itrace_s("looking up trade routes by civilization", "civ", civ);
     var result = vec_new();
     var v = all_routes(); var n = vec_len(v);
     for (var i = 0; i < n; i = i + 1) {
@@ -104,6 +109,7 @@ fn routes_by_civilization(civ: Str) {
 
 #must_use
 fn routes_active_at(year) {
+    itrace_i("looking up trade routes active at year", "year", year);
     var result = vec_new();
     var v = all_routes(); var n = vec_len(v);
     for (var i = 0; i < n; i = i + 1) {

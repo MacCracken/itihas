@@ -8,7 +8,7 @@ var int_init_done = 0;
 
 #must_use
 fn int_new(ca: Str, cb: Str, itype, sy, ey, desc: Str) {
-    var p = alloc(INT_SIZE);
+    var p = xalloc(INT_SIZE);
     store64(p+INT_CIVA,ca); store64(p+INT_CIVB,cb); store64(p+INT_TYPE,itype);
     store64(p+INT_START,sy); store64(p+INT_END,ey); store64(p+INT_DESC,desc);
     return p;
@@ -57,6 +57,7 @@ fn interaction_count() { return vec_len(all_interactions()); }
 
 #must_use
 fn interactions_for(civ: Str) {
+    itrace_s("looking up interactions for civilization", "civ", civ);
     var result = vec_new();
     var v = all_interactions(); var n = vec_len(v);
     for (var i = 0; i < n; i = i + 1) {
@@ -68,6 +69,7 @@ fn interactions_for(civ: Str) {
 
 #must_use
 fn interactions_between(ca: Str, cb: Str) {
+    itrace_pair("looking up interactions between civilizations", "civs", ca, cb);
     var result = vec_new();
     var v = all_interactions(); var n = vec_len(v);
     for (var i = 0; i < n; i = i + 1) {
@@ -81,6 +83,7 @@ fn interactions_between(ca: Str, cb: Str) {
 
 #must_use
 fn interactions_by_type(itype) {
+    itrace_i("looking up interactions by type", "type", itype);
     var result = vec_new();
     var v = all_interactions(); var n = vec_len(v);
     for (var i = 0; i < n; i = i + 1) {
@@ -92,6 +95,7 @@ fn interactions_by_type(itype) {
 
 #must_use
 fn interaction_neighbors(civ: Str) {
+    itrace_s("looking up civilization neighbors", "civ", civ);
     var result = vec_new();
     var v = all_interactions(); var n = vec_len(v);
     for (var i = 0; i < n; i = i + 1) {
@@ -113,6 +117,7 @@ fn interaction_neighbors(civ: Str) {
 
 #must_use
 fn influence_score(ca: Str, cb: Str) {
+    itrace_pair("computing influence score", "civs", ca, cb);
     # Scans the interaction table directly rather than materializing the vec
     # interactions_between would build; the sum is order-independent, so the
     # intermediate collection was pure allocation.
@@ -167,6 +172,7 @@ fn split_regions(region_str) {
 # 100 = identical region strings, 50-99 = shared region components, 0 = no overlap
 #must_use
 fn region_proximity(ca: Str, cb: Str) {
+    itrace_pair("computing region proximity", "civs", ca, cb);
     var civ_a = civ_by_name(ca);
     var civ_b = civ_by_name(cb);
     if (civ_a == 0 || civ_b == 0) { return 0; }

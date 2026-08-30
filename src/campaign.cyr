@@ -9,7 +9,7 @@ var camp_init_done = 0;
 
 #must_use
 fn camp_new(name: Str, region: Str, sy, ey, ba: Str, bb: Str, cmds: Str, out, desc: Str) {
-    var p = alloc(CAMP_SIZE);
+    var p = xalloc(CAMP_SIZE);
     store64(p+CAMP_NAME,name); store64(p+CAMP_REGION,region);
     store64(p+CAMP_START,sy); store64(p+CAMP_END,ey);
     store64(p+CAMP_BELLA,ba); store64(p+CAMP_BELLB,bb); store64(p+CAMP_CMDS,cmds);
@@ -31,7 +31,7 @@ fn camp_bellb(p) { return load64(p+CAMP_BELLB); }
 
 # Append a battle record to `camp`. Used by build_campaigns while assembling the table.
 fn bat_add(camp, name: Str, year, loc: Str, desc: Str) {
-    var b = alloc(BAT_SIZE);
+    var b = xalloc(BAT_SIZE);
     store64(b+BAT_NAME,name); store64(b+BAT_YEAR,year);
     store64(b+BAT_LOC,loc); store64(b+BAT_DESC,desc);
     vec_push(load64(camp+CAMP_BATTLES), b);
@@ -116,6 +116,7 @@ fn campaign_count() { return vec_len(all_campaigns()); }
 
 #must_use
 fn campaign_by_name(name: Str) {
+    itrace_s("looking up campaign by name", "name", name);
     var v = all_campaigns(); var n = vec_len(v);
     for (var i = 0; i < n; i = i + 1) {
         var p = vec_get(v, i);
@@ -126,6 +127,7 @@ fn campaign_by_name(name: Str) {
 
 #must_use
 fn campaigns_by_region(region: Str) {
+    itrace_s("looking up campaigns by region", "region", region);
     var result = vec_new();
     var v = all_campaigns(); var n = vec_len(v);
     for (var i = 0; i < n; i = i + 1) {
@@ -137,6 +139,7 @@ fn campaigns_by_region(region: Str) {
 
 #must_use
 fn campaigns_by_outcome(outcome) {
+    itrace_i("looking up campaigns by outcome", "outcome", outcome);
     var result = vec_new();
     var v = all_campaigns(); var n = vec_len(v);
     for (var i = 0; i < n; i = i + 1) {
@@ -148,6 +151,7 @@ fn campaigns_by_outcome(outcome) {
 
 #must_use
 fn campaigns_by_commander(cmd: Str) {
+    itrace_s("looking up campaigns by commander", "commander", cmd);
     var result = vec_new();
     var v = all_campaigns(); var n = vec_len(v);
     for (var i = 0; i < n; i = i + 1) {
@@ -159,6 +163,7 @@ fn campaigns_by_commander(cmd: Str) {
 
 #must_use
 fn campaigns_by_civilization(civ: Str) {
+    itrace_s("looking up campaigns by civilization", "civ", civ);
     var result = vec_new();
     var v = all_campaigns(); var n = vec_len(v);
     for (var i = 0; i < n; i = i + 1) {
@@ -170,6 +175,7 @@ fn campaigns_by_civilization(civ: Str) {
 
 #must_use
 fn campaigns_active_at(year) {
+    itrace_i("looking up campaigns active at year", "year", year);
     var result = vec_new();
     var v = all_campaigns(); var n = vec_len(v);
     for (var i = 0; i < n; i = i + 1) {
@@ -183,6 +189,7 @@ fn _cmp_camp_start(a, b) { return load64(a+CAMP_START) - load64(b+CAMP_START); }
 
 #must_use
 fn campaigns_between(sy, ey) {
+    itrace_range("looking up campaigns between years", sy, ey);
     var result = vec_new();
     var v = all_campaigns(); var n = vec_len(v);
     for (var i = 0; i < n; i = i + 1) {

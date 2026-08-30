@@ -9,7 +9,7 @@ var evt_init_done = 0;
 
 #must_use
 fn evt_new(name: Str, year, era: Str, cat, desc: Str, civs: Str, sig) {
-    var p = alloc(EVT_SIZE);
+    var p = xalloc(EVT_SIZE);
     store64(p+EVT_NAME,name); store64(p+EVT_YEAR,year); store64(p+EVT_ERA,era);
     store64(p+EVT_CAT,cat); store64(p+EVT_DESC,desc); store64(p+EVT_CIVS,civs); store64(p+EVT_SIG,sig);
     return p;
@@ -144,6 +144,7 @@ fn event_count() { return vec_len(all_events()); }
 
 #must_use
 fn events_by_category(cat) {
+    itrace_i("looking up events by category", "category", cat);
     var result = vec_new();
     var v = all_events(); var n = vec_len(v);
     for (var i = 0; i < n; i = i + 1) {
@@ -155,6 +156,7 @@ fn events_by_category(cat) {
 
 #must_use
 fn events_at_year(year) {
+    itrace_i("looking up events at year", "year", year);
     var result = vec_new();
     var v = all_events(); var n = vec_len(v);
     for (var i = 0; i < n; i = i + 1) {
@@ -168,6 +170,7 @@ fn _cmp_evt_year(a, b) { return load64(a+EVT_YEAR) - load64(b+EVT_YEAR); }
 
 #must_use
 fn events_between(sy, ey) {
+    itrace_range("looking up events between years", sy, ey);
     var result = vec_new();
     var v = all_events(); var n = vec_len(v);
     for (var i = 0; i < n; i = i + 1) {
@@ -180,6 +183,7 @@ fn events_between(sy, ey) {
 
 #must_use
 fn events_by_significance(sig) {
+    itrace_i("looking up events by significance", "significance", sig);
     var result = vec_new();
     var v = all_events(); var n = vec_len(v);
     for (var i = 0; i < n; i = i + 1) {
@@ -191,6 +195,7 @@ fn events_by_significance(sig) {
 
 #must_use
 fn event_by_name(name: Str) {
+    itrace_s("looking up event by name", "name", name);
     var v = all_events(); var n = vec_len(v);
     for (var i = 0; i < n; i = i + 1) {
         var p = vec_get(v, i);

@@ -1,6 +1,6 @@
 # Development Roadmap
 
-> **Current**: 2.4.2 | **Compiler**: cyrius 6.5.36 | **Tests**: 285 | **Coverage**: 96%
+> **Current**: 2.4.2 | **Compiler**: cyrius 6.5.36 | **Tests**: 299 | **Coverage**: 94%
 
 This file tracks **open work only**. Completed releases are recorded in
 [CHANGELOG.md](../../CHANGELOG.md) — they are not duplicated here.
@@ -13,14 +13,14 @@ gates per CLAUDE.md) unless explicitly marked as batchable.
 ## 2.4.x — Hardening arc (in progress)
 
 The P(-1) sweep landed in 2.4.2. These are findings it confirmed but did not
-batch, in the order they should be taken.
+batch, in the order they should be taken. **`xalloc` (CWE-690) and the tracing
+restoration are done** — see CHANGELOG `[Unreleased]`. What remains needs a
+project decision before any code changes, so both are stated as decisions:
 
 | Item | Effort | Detail |
 |------|--------|--------|
-| **`xalloc` — checked allocation (CWE-690)** | Medium | ~21 raw `alloc()` sites write into the result unchecked; stdlib `alloc()` returns `0` on OOM, so exhaustion is a near-NULL write. Route through a checked `xalloc(n)` that aborts with a diagnostic, per avatara 2.5.4 / its ADR-009. |
-| **Full tracing restoration** | Medium | The Rust original had 52 `tracing::` sites. 2.4.2 added emission only on the hoosh failure paths, where the audit gap was concrete; the rest is a cross-module sweep. |
-| **Referential-integrity policy for civ-name fields** | Medium | Many figure/site/route records name civilizations with no `civ_new` record. Most are deliberate free-text culture labels (`Upper Paleolithic`, `Neolithic Britain`), not broken keys. Needs a documented decision on whether these fields are foreign keys **before** any validation test is written. |
-| **Line-length lint (364 warnings)** | Low | Almost entirely data-table rows whose long description strings read better unwrapped. Needs a project decision on the limit for data modules; `src/util.cyr` is already clean and can serve as the reference. |
+| **Referential-integrity policy for civ-name fields** | Medium | **Decision needed.** Many figure/site/route records name civilizations with no `civ_new` record. Most are deliberate free-text culture labels (`Upper Paleolithic`, `Neolithic Britain`), not broken keys — so a blanket validation test would fail on correct data. Options: (a) declare these fields free text and add no test; (b) split them into a typed `civ_ref` (validated) and a free-text `culture` field; (c) keep one field and maintain an allow-list of non-civ labels. Nothing should be written until one is chosen. |
+| **Line-length lint (364 warnings)** | Low | **Decision needed.** Almost entirely data-table rows whose long description strings read better unwrapped; `src/util.cyr` is already clean and shows the code style is not the problem. Options: (a) raise the limit for `src/*.cyr` data modules; (b) `#skip-lint` the data tables; (c) accept the warnings and stop treating the count as a gate. |
 
 ## 2.5.0 — Tool integration (unblocked)
 

@@ -7,8 +7,51 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-Documentation and repository housekeeping. No source behaviour change; 285 tests
-pass and the benchmark suite is untouched.
+Two 2.4.x hardening-arc items — checked allocation and query tracing — plus the
+documentation and repository housekeeping that preceded them. **299 tests**
+(was 285), coverage 94%, docs/fmt/dist gates clean.
+
+### Added
+
+- **`xalloc(n)` — checked allocation, closing CWE-690.** `alloc()` returns `0`
+  on exhaustion rather than aborting, and **all 21** allocation sites in itihas
+  wrote into the result immediately: a struct constructor `store64`s its fields,
+  a buffer builder `store8`s its bytes. Every one was therefore a write through
+  a near-NULL pointer under memory pressure, faulting at an address that says
+  nothing about where it came from.
+
+  17 sites now use `xalloc`, which aborts with a diagnostic on stderr and exit
+  134 (128 + SIGABRT) — the AGNOS policy avatara set in its ADR-009, matching
+  Rust and Go, whose allocators abort rather than return null because a library
+  cannot invent a recovery its caller did not ask for. The remaining 4 are
+  hoosh's network buffers, where the caller already handles a `0` return and
+  logs it, so those check `alloc` explicitly and degrade instead.
+
+  `xalloc` reports a **non-positive size separately** from exhaustion. The
+  stdlib `alloc(0)` returns 0, so a zero-size request would otherwise abort
+  claiming "out of memory" and send the reader hunting the wrong problem. No
+  itihas call site can reach it — every size is a positive struct constant or
+  `len + 1` — but the diagnostic is honest if one ever does.
+
+- **Query tracing restored — 45 of the Rust original's 52 sites.** The port kept
+  `logging.cyr` but never called it from anything, so `itihas_log_init` set a
+  level nothing honoured and an operator had no way to see what a consumer was
+  asking for. Every query entry now traces its lookup argument, matching the
+  Rust `tracing::debug!` sites one for one: 42 across the ten data modules, plus
+  three in hoosh (`answer_from_data`, tool selection, and `llm_answer` at
+  **info** rather than debug, since that is the one path that leaves the process
+  and spends a consumer's tokens). The remaining seven live in `mcp.rs`, which
+  is still unported — they come with 2.5.0.
+
+  Four helpers in `util.cyr` (`itrace_i`, `itrace_s`, `itrace_range`,
+  `itrace_pair`) emit through sakshi's structured `sakshi_log_kv`, so a trace
+  reads `looking up eras containing year year=500` rather than a flat string.
+  Each checks the level **first** and returns before touching its arguments, so
+  a build with logging off pays one call and one compare — the argument is an
+  integer or an already-materialised `Str`, never a construction. They live in
+  `util.cyr` rather than `logging.cyr` because Cyrius resolves forward
+  references single-pass and `logging.cyr` is included after the ten data
+  modules that call them.
 
 ### Removed
 
@@ -68,6 +111,19 @@ pass and the benchmark suite is untouched.
 - **`CLAUDE.md`** — the documented docs layout omitted `docs/sources/` (nine
   files of data provenance) and described `roadmap.md` as holding completed
   items, which is the opposite of the convention now in force.
+
+### Performance
+
+Interleaved A/B against `f5d60bb`, 4 rounds each, same machine and session.
+**No benchmark regresses beyond its own run-to-run spread**; the aggregate cost
+of putting a gated trace call on every query path is **+0.9%** across all 28
+(10,106 → 10,194 ns summed medians).
+
+An earlier 3-round pass showed three benchmarks at +4%; a fourth round resolved
+them as noise, which is why the recorded figure is the 4-round one. A variant
+that skipped `sakshi_get_level()` by reading sakshi's level global directly was
+measured and **rejected** — it was within noise of the public-API version, so it
+bought nothing for the layering it broke.
 
 ## [2.4.2] - 2026-08-29
 

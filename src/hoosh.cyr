@@ -20,7 +20,7 @@ enum QueryOff { Q_TYPE=0; Q_ARG1=8; Q_ARG2=16; Q_SIZE=24; }
 
 #must_use
 fn query_new(qtype, a1, a2) {
-    var q = alloc(Q_SIZE);
+    var q = xalloc(Q_SIZE);
     store64(q+Q_TYPE, qtype);
     store64(q+Q_ARG1, a1);
     store64(q+Q_ARG2, a2);
@@ -50,7 +50,7 @@ enum RespOff { RESP_SRC=0; RESP_CONTENT=8; RESP_DATA=16; RESP_SIZE=24; }
 
 #must_use
 fn resp_new(src, content: Str, data: Str) {
-    var r = alloc(RESP_SIZE);
+    var r = xalloc(RESP_SIZE);
     store64(r+RESP_SRC, src);
     store64(r+RESP_CONTENT, content);
     store64(r+RESP_DATA, data);
@@ -93,6 +93,7 @@ fn _json_array(v, to_json_fn) {
 #must_use
 fn answer_from_data(q) {
     var qt = load64(q+Q_TYPE);
+    itrace_i("attempting to answer from itihas data", "query_type", qt);
 
     if (qt == QT_EVENTS_IN_RANGE) {
         var events = events_between(load64(q+Q_ARG1), load64(q+Q_ARG2));
@@ -244,7 +245,7 @@ fn _build_post_header(buf, path, host, body_len) {
     memcpy(buf + pos, "Connection: close", 17); pos = pos + 17;
     store8(buf + pos, 13); store8(buf + pos + 1, 10); pos = pos + 2;
     memcpy(buf + pos, "Content-Length: ", 16); pos = pos + 16;
-    var cl_buf = alloc(32);
+    var cl_buf = xalloc(32);
     var cl_len = fmt_int_buf(body_len, cl_buf);
     memcpy(buf + pos, cl_buf, cl_len); pos = pos + cl_len;
     store8(buf + pos, 13); store8(buf + pos + 1, 10); pos = pos + 2;
@@ -297,7 +298,14 @@ fn hoosh_post(port, body: Str) {
         _hoosh_warn("hoosh_post: connect() refused", 29);
         return 0;
     }
+    # Explicit check rather than xalloc: hoosh_post's caller already handles a
+    # 0 return and logs it, so a transient allocation failure on the network
+    # path should degrade, not take the process down.
     var hdr = alloc(HOOSH_HDR_CAP);
+    if (hdr == 0) {
+        _hoosh_warn("hoosh_post: header buffer allocation failed", 43);
+        return 0;
+    }
     var body_data = str_data(body);
     var body_len = str_len(body);
     var hlen = _build_post_header(hdr, "/v1/chat/completions", "localhost", body_len);
@@ -314,6 +322,10 @@ fn hoosh_post(port, body: Str) {
         return 0;
     }
     var rbuf = alloc(HOOSH_RESP_CAP);
+    if (rbuf == 0) {
+        _hoosh_warn("hoosh_post: response buffer allocation failed", 45);
+        return 0;
+    }
     var total = 0;
     var n = 1;
     # Distinguish the three ways this loop used to end identically: clean EOF,
@@ -454,7 +466,7 @@ fn _extract_tool_call(body, body_len) {
         } }
 
     # Return {name, args_str} packed in 16 bytes
-    var result = alloc(16);
+    var result = xalloc(16);
     store64(result, tool_name);
     store64(result + 8, args_str);
     return result;
@@ -539,6 +551,12 @@ fn _extract_content(body, body_len) {
 # Returns QueryResponse pointer, or 0 on error
 # ----------------------------------------------------------------
 fn llm_answer(port, question: Str, model: Str) {
+    # info, not debug: this is the one path that leaves the process and spends
+    # a consumer's tokens, so it is worth seeing at the default level.
+    if (sakshi_get_level() >= SK_INFO) {
+        sakshi_log_kv(SK_INFO, "answering via hoosh LLM", 23, "model", 5,
+          str_data(model), str_len(model));
+    }
     var req_body = _build_inference_request(question, model);
     var resp = hoosh_post(port, req_body);
     if (resp == 0) { return 0; }
@@ -554,6 +572,7 @@ fn llm_answer(port, question: Str, model: Str) {
     if (tc != 0) {
         var tool_name = load64(tc);
         var tool_args_str = load64(tc + 8);
+        itrace_s("LLM selected tool", "tool", tool_name);
 
         # era_lookup — special case
         if (str_eq_cstr(tool_name, "era_lookup") == 1) {

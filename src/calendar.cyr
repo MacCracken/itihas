@@ -11,7 +11,7 @@ var calendar_init_done = 0;
 
 #must_use
 fn cal_new(name: Str, ctype, epoch, months, leap: Str) {
-    var p = alloc(CAL_SIZE);
+    var p = xalloc(CAL_SIZE);
     store64(p + CAL_NAME, name);
     store64(p + CAL_TYPE, ctype);
     store64(p + CAL_EPOCH, epoch);
@@ -53,6 +53,7 @@ fn calendar_count() { return vec_len(all_calendars()); }
 
 #must_use
 fn calendar_by_name(name: Str) {
+    itrace_s("looking up calendar by name", "name", name);
     var v = all_calendars();
     var n = vec_len(v);
     for (var i = 0; i < n; i = i + 1) {
