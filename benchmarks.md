@@ -1,39 +1,39 @@
 # Benchmarks
 
-Latest: **2026-07-22T00:05:19Z** -- commit `2f3a2e8`
+Latest: **2026-08-30T04:42:43Z** -- commit `9b069cb`
 
-Tracking: `0ec104c` (baseline) -> `2294f05` (mid) -> `2f3a2e8` (current)
+Tracking: `0ec104c` (baseline) -> `2f3a2e8` (mid) -> `9b069cb` (current)
 
-| Benchmark | Baseline (`0ec104c`) | Mid (`2294f05`) | Current (`2f3a2e8`) |
+| Benchmark | Baseline (`0ec104c`) | Mid (`2f3a2e8`) | Current (`9b069cb`) |
 |-----------|------|------|------|
-| `all_eras` | 6.00 ns | 6.00 ns | 5.00 ns **-17%** |
-| `eras_containing_500bce` | 441.0 ns | 620.0 ns +41% | 475.0 ns +8% |
-| `all_civilizations` | 5.00 ns | 7.00 ns +40% | 4.00 ns **-20%** |
-| `civs_active_at_500bce` | 944.0 ns | 1000.0 ns +6% | 995.0 ns +5% |
-| `civs_by_region_mediterranean` | 1000.0 ns | 1000.0 ns | 900.0 ns **-10%** |
+| `all_eras` | 6.00 ns | 5.00 ns **-17%** | 5.00 ns **-17%** |
+| `eras_containing_500bce` | 441.0 ns | 475.0 ns +8% | 412.0 ns **-7%** |
+| `all_civilizations` | 5.00 ns | 4.00 ns **-20%** | 4.00 ns **-20%** |
+| `civs_active_at_500bce` | 944.0 ns | 995.0 ns +5% | 897.0 ns **-5%** |
+| `civs_by_region_mediterranean` | 1000.0 ns | 900.0 ns **-10%** | 843.0 ns **-16%** |
 | `all_events` | 5.00 ns | 5.00 ns | 5.00 ns |
-| `events_by_category_war` | 930.0 ns | 1000.0 ns +8% | 1021.0 ns +10% |
-| `events_at_year_476` | 840.0 ns | 991.0 ns +18% | 860.0 ns |
-| `events_between_500bce_500ce` | 2000.0 ns | 3000.0 ns +50% | 2995.0 ns +50% |
+| `events_by_category_war` | 930.0 ns | 1021.0 ns +10% | 958.0 ns +3% |
+| `events_at_year_476` | 840.0 ns | 860.0 ns | 778.0 ns **-7%** |
+| `events_between_500bce_500ce` | 2000.0 ns | 2995.0 ns +50% | 2592.0 ns +30% |
 | `all_calendars` | 6.00 ns | 5.00 ns **-17%** | 5.00 ns **-17%** |
-| `calendar_by_name_gregorian` | 85.00 ns | 135.0 ns +59% | 126.0 ns +48% |
-| `all_figures` | 6.00 ns | 6.00 ns | 5.00 ns **-17%** |
-| `figures_by_domain_scientist` | 494.0 ns | 695.0 ns +41% | 564.0 ns +14% |
-| `all_causalities` | 5.00 ns | 5.00 ns | 5.00 ns |
-| `causes_of_french_revolution` | 316.0 ns | 346.0 ns +9% | 237.0 ns **-25%** |
-| `chain_writing_depth3` | 2000.0 ns | 948.0 ns **-53%** | 546.0 ns **-73%** |
-| `all_interactions` | 6.00 ns | 5.00 ns **-17%** | 4.00 ns **-33%** |
-| `interactions_for_rome` | 543.0 ns | 576.0 ns +6% | 453.0 ns **-17%** |
-| `influence_score_egypt_hittite` | 728.0 ns | 596.0 ns **-18%** | 471.0 ns **-35%** |
+| `calendar_by_name_gregorian` | 85.00 ns | 126.0 ns +48% | 121.0 ns +42% |
+| `all_figures` | 6.00 ns | 5.00 ns **-17%** | 5.00 ns **-17%** |
+| `figures_by_domain_scientist` | 494.0 ns | 564.0 ns +14% | 493.0 ns |
+| `all_causalities` | 5.00 ns | 5.00 ns | 4.00 ns **-20%** |
+| `causes_of_french_revolution` | 316.0 ns | 237.0 ns **-25%** | 180.0 ns **-43%** |
+| `chain_writing_depth3` | 2000.0 ns | 546.0 ns **-73%** | 320.0 ns **-84%** |
+| `all_interactions` | 6.00 ns | 4.00 ns **-33%** | 5.00 ns **-17%** |
+| `interactions_for_rome` | 543.0 ns | 453.0 ns **-17%** | 394.0 ns **-27%** |
+| `influence_score_egypt_hittite` | 728.0 ns | 471.0 ns **-35%** | 418.0 ns **-43%** |
 | `all_sites` | 6.00 ns | 5.00 ns **-17%** | 5.00 ns **-17%** |
-| `sites_by_region_near_east` | 1000.0 ns | 714.0 ns **-29%** | 583.0 ns **-42%** |
-| `sites_active_at_500bce` | 296.0 ns | 472.0 ns +59% | 360.0 ns +22% |
+| `sites_by_region_near_east` | 1000.0 ns | 583.0 ns **-42%** | 519.0 ns **-48%** |
+| `sites_active_at_500bce` | 296.0 ns | 360.0 ns +22% | 309.0 ns +4% |
 | `all_routes` | 6.00 ns | 5.00 ns **-17%** | 5.00 ns **-17%** |
-| `routes_by_region_east_asia` | 1000.0 ns | 400.0 ns **-60%** | 291.0 ns **-71%** |
-| `routes_by_commodity_silk` | 2000.0 ns | 430.0 ns **-78%** | 325.0 ns **-84%** |
+| `routes_by_region_east_asia` | 1000.0 ns | 291.0 ns **-71%** | 238.0 ns **-76%** |
+| `routes_by_commodity_silk` | 2000.0 ns | 325.0 ns **-84%** | 271.0 ns **-86%** |
 | `all_campaigns` | 5.00 ns | 5.00 ns | 5.00 ns |
-| `campaigns_by_commander_napoleon` | 2000.0 ns | 424.0 ns **-79%** | 309.0 ns **-85%** |
-| `campaigns_between_500bce_500ce` | 243.0 ns | 399.0 ns +64% | 285.0 ns +17% |
+| `campaigns_by_commander_napoleon` | 2000.0 ns | 309.0 ns **-85%** | 271.0 ns **-86%** |
+| `campaigns_between_500bce_500ce` | 243.0 ns | 285.0 ns +17% | 235.0 ns **-3%** |
 
 ---
 

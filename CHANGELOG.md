@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.4.1] - 2026-08-29
+
+Toolchain modernization release — the cyrius 6.4.69 → 6.5.36 bump and the
+vendored-`lib/` resync it requires. Source behavior unchanged; 153 tests pass.
+The build is now warning-free, and the bump is performance-neutral.
+
+### Changed
+
+- **Toolchain pin bumped 6.4.69 → 6.5.36** (`cyrius.cyml` `[package].cyrius`). Resyncs the local `lib/` snapshot to the 6.5.36 stdlib — 25 declared `[deps].stdlib` modules re-vendored via `cyrius lib sync`, verified byte-identical to the pinned snapshot — clearing the toolchain-drift build warning. `[deps].stdlib` is unchanged; `net` + `http` remain load-bearing (hoosh's self-contained HTTP client). `dist/itihas.cyr` regenerated with the v2.4.1 header.
+
+### Added
+
+- **`dist/itihas.deps`** — new dep sidecar emitted by 6.5.36's `cyrius distlib` alongside `dist/itihas.cyr`, listing the 16 `[deps].stdlib` modules the bundle needs in scope. Consumed by `cyrius deps` on the consumer side (sankhya, avatara, kiran, joshua, jnana, lipi, vidya); ship it with the bundle.
+
+### Fixed
+
+- **Build is warning-free.** The three `lib/bayan.cyr:1439/1443/1448` "assigning non-pointer to typed pointer" warnings carried by the 6.4.69 snapshot are fixed upstream in the 6.5.36 bayan. Only the informational unreachable-fn note remains (eliminated by the `CYRIUS_DCE=1` build used in CI and releases).
+
+### Performance
+
+- **Performance-neutral toolchain bump — no regressions, no wins.** Measured by an interleaved A/B: two bench binaries (pre-bump 6.4.69 `lib/` vs post-bump 6.5.36 `lib/`, both compiled by cycc 6.5.36), run in alternation for 3 rounds each on the same machine and session. All 28 benchmarks land within **±2% of median**, and every delta is smaller than that benchmark's own run-to-run spread: `civs_active_at_500bce` 902 → 884 ns (-2.0%, spread 3.1%), `events_at_year_476` 807 → 791 ns (-2.0%, spread 2.5%), `civs_by_region_mediterranean` 853 → 840 ns (-1.5%), `causes_of_french_revolution` 183 → 181 ns (-1.1%), `events_by_category_war` 948 → 957 ns (+0.9%), `sites_active_at_500bce` 303 → 306 ns (+1.0%); `chain_writing_depth3` 324 → 325 ns, `interactions_for_rome` 402 → 401 ns, `eras_containing_500bce` 420 → 419 ns, and the O(1) `all_*` accessors all hold flat at 5 ns. Unlike 2.3.5 (creep) and 2.4.0 (recovery), the 6.5.36 stdlib neither costs nor gains itihas anything. Full run recorded in `bench-history.csv` / `benchmarks.md`.
+- **Benchmark methodology note (affects cross-release CSV comparisons).** 6.5.36's `lib/bench.cyr` adds timer-floor calibration (v6.5.19): it measures what one `now_ns()` read costs on the host and subtracts it from every sample, which 6.4.69's harness did not do. itihas calls `bench_run_batch` with `BATCH=10000`, so the subtraction removes ~0.13 ns/iteration — under 0.1% of the query benchmarks, and the only reason the `all_*` rows can read 4 ns rather than 5 ns. Separately, absolute numbers in this run are well below the 2.4.0 release row for the same benchmarks (e.g. `chain_writing_depth3` 546 → 325 ns); that gap is machine/session difference, **not** attributable to this bump — the pre-bump binary measured the same faster numbers in this session. Only the interleaved A/B above is attributable.
+
 ## [2.4.0] - 2026-07-21
 
 Toolchain modernization release — the cyrius 6.2.11 → 6.4.69 bump and the

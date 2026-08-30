@@ -1,6 +1,6 @@
 # Development Roadmap
 
-> **Status**: v2.4.0 released | **Current**: 2.4.0 | **Compiler**: cyrius 6.4.69
+> **Status**: v2.4.1 released | **Current**: 2.4.1 | **Compiler**: cyrius 6.5.36
 
 Completed items are in [CHANGELOG.md](../../CHANGELOG.md).
 Rust benchmark baseline in [benchmarks-rust-v-cyrius.md](../../benchmarks-rust-v-cyrius.md).
@@ -64,6 +64,13 @@ Sibling avatara has completed two stdlib modernizations itihas has not. Both are
 |------|--------|---------|
 | **Checked allocation (`xalloc`) — CWE-690** | Medium | itihas has ~21 raw `alloc()` sites that write into the result unchecked; the stdlib `alloc()` returns `0` on OOM (near-NULL write / UB under exhaustion). Route heap allocation through a checked `xalloc(n)` that aborts with a diagnostic, per avatara 2.5.4 / its ADR-009 (Rust/Go abort-on-OOM policy). |
 | **Native `#derive(accessors)` struct migration** | Large | The 10 data modules + serial address fields via ~242 manual `load64(p+OFFSET)` / `store64` calls against hand-maintained offset enums. avatara (2.5.3) migrated its profile to a named-field `#derive(accessors)` `struct` once the 6.x struct field cap was raised (32 → 256), making offset-collision bugs a compile error while keeping `prof_*` compat shims. The same applies here: convert each module's offset layout to a native struct, keep the public getters as shims. Touches all 11 modules — strictly one module per cycle, each behind the cleanliness + benchmark gates. |
+
+## Completed in 2.4.1 — Toolchain bump 6.4.69 → 6.5.36
+
+- [x] Cyrius compiler pin `6.4.69` → `6.5.36` (`cyrius.cyml` `[package].cyrius`); local `lib/` snapshot resynced via `cyrius lib sync` (25 declared `[deps].stdlib` modules), clearing the toolchain-drift warning
+- [x] Build is now warning-free: the three `lib/bayan.cyr` "assigning non-pointer to typed pointer" warnings carried by the 6.4.69 snapshot are fixed upstream in the 6.5.36 bayan
+- [x] `[deps].stdlib` unchanged; `net` + `http` remain load-bearing (hoosh's self-contained HTTP client); `dist/itihas.cyr` regenerated (v2.4.1), plus the new `dist/itihas.deps` sidecar that 6.5.36's `distlib` emits for consumers
+- [x] Source behavior unchanged; 153 tests pass. Benchmark gate: **performance-neutral** — interleaved A/B (3 runs each, pre-bump vs post-bump `lib/`, both under cycc 6.5.36) puts all 28 benchmarks within ±2% median, every delta inside run-to-run spread. No regressions, no wins (see CHANGELOG / `benchmarks.md`)
 
 ## Completed in 2.4.0 — Toolchain bump 6.2.11 → 6.4.69
 

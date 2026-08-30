@@ -48,7 +48,7 @@ CYRIUS_DCE=1 cyrius build src/main.cyr build/itihas
 cyrius test tests/itihas.tcyr
 ```
 
-Requires Cyrius 6.4.69 (`cyriusly install 6.4.69`) — pinned in `cyrius.cyml`.
+Requires Cyrius 6.5.36 (`cyriusly install 6.5.36`) — pinned in `cyrius.cyml`.
 
 ### Use as a dependency
 
