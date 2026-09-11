@@ -206,18 +206,27 @@ fn itrace_pair(msg, key, a: Str, b: Str) {
 fn json_escape_into(sb, val: Str) {
     var vlen = str_len(val);
     var vd = str_data(val);
+    # Bytes needing no escape are copied in runs rather than one call per byte.
+    # Historical prose escapes essentially nothing, so the common case is a
+    # single memcpy of the whole string instead of ~400 str_builder_add_byte
+    # calls. `run` is the start of the current clean run.
+    var run = 0;
     var i = 0;
     while (i < vlen) {
         var c = load8(vd + i);
-        if (c == 34) { str_builder_add_cstr(sb, "\\\""); }
-        else { if (c == 92) { str_builder_add_cstr(sb, "\\\\"); }
-            else { if (c == 8)  { str_builder_add_cstr(sb, "\\b"); }
-                else { if (c == 9)  { str_builder_add_cstr(sb, "\\t"); }
-                    else { if (c == 10) { str_builder_add_cstr(sb, "\\n"); }
-                        else { if (c == 12) { str_builder_add_cstr(sb, "\\f"); }
-                            else { if (c == 13) { str_builder_add_cstr(sb, "\\r"); }
-                                else { if (c >= 0 && c < 32) {
-                                        # Remaining C0 controls have no shorthand — emit \u00XX.
+        # load8 is unsigned, so the three tests below cover everything JSON
+        # requires escaping: the C0 controls, the quote, and the backslash.
+        if (c < 32 || c == 34 || c == 92) {
+            if (i > run) { str_builder_add(sb, str_new(vd + run, i - run)); }
+            if (c == 34) { str_builder_add_cstr(sb, "\\\""); }
+            else { if (c == 92) { str_builder_add_cstr(sb, "\\\\"); }
+                else { if (c == 8)  { str_builder_add_cstr(sb, "\\b"); }
+                    else { if (c == 9)  { str_builder_add_cstr(sb, "\\t"); }
+                        else { if (c == 10) { str_builder_add_cstr(sb, "\\n"); }
+                            else { if (c == 12) { str_builder_add_cstr(sb, "\\f"); }
+                                else { if (c == 13) { str_builder_add_cstr(sb, "\\r"); }
+                                    else {
+                                        # Remaining C0 controls have no shorthand.
                                         str_builder_add_cstr(sb, "\\u00");
                                         var hi = c / 16;
                                         var lo = c - hi * 16;
@@ -225,10 +234,12 @@ fn json_escape_into(sb, val: Str) {
                                         else { str_builder_add_byte(sb, 87 + hi); }
                                         if (lo < 10) { str_builder_add_byte(sb, 48 + lo); }
                                         else { str_builder_add_byte(sb, 87 + lo); }
-                                    }
-                                    else { str_builder_add_byte(sb, c); } } } } } } } }
+                                    } } } } } } }
+            run = i + 1;
+        }
         i = i + 1;
     }
+    if (vlen > run) { str_builder_add(sb, str_new(vd + run, vlen - run)); }
     return 0;
 }
 
@@ -448,38 +459,63 @@ enum EraOff { ERA_NAME = 0; ERA_START = 8; ERA_END = 16; ERA_REGION = 24; ERA_DE
 # presentation layers should render it as "present" rather than the digits.
 enum EraSentinel { ERA_ONGOING = 2147483647; }
 
+# --- Era struct (native view over the 56-byte layout) ---
+# NOTE: hot paths call the generated Era_<field> accessors directly rather than
+# the era_* wrappers. Cyrius does not inline, so era_start -> Era_start_year is
+# two calls where the old load64 body was one; routing eras_containing and
+# _era_upper_bound through the wrappers cost a measured +12.3% on
+# eras_containing_500bce. The era_* names remain the public, stable API.
+# Field order MUST match the EraOff offsets above (declaration order x 8, all
+# fields i64). #derive(accessors) generates Era_<field>(p) / Era_set_<field>(p,
+# v); the era_* accessors below delegate to these and era_new sets fields via
+# the generated setters. Named fields make an offset collision a compile error
+# rather than a silent aliasing bug — the EraOff enum was the only thing
+# keeping the seven offsets distinct, and nothing checked it.
+#
+# The EraOff enum is retained: serial.cyr and the sorted-view comparators still
+# address fields by offset, and tests/itihas.tcyr pins each field to its offset.
+#derive(accessors)
+struct Era {
+    name; start_year; end_year; region; description; category; scope;
+}
+
 var era_vec = 0;
 var era_init_done = 0;
 
 #must_use
 fn era_new(name: Str, sy, ey, region: Str, desc: Str, cat, scope) {
     var p = xalloc(ERA_SIZE);
-    store64(p + ERA_NAME, name);
-    store64(p + ERA_START, sy);
-    store64(p + ERA_END, ey);
-    store64(p + ERA_REGION, region);
-    store64(p + ERA_DESC, desc);
-    store64(p + ERA_CAT, cat);
-    store64(p + ERA_SCOPE, scope);
+    Era_set_name(p, name);
+    Era_set_start_year(p, sy);
+    Era_set_end_year(p, ey);
+    Era_set_region(p, region);
+    Era_set_description(p, desc);
+    Era_set_category(p, cat);
+    Era_set_scope(p, scope);
     return p;
 }
 
 #must_use
-fn era_name(p) { return load64(p + ERA_NAME); }
+fn era_name(p) { return Era_name(p); }
 #must_use
-fn era_start(p) { return load64(p + ERA_START); }
+fn era_start(p) { return Era_start_year(p); }
 #must_use
-fn era_end(p) { return load64(p + ERA_END); }
+fn era_end(p) { return Era_end_year(p); }
 
 # True when this era has no end year yet (end == ERA_ONGOING).
 #must_use
-fn era_is_ongoing(p) { return load64(p + ERA_END) == ERA_ONGOING; }
+fn era_is_ongoing(p) { return Era_end_year(p) == ERA_ONGOING; }
 #must_use
-fn era_region(p) { return load64(p + ERA_REGION); }
+fn era_region(p) { return Era_region(p); }
+
+# The description had no accessor at all until the struct migration — serial.cyr
+# reached through `load64(p + ERA_DESC)` directly.
 #must_use
-fn era_cat(p) { return load64(p + ERA_CAT); }
+fn era_desc(p) { return Era_description(p); }
 #must_use
-fn era_scope(p) { return load64(p + ERA_SCOPE); }
+fn era_cat(p) { return Era_category(p); }
+#must_use
+fn era_scope(p) { return Era_scope(p); }
 
 # Build the era table (25 rows). Called once by the lazy initializer.
 fn build_eras() {
@@ -521,6 +557,43 @@ fn all_eras() {
     if (era_init_done == 0) { era_vec = build_eras(); era_init_done = 1; }
     return era_vec;
 }
+
+var era_start_vec = 0;
+var era_start_done = 0;
+
+# The table in ascending start-year order, built once. See all_events_by_year
+# in event.cyr for the rationale; the ordering is a property of the immutable
+# table, so deriving it per query was pure waste.
+#
+# Scanning this view in order means the result comes out start-sorted for free,
+# which is what removes the per-call insertion sort. Order matches the old
+# filter-then-stable-sort exactly.
+#must_use
+fn all_eras_by_start() {
+    if (era_start_done == 0) {
+        var src = all_eras();
+        var out = vec_new();
+        var n = vec_len(src);
+        for (var i = 0; i < n; i = i + 1) { vec_push(out, vec_get(src, i)); }
+        vec_sort(out, &_cmp_era_start);
+        era_start_vec = out;
+        era_start_done = 1;
+    }
+    return era_start_vec;
+}
+
+# Index of the first record starting AFTER `y` — the exclusive end of the
+# prefix that can possibly contain `y`.
+fn _era_upper_bound(v, y) {
+    var lo = 0;
+    var hi = vec_len(v);
+    while (lo < hi) {
+        var mid = lo + (hi - lo) / 2;
+        if (Era_start_year(vec_get(v, mid)) <= y) { lo = mid + 1; }
+        else { hi = mid; }
+    }
+    return lo;
+}
 #must_use
 fn era_count() { return vec_len(all_eras()); }
 #must_use
@@ -532,13 +605,14 @@ fn _cmp_era_start(a, b) { return load64(a+ERA_START) - load64(b+ERA_START); }
 fn eras_containing(year) {
     itrace_i("looking up eras containing year", "year", year);
     var result = vec_new();
-    var v = all_eras();
-    var n = vec_len(v);
-    for (var i = 0; i < n; i = i + 1) {
+    var v = all_eras_by_start();
+    var ub = _era_upper_bound(v, year);
+    var i = 0;
+    while (i < ub) {
         var p = vec_get(v, i);
-        if (year >= era_start(p) && year <= era_end(p)) { vec_push(result, p); }
+        if (year <= Era_end_year(p)) { vec_push(result, p); }
+        i = i + 1;
     }
-    vec_sort(result, &_cmp_era_start);
     return result;
 }
 
@@ -739,6 +813,43 @@ fn all_civilizations() {
     if (civ_init_done == 0) { civ_vec = build_civs(); civ_init_done = 1; }
     return civ_vec;
 }
+
+var civ_found_vec = 0;
+var civ_found_done = 0;
+
+# The table in ascending start-year order, built once. See all_events_by_year
+# in event.cyr for the rationale; the ordering is a property of the immutable
+# table, so deriving it per query was pure waste.
+#
+# Scanning this view in order means the result comes out start-sorted for free,
+# which is what removes the per-call insertion sort. Order matches the old
+# filter-then-stable-sort exactly.
+#must_use
+fn all_civs_by_founded() {
+    if (civ_found_done == 0) {
+        var src = all_civilizations();
+        var out = vec_new();
+        var n = vec_len(src);
+        for (var i = 0; i < n; i = i + 1) { vec_push(out, vec_get(src, i)); }
+        vec_sort(out, &_cmp_civ_found);
+        civ_found_vec = out;
+        civ_found_done = 1;
+    }
+    return civ_found_vec;
+}
+
+# Index of the first record starting AFTER `y` — the exclusive end of the
+# prefix that can possibly contain `y`.
+fn _civ_upper_bound(v, y) {
+    var lo = 0;
+    var hi = vec_len(v);
+    while (lo < hi) {
+        var mid = lo + (hi - lo) / 2;
+        if (civ_found(vec_get(v, mid)) <= y) { lo = mid + 1; }
+        else { hi = mid; }
+    }
+    return lo;
+}
 #must_use
 fn civ_count() { return vec_len(all_civilizations()); }
 #must_use
@@ -765,12 +876,17 @@ fn _cmp_civ_found(a, b) { return load64(a+CIV_FOUND) - load64(b+CIV_FOUND); }
 fn civs_active_at(year) {
     itrace_i("looking up civilizations active at year", "year", year);
     var result = vec_new();
-    var v = all_civilizations(); var n = vec_len(v);
-    for (var i = 0; i < n; i = i + 1) {
+    var v = all_civs_by_founded();
+    # Everything past the first record founded AFTER `year` is out of range, so
+    # only the prefix can match. Within it the end year still has to be checked
+    # individually — ends are not ordered by founding.
+    var ub = _civ_upper_bound(v, year);
+    var i = 0;
+    while (i < ub) {
         var p = vec_get(v, i);
-        if (year >= civ_found(p) && year <= civ_end(p)) { vec_push(result, p); }
+        if (year <= civ_end(p)) { vec_push(result, p); }
+        i = i + 1;
     }
-    vec_sort(result, &_cmp_civ_found);
     return result;
 }
 
@@ -1041,6 +1157,48 @@ fn all_events() {
     if (evt_init_done == 0) { evt_vec = build_events(); evt_init_done = 1; }
     return evt_vec;
 }
+
+var evt_year_vec = 0;
+var evt_year_done = 0;
+
+# Every event in ascending year order, built once.
+#
+# The event table is immutable after build_events(), so the year ordering is a
+# property of the data, not of any one query — but events_between re-derived it
+# on every call, filtering into a fresh vec and then insertion-sorting it.
+# Sorting the whole table once and binary-searching it turns that into a
+# logarithmic seek plus a linear copy of exactly the matches.
+#
+# Order is IDENTICAL to the old path, not merely equivalent: vec_sort is a
+# stable insertion sort and this sorts the table in its build order, so events
+# sharing a year keep the same relative position they had when the filter ran
+# first and the sort second.
+#must_use
+fn all_events_by_year() {
+    if (evt_year_done == 0) {
+        var src = all_events();
+        var out = vec_new();
+        var n = vec_len(src);
+        for (var i = 0; i < n; i = i + 1) { vec_push(out, vec_get(src, i)); }
+        vec_sort(out, &_cmp_evt_year);
+        evt_year_vec = out;
+        evt_year_done = 1;
+    }
+    return evt_year_vec;
+}
+
+# Index of the first event whose year is >= `y`, or vec_len when none is.
+# Plain lower-bound binary search over the sorted view.
+fn _evt_lower_bound(v, y) {
+    var lo = 0;
+    var hi = vec_len(v);
+    while (lo < hi) {
+        var mid = lo + (hi - lo) / 2;
+        if (evt_year(vec_get(v, mid)) < y) { lo = mid + 1; }
+        else { hi = mid; }
+    }
+    return lo;
+}
 #must_use
 fn event_count() { return vec_len(all_events()); }
 
@@ -1074,12 +1232,16 @@ fn _cmp_evt_year(a, b) { return load64(a+EVT_YEAR) - load64(b+EVT_YEAR); }
 fn events_between(sy, ey) {
     itrace_range("looking up events between years", sy, ey);
     var result = vec_new();
-    var v = all_events(); var n = vec_len(v);
-    for (var i = 0; i < n; i = i + 1) {
+    if (sy > ey) { return result; }
+    var v = all_events_by_year();
+    var n = vec_len(v);
+    var i = _evt_lower_bound(v, sy);
+    while (i < n) {
         var p = vec_get(v, i);
-        if (evt_year(p) >= sy && evt_year(p) <= ey) { vec_push(result, p); }
+        if (evt_year(p) > ey) { return result; }
+        vec_push(result, p);
+        i = i + 1;
     }
-    vec_sort(result, &_cmp_evt_year);
     return result;
 }
 
@@ -1578,6 +1740,37 @@ fn all_campaigns() {
     if (camp_init_done == 0) { camp_vec = build_campaigns(); camp_init_done = 1; }
     return camp_vec;
 }
+
+var camp_start_vec = 0;
+var camp_start_done = 0;
+
+# The campaign table in ascending start-year order, built once. Same rationale
+# as all_events_by_year in event.cyr.
+#must_use
+fn all_campaigns_by_start() {
+    if (camp_start_done == 0) {
+        var src = all_campaigns();
+        var out = vec_new();
+        var n = vec_len(src);
+        for (var i = 0; i < n; i = i + 1) { vec_push(out, vec_get(src, i)); }
+        vec_sort(out, &_cmp_camp_start);
+        camp_start_vec = out;
+        camp_start_done = 1;
+    }
+    return camp_start_vec;
+}
+
+# Index of the first campaign starting AFTER `y`.
+fn _camp_upper_bound(v, y) {
+    var lo = 0;
+    var hi = vec_len(v);
+    while (lo < hi) {
+        var mid = lo + (hi - lo) / 2;
+        if (load64(vec_get(v, mid) + CAMP_START) <= y) { lo = mid + 1; }
+        else { hi = mid; }
+    }
+    return lo;
+}
 #must_use
 fn campaign_count() { return vec_len(all_campaigns()); }
 
@@ -1660,12 +1853,18 @@ fn _cmp_camp_start(a, b) { return load64(a+CAMP_START) - load64(b+CAMP_START); }
 fn campaigns_between(sy, ey) {
     itrace_range("looking up campaigns between years", sy, ey);
     var result = vec_new();
-    var v = all_campaigns(); var n = vec_len(v);
-    for (var i = 0; i < n; i = i + 1) {
+    var v = all_campaigns_by_start();
+    # Interval OVERLAP, not containment: a campaign matches when it starts on or
+    # before `ey` and ends on or after `sy`. Only the prefix starting at or
+    # before `ey` can qualify, and within it each end year is still checked —
+    # ends are not ordered by start.
+    var ub = _camp_upper_bound(v, ey);
+    var i = 0;
+    while (i < ub) {
         var p = vec_get(v, i);
-        if (load64(p+CAMP_START) <= ey && load64(p+CAMP_END) >= sy) { vec_push(result, p); }
+        if (load64(p + CAMP_END) >= sy) { vec_push(result, p); }
+        i = i + 1;
     }
-    vec_sort(result, &_cmp_camp_start);
     return result;
 }
 
@@ -1979,29 +2178,64 @@ fn _json_int(sb, key, val) {
 fn _json_sep(sb) { str_builder_add_cstr(sb, ", "); return 0; }
 
 # ----------------------------------------------------------------
+# Arrays
+# ----------------------------------------------------------------
+# Lived in hoosh.cyr until the _to_json_into split; it is a serialization
+# primitive, and mcp.cyr uses it too, so it belongs beside the record writers.
+# Appends the array to a caller-supplied builder. `into_fn` is an
+# `X_to_json_into` from serial.cyr, so each record is written straight into `sb`
+# — the older shape called `X_to_json`, which built a private builder and a
+# finished Str per record, then copied every byte a second time.
+fn _json_array_into(sb, v, into_fn) {
+    str_builder_add_cstr(sb, "[");
+    var n = vec_len(v);
+    for (var i = 0; i < n; i = i + 1) {
+        if (i > 0) { str_builder_add_cstr(sb, ", "); }
+        fncall2(into_fn, sb, vec_get(v, i));
+    }
+    str_builder_add_cstr(sb, "]");
+    return 0;
+}
+
+fn _json_array(v, into_fn) {
+    var sb = str_builder_new();
+    _json_array_into(sb, v, into_fn);
+    return str_builder_build(sb);
+}
+
+# ----------------------------------------------------------------
 # Era
 # ----------------------------------------------------------------
+# Appends the object to a caller-supplied builder. era_to_json is the
+# allocating wrapper; prefer this one when the result is going straight into
+# another builder, which saves a throwaway Str and a second copy of every byte.
+fn era_to_json_into(sb, p) {
+    str_builder_add_cstr(sb, "{");
+    _json_str(sb, "name", era_name(p));
+    _json_sep(sb); _json_int(sb, "start_year", era_start(p));
+    _json_sep(sb); _json_int(sb, "end_year", era_end(p));
+    _json_sep(sb); _json_str(sb, "region", era_region(p));
+    _json_sep(sb); _json_str(sb, "description", era_desc(p));
+    _json_sep(sb); _json_int(sb, "category", era_cat(p));
+    _json_sep(sb); _json_int(sb, "scope", era_scope(p));
+    str_builder_add_cstr(sb, "}");
+    return 0;
+}
+
 #must_use
 fn era_to_json(p) {
     var sb = str_builder_new();
-    str_builder_add_cstr(sb, "{");
-    _json_str(sb, "name", load64(p+ERA_NAME));
-    _json_sep(sb); _json_int(sb, "start_year", load64(p+ERA_START));
-    _json_sep(sb); _json_int(sb, "end_year", load64(p+ERA_END));
-    _json_sep(sb); _json_str(sb, "region", load64(p+ERA_REGION));
-    _json_sep(sb); _json_str(sb, "description", load64(p+ERA_DESC));
-    _json_sep(sb); _json_int(sb, "category", load64(p+ERA_CAT));
-    _json_sep(sb); _json_int(sb, "scope", load64(p+ERA_SCOPE));
-    str_builder_add_cstr(sb, "}");
+    era_to_json_into(sb, p);
     return str_builder_build(sb);
 }
 
 # ----------------------------------------------------------------
 # Civilization
 # ----------------------------------------------------------------
-#must_use
-fn civ_to_json(p) {
-    var sb = str_builder_new();
+# Appends the object to a caller-supplied builder. civ_to_json is the
+# allocating wrapper; prefer this one when the result is going straight into
+# another builder, which saves a throwaway Str and a second copy of every byte.
+fn civ_to_json_into(sb, p) {
     str_builder_add_cstr(sb, "{");
     _json_str(sb, "name", load64(p+CIV_NAME));
     _json_sep(sb); _json_str(sb, "region", load64(p+CIV_REGION));
@@ -2012,15 +2246,23 @@ fn civ_to_json(p) {
     _json_sep(sb); _json_str(sb, "script", load64(p+CIV_SCRIPT));
     _json_sep(sb); _json_str(sb, "language", load64(p+CIV_LANG));
     str_builder_add_cstr(sb, "}");
+    return 0;
+}
+
+#must_use
+fn civ_to_json(p) {
+    var sb = str_builder_new();
+    civ_to_json_into(sb, p);
     return str_builder_build(sb);
 }
 
 # ----------------------------------------------------------------
 # Event
 # ----------------------------------------------------------------
-#must_use
-fn event_to_json(p) {
-    var sb = str_builder_new();
+# Appends the object to a caller-supplied builder. event_to_json is the
+# allocating wrapper; prefer this one when the result is going straight into
+# another builder, which saves a throwaway Str and a second copy of every byte.
+fn event_to_json_into(sb, p) {
     str_builder_add_cstr(sb, "{");
     _json_str(sb, "name", load64(p+EVT_NAME));
     _json_sep(sb); _json_int(sb, "year", load64(p+EVT_YEAR));
@@ -2030,15 +2272,23 @@ fn event_to_json(p) {
     _json_sep(sb); _json_str(sb, "civilizations", load64(p+EVT_CIVS));
     _json_sep(sb); _json_int(sb, "significance", load64(p+EVT_SIG));
     str_builder_add_cstr(sb, "}");
+    return 0;
+}
+
+#must_use
+fn event_to_json(p) {
+    var sb = str_builder_new();
+    event_to_json_into(sb, p);
     return str_builder_build(sb);
 }
 
 # ----------------------------------------------------------------
 # Figure
 # ----------------------------------------------------------------
-#must_use
-fn figure_to_json(p) {
-    var sb = str_builder_new();
+# Appends the object to a caller-supplied builder. figure_to_json is the
+# allocating wrapper; prefer this one when the result is going straight into
+# another builder, which saves a throwaway Str and a second copy of every byte.
+fn figure_to_json_into(sb, p) {
     str_builder_add_cstr(sb, "{");
     _json_str(sb, "name", load64(p+FIG_NAME));
     _json_sep(sb); _json_int(sb, "birth_year", load64(p+FIG_BIRTH));
@@ -2047,15 +2297,23 @@ fn figure_to_json(p) {
     _json_sep(sb); _json_int(sb, "domain", load64(p+FIG_DOM));
     _json_sep(sb); _json_str(sb, "description", load64(p+FIG_DESC));
     str_builder_add_cstr(sb, "}");
+    return 0;
+}
+
+#must_use
+fn figure_to_json(p) {
+    var sb = str_builder_new();
+    figure_to_json_into(sb, p);
     return str_builder_build(sb);
 }
 
 # ----------------------------------------------------------------
 # Calendar
 # ----------------------------------------------------------------
-#must_use
-fn calendar_to_json(p) {
-    var sb = str_builder_new();
+# Appends the object to a caller-supplied builder. calendar_to_json is the
+# allocating wrapper; prefer this one when the result is going straight into
+# another builder, which saves a throwaway Str and a second copy of every byte.
+fn calendar_to_json_into(sb, p) {
     str_builder_add_cstr(sb, "{");
     _json_str(sb, "name", load64(p+CAL_NAME));
     _json_sep(sb); _json_int(sb, "type", load64(p+CAL_TYPE));
@@ -2063,27 +2321,43 @@ fn calendar_to_json(p) {
     _json_sep(sb); _json_int(sb, "months", load64(p+CAL_MONTHS));
     _json_sep(sb); _json_str(sb, "leap", load64(p+CAL_LEAP));
     str_builder_add_cstr(sb, "}");
+    return 0;
+}
+
+#must_use
+fn calendar_to_json(p) {
+    var sb = str_builder_new();
+    calendar_to_json_into(sb, p);
     return str_builder_build(sb);
 }
 
 # ----------------------------------------------------------------
 # Campaign (with nested battles array)
 # ----------------------------------------------------------------
-#must_use
-fn battle_to_json(b) {
-    var sb = str_builder_new();
+# Appends the object to a caller-supplied builder. battle_to_json is the
+# allocating wrapper; prefer this one when the result is going straight into
+# another builder, which saves a throwaway Str and a second copy of every byte.
+fn battle_to_json_into(sb, b) {
     str_builder_add_cstr(sb, "{");
     _json_str(sb, "name", load64(b+BAT_NAME));
     _json_sep(sb); _json_int(sb, "year", load64(b+BAT_YEAR));
     _json_sep(sb); _json_str(sb, "location", load64(b+BAT_LOC));
     _json_sep(sb); _json_str(sb, "description", load64(b+BAT_DESC));
     str_builder_add_cstr(sb, "}");
-    return str_builder_build(sb);
+    return 0;
 }
 
 #must_use
-fn campaign_to_json(p) {
+fn battle_to_json(b) {
     var sb = str_builder_new();
+    battle_to_json_into(sb, b);
+    return str_builder_build(sb);
+}
+
+# Appends the object to a caller-supplied builder. campaign_to_json is the
+# allocating wrapper; prefer this one when the result is going straight into
+# another builder, which saves a throwaway Str and a second copy of every byte.
+fn campaign_to_json_into(sb, p) {
     str_builder_add_cstr(sb, "{");
     _json_str(sb, "name", load64(p+CAMP_NAME));
     _json_sep(sb); _json_str(sb, "region", load64(p+CAMP_REGION));
@@ -2101,19 +2375,27 @@ fn campaign_to_json(p) {
     var bn = vec_len(bats);
     for (var bi = 0; bi < bn; bi = bi + 1) {
         if (bi > 0) { str_builder_add_cstr(sb, ", "); }
-        str_builder_add(sb, battle_to_json(vec_get(bats, bi)));
+        battle_to_json_into(sb, vec_get(bats, bi));
     }
     str_builder_add_cstr(sb, "]");
     str_builder_add_cstr(sb, "}");
+    return 0;
+}
+
+#must_use
+fn campaign_to_json(p) {
+    var sb = str_builder_new();
+    campaign_to_json_into(sb, p);
     return str_builder_build(sb);
 }
 
 # ----------------------------------------------------------------
 # Site
 # ----------------------------------------------------------------
-#must_use
-fn site_to_json(p) {
-    var sb = str_builder_new();
+# Appends the object to a caller-supplied builder. site_to_json is the
+# allocating wrapper; prefer this one when the result is going straight into
+# another builder, which saves a throwaway Str and a second copy of every byte.
+fn site_to_json_into(sb, p) {
     str_builder_add_cstr(sb, "{");
     _json_str(sb, "name", load64(p+SITE_NAME));
     _json_sep(sb); _json_str(sb, "location", load64(p+SITE_LOC));
@@ -2125,15 +2407,23 @@ fn site_to_json(p) {
     _json_sep(sb); _json_int(sb, "discovered", load64(p+SITE_DISC));
     _json_sep(sb); _json_str(sb, "description", load64(p+SITE_DESC));
     str_builder_add_cstr(sb, "}");
+    return 0;
+}
+
+#must_use
+fn site_to_json(p) {
+    var sb = str_builder_new();
+    site_to_json_into(sb, p);
     return str_builder_build(sb);
 }
 
 # ----------------------------------------------------------------
 # Trade Route
 # ----------------------------------------------------------------
-#must_use
-fn route_to_json(p) {
-    var sb = str_builder_new();
+# Appends the object to a caller-supplied builder. route_to_json is the
+# allocating wrapper; prefer this one when the result is going straight into
+# another builder, which saves a throwaway Str and a second copy of every byte.
+fn route_to_json_into(sb, p) {
     str_builder_add_cstr(sb, "{");
     _json_str(sb, "name", load64(p+ROUTE_NAME));
     _json_sep(sb); _json_str(sb, "regions", load64(p+ROUTE_REGIONS));
@@ -2144,30 +2434,46 @@ fn route_to_json(p) {
     _json_sep(sb); _json_int(sb, "end_year", load64(p+ROUTE_END));
     _json_sep(sb); _json_str(sb, "description", load64(p+ROUTE_DESC));
     str_builder_add_cstr(sb, "}");
+    return 0;
+}
+
+#must_use
+fn route_to_json(p) {
+    var sb = str_builder_new();
+    route_to_json_into(sb, p);
     return str_builder_build(sb);
 }
 
 # ----------------------------------------------------------------
 # Causality
 # ----------------------------------------------------------------
-#must_use
-fn causality_to_json(p) {
-    var sb = str_builder_new();
+# Appends the object to a caller-supplied builder. causality_to_json is the
+# allocating wrapper; prefer this one when the result is going straight into
+# another builder, which saves a throwaway Str and a second copy of every byte.
+fn causality_to_json_into(sb, p) {
     str_builder_add_cstr(sb, "{");
     _json_str(sb, "cause", load64(p+CAUS_CAUSE));
     _json_sep(sb); _json_str(sb, "effect", load64(p+CAUS_EFFECT));
     _json_sep(sb); _json_int(sb, "strength", load64(p+CAUS_STR));
     _json_sep(sb); _json_str(sb, "description", load64(p+CAUS_DESC));
     str_builder_add_cstr(sb, "}");
+    return 0;
+}
+
+#must_use
+fn causality_to_json(p) {
+    var sb = str_builder_new();
+    causality_to_json_into(sb, p);
     return str_builder_build(sb);
 }
 
 # ----------------------------------------------------------------
 # Interaction
 # ----------------------------------------------------------------
-#must_use
-fn interaction_to_json(p) {
-    var sb = str_builder_new();
+# Appends the object to a caller-supplied builder. interaction_to_json is the
+# allocating wrapper; prefer this one when the result is going straight into
+# another builder, which saves a throwaway Str and a second copy of every byte.
+fn interaction_to_json_into(sb, p) {
     str_builder_add_cstr(sb, "{");
     _json_str(sb, "civilization_a", load64(p+INT_CIVA));
     _json_sep(sb); _json_str(sb, "civilization_b", load64(p+INT_CIVB));
@@ -2176,6 +2482,13 @@ fn interaction_to_json(p) {
     _json_sep(sb); _json_int(sb, "end_year", load64(p+INT_END));
     _json_sep(sb); _json_str(sb, "description", load64(p+INT_DESC));
     str_builder_add_cstr(sb, "}");
+    return 0;
+}
+
+#must_use
+fn interaction_to_json(p) {
+    var sb = str_builder_new();
+    interaction_to_json_into(sb, p);
     return str_builder_build(sb);
 }
 
@@ -2264,18 +2577,6 @@ fn _names_from_vec(v, name_fn) {
     return str_builder_build(sb);
 }
 
-fn _json_array(v, to_json_fn) {
-    var sb = str_builder_new();
-    str_builder_add_cstr(sb, "[");
-    var n = vec_len(v);
-    for (var i = 0; i < n; i = i + 1) {
-        if (i > 0) { str_builder_add_cstr(sb, ", "); }
-        str_builder_add(sb, fncall1(to_json_fn, vec_get(v, i)));
-    }
-    str_builder_add_cstr(sb, "]");
-    return str_builder_build(sb);
-}
-
 #must_use
 fn answer_from_data(q) {
     var qt = load64(q+Q_TYPE);
@@ -2287,7 +2588,7 @@ fn answer_from_data(q) {
             return resp_new(SRC_DATA, str_from("No events found in the specified range."), str_from("[]"));
         }
         var names = _names_from_vec(events, &evt_name);
-        var data = _json_array(events, &event_to_json);
+        var data = _json_array(events, &event_to_json_into);
         return resp_new(SRC_DATA, names, data);
     }
 
@@ -2297,7 +2598,7 @@ fn answer_from_data(q) {
             return resp_new(SRC_DATA, str_from("No civilizations found active at that year."), str_from("[]"));
         }
         var names = _names_from_vec(civs, &civ_name);
-        var data = _json_array(civs, &civ_to_json);
+        var data = _json_array(civs, &civ_to_json_into);
         return resp_new(SRC_DATA, names, data);
     }
 
@@ -2311,7 +2612,7 @@ fn answer_from_data(q) {
             str_builder_add(sb, load64(vec_get(causes, i)+CAUS_DESC));
         }
         var content = str_builder_build(sb);
-        var data = _json_array(causes, &causality_to_json);
+        var data = _json_array(causes, &causality_to_json_into);
         return resp_new(SRC_DATA, content, data);
     }
 
@@ -2325,7 +2626,7 @@ fn answer_from_data(q) {
             str_builder_add(sb, load64(vec_get(ints, i)+INT_DESC));
         }
         var content = str_builder_build(sb);
-        var data = _json_array(ints, &interaction_to_json);
+        var data = _json_array(ints, &interaction_to_json_into);
         return resp_new(SRC_DATA, content, data);
     }
 
@@ -2377,7 +2678,7 @@ fn resolve_era_lookup(args) {
                 return resp_new(SRC_DATA, str_from("No eras found containing that year."), str_from("[]"));
             }
             var names = _names_from_vec(eras, &era_name);
-            var data = _json_array(eras, &era_to_json);
+            var data = _json_array(eras, &era_to_json_into);
             return resp_new(SRC_DATA, names, data);
         }
     }

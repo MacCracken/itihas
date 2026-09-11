@@ -4,7 +4,7 @@ version = "${file:VERSION}"
 description = "Itihas — structured world history: civilizations, eras, events, figures, campaigns, sites, trade routes, calendars"
 license = "GPL-3.0-only"
 language = "cyrius"
-cyrius = "6.5.36"
+cyrius = "6.6.2"
 repository = "https://github.com/MacCracken/itihas"
 
 [build]
@@ -61,7 +61,7 @@ stdlib = ["string", "fmt", "alloc", "vec", "str", "syscalls", "assert", "tagged"
 [deps.bote]
 optional = true
 git = "https://github.com/MacCracken/bote.git"
-tag = "3.3.7"
+tag = "3.3.8"
 modules = ["dist/bote.cyr"]
 
 # `mcp` activates the optional bote dep. It is deliberately NOT in `default`:

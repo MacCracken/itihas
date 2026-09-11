@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Toolchain `6.5.36` → `6.6.2`, and bote `3.3.7` → `3.3.8`.** 6.6.0 made
+  `Result` / `Option` / `Either` a two-register `(tag, payload)` value and deleted
+  the `payload()` accessor. itihas needed **no source change**: its own tree calls
+  neither retired accessor, carries no `Result` propagation chains and uses no
+  `callptr`. Verified by enumerating every `.cyr` / `.tcyr` / `.bcyr` / `.fcyr`
+  outside `lib/` — `src/`, `tests/` **and** `tests-mcp/`, which a scan anchored on
+  `src/` + `tests/` would have missed.
+
+  The bote bump is the load-bearing half. itihas consumes the **full**
+  `dist/bote.cyr`, and at 3.3.7 that bundle still called bare `payload(` from
+  `src/transport_unix.cyr` — a symbol that does not exist in the 6.6.2 stdlib, so
+  the build could not have linked. bote 3.3.8 fixes it at the source.
+
+### Fixed
+
+- **`dist/itihas.cyr` was stale against `src/`.** Not a migration artifact: the
+  commit after tag 2.5.0 changed `src/` without regenerating the bundle, so
+  `event_to_json_into` and the reworked `_json_array(v, into_fn)` existed in source
+  and not in the shipped bundle — CI's "Verify dist bundle is current" gate was
+  already red on `main`. Regenerated; consumers pulling `dist/itihas.cyr` were
+  getting the pre-rework code.
+
 ### Added
 
 - **`era_desc(p)` accessor.** The era description was the one field with no
