@@ -7,9 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Changed
+## [2.5.1] - 2026-09-11
 
-- **Toolchain `6.5.36` → `6.6.2`, and bote `3.3.7` → `3.3.8`.** 6.6.0 made
+Patch cut of everything that had accumulated on `main` past tag 2.5.0: the
+cyrius 6.6.2 toolchain migration, a dist bundle that had gone stale against
+`src/`, and the `src/era.cyr` struct migration that opens the 2.7.x structural
+arc. Suite **309** tests.
+
+### Changed — toolchain and dependencies
+
+- **Toolchain `6.5.36` → `6.6.2`, and bote `3.3.7` → `3.3.8`, and bote `3.3.7` → `3.3.8`.** 6.6.0 made
   `Result` / `Option` / `Either` a two-register `(tag, payload)` value and deleted
   the `payload()` accessor. itihas needed **no source change**: its own tree calls
   neither retired accessor, carries no `Result` propagation chains and uses no
@@ -37,7 +44,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   accessor — `src/serial.cyr` reached through `load64(p + ERA_DESC)` directly.
   Surfaced by the struct migration below.
 
-### Changed
+### Changed — the `era` struct migration
 
 - **`src/era.cyr` migrated to a native `#derive(accessors)` struct** — the first
   module of the 2.7.x structural arc, which is done strictly one module per
