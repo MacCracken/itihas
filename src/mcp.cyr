@@ -47,17 +47,25 @@ fn _mcp_arg_str(args, key) {
     return str_from(s);
 }
 
-# `{"ok":false,"error":"..."}` — a handler failure the agent can read.
+# A handler failure, as an MCP tool-execution error:
+#   {"content":[{"type":"text","text":"<msg>"}],"isError":true}
+# The reason is the text block, so the agent can read it, and `isError` is what
+# tells the client the call failed. bote's dispatcher passes a result that
+# already carries `content` through unchanged, and since bote 3.4.8 it also
+# audits an `isError` result as a failure.
+#
+# Through 2.5.2 this returned `{"ok":false,"error":"..."}`. bote 3.4.8+ wraps
+# such bare JSON in a text block with no `isError`, so a client read every
+# itihas failure as a successful call (bote consumer audit 2026-10-15, B3).
+#
+# Successful results stay bare JSON on purpose. The dispatcher wraps those in a
+# text block itself, and `itihas_daimon_invoke` callers get the record as-is.
 fn _mcp_err(msg) {
-    var sb = str_builder_new();
-    str_builder_add_cstr(sb, "{\"ok\":false,\"error\":\"");
-    json_escape_into(sb, str_from(msg));
-    str_builder_add_cstr(sb, "\"}");
-    return str_data(str_builder_build(sb));
+    return content_text_error_response(msg);
 }
 
-# One record, or a not-found object rather than a bare null, so the agent gets
-# a reason instead of having to infer one.
+# One record, or a failure naming what was not found rather than a bare null,
+# so the agent gets a reason instead of having to infer one.
 # `into_fn` is an `X_to_json_into` from serial.cyr throughout, so a record is
 # written once into the builder that becomes the reply.
 fn _mcp_one(p, into_fn, what) {
@@ -309,9 +317,12 @@ fn itihas_daimon_register_tools(registry) {
     return 0;
 }
 
-# Invoke a tool by name with a JSON arguments object. Returns the JSON result,
-# or 0 when the name is not one of itihas's — the caller distinguishes "not
-# mine" from "failed", which is why an unknown name is not an error object.
+# Invoke a tool by name with a JSON arguments object. Returns the bare JSON
+# record or array on success, a CallToolResult with `"isError":true` on
+# failure, or 0 when the name is not one of itihas's. The caller distinguishes
+# "not mine" from "failed", which is why an unknown name is not an error object.
+# A host can forward the result the way daimon's `_mcp_wrap_builtin` does: pass
+# a result that has `content` through, and wrap anything else in a text block.
 #must_use
 fn itihas_daimon_invoke(name, args) {
     if (streq(name, "itihas_era") == 1) { return itihas_mcp_handle_era(args, 0); }

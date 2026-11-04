@@ -29,8 +29,12 @@ will notice them:
   surfaced two real clashes in itihas's own code — `query_new` against bote's
   `libro`, and `RT_SIZE` against `lib/async_win.cyr` with a *different value* —
   both renamed in 2.5.0.
-- **`ToolResult` is not a tagged union.** Handlers return a JSON cstr, matching
-  bote's own handler convention; failures are `{"ok":false,"error":"..."}`.
+- **`ToolResult` is not a tagged union.** Handlers return a JSON cstr. Success
+  is the bare record or array, which bote's dispatcher wraps in a text block.
+  Since 2.6.0 a failure is an MCP tool-execution error,
+  `{"content":[{"type":"text","text":"<reason>"}],"isError":true}`, built with
+  bote's `content_text_error_response`. Through 2.5.2 it was
+  `{"ok":false,"error":"..."}`, which clients read as a successful call.
 - **`src/mcp.cyr` is not in the default bundle.** It is absent from
   `src/lib.cyr` and `[lib].modules`, so `dist/itihas.cyr` references no bote
   symbol. bote sits behind the optional `mcp` feature, because measuring showed

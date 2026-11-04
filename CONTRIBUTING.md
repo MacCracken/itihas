@@ -12,7 +12,7 @@ Thank you for your interest in contributing to Itihas.
 
 ## Prerequisites
 
-- Cyrius 6.6.20 (`cyriusly install 6.6.20`) — pinned in `cyrius.cyml`
+- Cyrius 6.7.9 (`cyriusly install 6.7.9`) — pinned in `cyrius.cyml`
 
 ## Commands
 

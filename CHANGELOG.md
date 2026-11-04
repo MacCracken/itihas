@@ -7,6 +7,128 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.6.0] - 2026-11-04
+
+Toolchain and dependency cut onto the 6.7 line: cyrius 6.6.20 → 6.7.9, and
+bote 3.3.17 → 3.4.10, the newest bote tag that pins 6.7.9. The bump itself
+needed no `src/` change. The minor version is for what MCP clients now see from
+itihas's tools. Results arrive as spec-shaped CallToolResults, argument types
+are enforced, and itihas's own failures are flagged `isError`. That last one is
+the one `src/` change in this release, in `src/mcp.cyr`, which is outside the
+default bundle. Suite **309** tests + **51** MCP.
+
+### Changed — toolchain and dependencies
+
+- **Toolchain `6.6.20` → `6.7.9`, bote `3.3.17` → `3.4.10`.** bote 3.4.0–3.4.10
+  pin 6.7.9 (3.4.11 onward pins 6.7.18). The graph resolves to libro 2.11.0,
+  majra 2.12.0, patra 1.16.0 and sigil 3.13.12. 6.7.0–6.7.9 add traits,
+  generics, `const`, `bool` / `true` / `false`, `loop` / `do … while`, tuples
+  and `dyn`. None of the new keywords collides with an itihas identifier.
+  Smoke, the 309 unit tests, the CI lint gate and `cyrius fmt --check` are clean
+  unchanged.
+
+- **`lib/` and `cyrius.lock` rebuilt from empty**, the same procedure as 2.5.2:
+  75 file hashes, one commit pin each for bote, libro, majra, patra and sigil,
+  and a `cyrius 6.7.9` trailer. Running CI's steps on a fresh copy of the tree
+  leaves the lock byte-identical, and `cyrius deps --features mcp --verify`
+  passes 75/75.
+
+- **`dist/itihas.cyr` and `dist/itihas.deps`:** only the bundle's version line
+  changed. The sidecar still names the same 11 stdlib leaves.
+
+### Changed — MCP tools, on the wire (bote 3.4.8)
+
+bote 3.4.8 compiles each tool's input schema at registration and coerces every
+tool result into a CallToolResult. itihas's five definitions pass the new
+registration checks unchanged. Measured by sending the same `tools/call`
+messages through `codec_process_message` on 2.5.2 and on 2.6.0:
+
+| Call | 2.5.2 (bote 3.3.17) | 2.6.0 (bote 3.4.10) |
+|------|---------------------|---------------------|
+| a record or array is found | bare JSON as the `result`, which an SDK client cannot read as a CallToolResult | `{"content":[{"type":"text","text":"<the JSON>"}]}` |
+| `"year":"500"` (a string where the schema says integer) | parsed as 500 anyway, and eras returned | `isError: true`, "year: expected integer" |
+| a not-found or invalid-range failure | `{"ok":false,"error":…}` as the bare `result`, read by a client as a success | `{"content":[{"type":"text","text":"no era with that name"}],"isError":true}` (see *Fixed* below) |
+
+### Fixed
+
+- **MCP tool failures are flagged `isError`.** `_mcp_err` in `src/mcp.cyr`
+  returned `{"ok":false,"error":"…"}`. On bote 3.4.10 alone that would have gone
+  out as an ordinary text block with no `isError`, so a client would read "no
+  era with that name" as a successful call. Through 2.5.2 the same object was
+  the bare `result`, which no client could read as a CallToolResult anyway. This
+  is finding B3 for itihas in bote's 2026-10-15 consumer audit. `_mcp_err` now
+  returns bote's `content_text_error_response(reason)`, an MCP tool-execution
+  error. The dispatcher passes it through unchanged, and since bote 3.4.8 it
+  also audits the call as a failure. This covers all six failure paths: the
+  four not-found lookups, an unknown event category or figure domain, and a
+  missing or inverted timeline range.
+
+  There is no benchmark impact. The bench suite does not include
+  `src/mcp.cyr`, and the default bundle does not contain it.
+
+### Breaking — the MCP failure shape, for direct callers
+
+This reaches only code that calls the `itihas_mcp_handle_*` handlers or
+`itihas_daimon_invoke` itself. A client going through bote's dispatcher just
+gets the spec-shaped error. No AGNOS repo calls `itihas_daimon_invoke` today,
+daimon included.
+
+Migration:
+
+- **A failure is now a CallToolResult, not `{"ok":false,…}`.** Test
+  `"isError":true` instead of `"ok":false`. The reason is the text block's text.
+- **Successful results are unchanged:** still the bare JSON record or array.
+- **A host forwarding both shapes** can do what daimon's `_mcp_wrap_builtin`
+  already does: pass a result that has `content` through, and wrap anything
+  else in a text block.
+
+### Added
+
+- **`tests-mcp/itihas-mcp.tcyr` covers the `tools/call` wire path and the
+  failure shape**, 39 → 51 assertions. Every earlier MCP test called the
+  handlers directly, so a change in what the dispatcher puts on the wire could
+  not show. The new wire assertions check that:
+  - a record arrives as a text block;
+  - a negative integer year passes validation;
+  - a string year is refused with `isError` and a reason naming the type;
+  - a not-found lookup and an inverted range reach the client flagged
+    `isError`, with the bare reason as the text;
+  - a successful call is not flagged.
+
+  The direct-handler tests check `isError` on the failure paths instead of
+  `"ok":false`. Each new assertion is shown to be load-bearing. Three of the
+  wire checks fail against bote 3.3.17. All seven failure-shape checks fail with
+  the old `_mcp_err` restored.
+
+### Benchmarks — release gate
+
+Interleaved A/B of the 2.5.2 bench binary (6.6.20) against this one (6.7.9).
+A first 3-round run at load average 12 had 20–200% spread and was discarded.
+The recorded comparison is 6 rounds each, with spreads of 0.7–2.9%. The gate
+run is in `bench-history.csv`.
+
+- **The 28 query and JSON rows are flat:** −2.2% to +1.9%, each about the size
+  of its own spread. For example, `eras_containing_500bce` 172 → 173 ns,
+  `chain_writing_depth3` 2627 → 2626 ns, `routes_by_region_east_asia` 1798 →
+  1797 ns, `json_array_eras` 71.6 → 70.0 us, `json_array_events` 313.5 → 317.6 us.
+- **The ten `all_*` accessors show code placement, not codegen.** The A/B report
+  flagged four of them, which read 4 → 5 ns at integer-ns resolution. At the
+  harness's picosecond resolution, these identical "return the cached vec"
+  bodies sit at about 4.1, 4.3 and 4.6 ns and swap levels in both directions:
+  `all_campaigns` +0.49 ns, `all_civilizations` −0.49 ns. Across all ten the
+  sum moved +1.4%.
+- **Binary size:** the DCE `build/itihas` went 251,848 → 251,800 B (−48 B). The
+  non-DCE build went 780,232 → 784,280 B (+4,048). The `--features mcp` test
+  binary, built from the same source on each toolchain, went 2,986,024 →
+  3,045,440 B (+59,416), which is the bote 3.4.x graph.
+
+### Known
+
+- Unchanged from 2.5.2: `cyrius distlib` still warns that `SYS_SOCKET` /
+  `SYS_CONNECT` are undefined on x86_64-windows and x86_64-agnos (roadmap,
+  *Portability*). The `--features mcp` build still warns about the
+  262,144-byte static array in the vendored `lib/sigil.cyr` fold.
+
 ## [2.5.2] - 2026-11-04
 
 Toolchain and dependency cut: cyrius 6.6.2 → 6.6.20, and bote 3.3.8 → 3.3.17,

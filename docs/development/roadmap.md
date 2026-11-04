@@ -1,6 +1,6 @@
 # Development Roadmap
 
-> **Current**: 2.5.2 | **Compiler**: cyrius 6.6.20 | **Tests**: 309 + 39 MCP | **Coverage**: 94% | **Lint**: clean
+> **Current**: 2.6.0 | **Compiler**: cyrius 6.7.9 | **Tests**: 309 + 51 MCP | **Coverage**: 94% | **Lint**: clean
 
 This file tracks **open work only**. Completed releases are recorded in
 [CHANGELOG.md](../../CHANGELOG.md) — they are not duplicated here.
@@ -83,7 +83,7 @@ treatment and its own before/after A/B.
 
 | Item | Effort | Detail |
 |------|--------|--------|
-| **`hoosh_post` on Windows and agnos** | Medium | `src/hoosh.cyr` opens its socket with raw `syscall(SYS_SOCKET, …)` / `syscall(SYS_CONNECT, …)` and moves bytes with `SYS_WRITE` / `SYS_READ`. Those numbers exist on Linux and macOS only. Under the 6.6.20 pin, `cyrius distlib` checks the bundle against every target and warns that both names are undefined on x86_64-windows and x86_64-agnos. On Windows a socket is a Winsock `SOCKET`, so a port means routing the connect, write, read and close through `lib/net.cyr`'s per-OS `sock_*` primitives, not just renaming constants. The HTTP client must stay self-contained, so keep it in itihas. |
+| **`hoosh_post` on Windows and agnos** | Medium | `src/hoosh.cyr` opens its socket with raw `syscall(SYS_SOCKET, …)` / `syscall(SYS_CONNECT, …)` and moves bytes with `SYS_WRITE` / `SYS_READ`. Those numbers exist on Linux and macOS only. From the 6.6.20 pin on, `cyrius distlib` checks the bundle against every target and warns that both names are undefined on x86_64-windows and x86_64-agnos. On Windows a socket is a Winsock `SOCKET`, so a port means routing the connect, write, read and close through `lib/net.cyr`'s per-OS `sock_*` primitives, not just renaming constants. The HTTP client must stay self-contained, so keep it in itihas. |
 
 ## Data work (demand-gated)
 
@@ -102,7 +102,7 @@ treatment and its own before/after A/B.
 | Dependency | Repo | Needed for | Status |
 |-----------|------|-----------|--------|
 | **hoosh** | MacCracken/hoosh | 2.2.0 | ✅ Integrated (`src/hoosh.cyr`) |
-| **bote** | MacCracken/bote | 2.5.0 | ✅ **Ready** — 3.3.17, cyrius 6.6.20, builds clean, full surface exported |
+| **bote** | MacCracken/bote | 2.5.0 | ✅ **Ready** — 3.4.10, cyrius 6.7.9, builds clean, full surface exported |
 | **argonaut** | MacCracken/argonaut | shared JSON library | Ported upstream (424 tests) but **not integrated**. itihas ships its own `src/serial.cyr`, so this is an optional consolidation rather than a gap. |
 
 ## Port coverage

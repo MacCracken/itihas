@@ -61,7 +61,8 @@ fn main() {
     var e4 = itihas_mcp_handle_era("{}", 0);
     check(load8(e4), 91, "era with no args returns the whole collection");
     var e5 = itihas_mcp_handle_era("{\"name\":\"Space Age\"}", 0);
-    has(e5, "\"ok\":false", "unknown era name is a structured error");
+    has(e5, "\"isError\":true", "unknown era name is a tool-execution error");
+    has(e5, "\"text\":\"no era with that name\"", "the error's text block names what was missing");
 
     println("--- itihas_civilization ---");
     has(itihas_mcp_handle_civilization("{\"name\":\"Roman Empire\"}", 0), "Roman Empire", "civ by name");
@@ -90,6 +91,8 @@ fn main() {
     has(t1, "\"civilizations_at_end\"", "timeline carries civilizations at the end");
     has(itihas_mcp_handle_timeline("{}", 0), "both required", "timeline without a range is an error");
     has(itihas_mcp_handle_timeline("{\"start_year\":500,\"end_year\":-500}", 0), "must not exceed", "inverted range is an error");
+    has(itihas_mcp_handle_timeline("{}", 0), "\"isError\":true", "a missing range is flagged isError");   #skip-lint
+    has(itihas_mcp_handle_figure("{\"domain\":\"wizard\"}", 0), "\"isError\":true", "an unknown domain is flagged isError");   #skip-lint
 
     println("--- year sentinel ---");
     # Year 0 is a real value and must not read as absent. The dataset has no
@@ -115,6 +118,30 @@ fn main() {
     itihas_mcp_register_all(d);
     check(registry_len(dispatcher_registry(d)), 5, "register_all registers five tools");
     check(registry_contains(dispatcher_registry(d), "itihas_timeline"), 1, "timeline is in the registry");
+
+    # The sections above call handlers directly. This one sends real tools/call
+    # messages through bote's codec, the path a client takes. Since bote 3.4.8
+    # the dispatcher compiles each tool's schema at registration and wraps a bare
+    # handler result in a CallToolResult text block.
+    println("--- tools/call over the wire ---");
+    var found = codec_process_message("{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/call\",\"params\":{\"name\":\"itihas_era\",\"arguments\":{\"name\":\"Bronze Age\"}}}", d, 0);   #skip-lint
+    has(found, "\"content\":[{\"type\":\"text\"", "a record reaches the client as a CallToolResult text block");
+    has(found, "Bronze Age", "the text block carries the record");
+    var bce = codec_process_message("{\"jsonrpc\":\"2.0\",\"id\":2,\"method\":\"tools/call\",\"params\":{\"name\":\"itihas_era\",\"arguments\":{\"year\":-500}}}", d, 0);   #skip-lint
+    has(bce, "Classical Antiquity", "a negative integer year passes schema validation");
+    var bad = codec_process_message("{\"jsonrpc\":\"2.0\",\"id\":3,\"method\":\"tools/call\",\"params\":{\"name\":\"itihas_era\",\"arguments\":{\"year\":\"500\"}}}", d, 0);   #skip-lint
+    has(bad, "\"isError\":true", "a string year is refused by the integer schema");
+    has(bad, "expected integer", "the refusal names the type");
+    # itihas's own failures. The handler returns a CallToolResult, so the
+    # dispatcher must pass it through: the text is the bare reason, not the
+    # whole result escaped into a second text block.
+    var miss = codec_process_message("{\"jsonrpc\":\"2.0\",\"id\":4,\"method\":\"tools/call\",\"params\":{\"name\":\"itihas_era\",\"arguments\":{\"name\":\"Space Age\"}}}", d, 0);   #skip-lint
+    has(miss, "\"isError\":true", "a not-found failure reaches the client flagged isError");
+    has(miss, "\"text\":\"no era with that name\"", "the failure is passed through, not wrapped again");
+    var inv = codec_process_message("{\"jsonrpc\":\"2.0\",\"id\":5,\"method\":\"tools/call\",\"params\":{\"name\":\"itihas_timeline\",\"arguments\":{\"start_year\":10,\"end_year\":5}}}", d, 0);   #skip-lint
+    has(inv, "\"isError\":true", "an inverted range reaches the client flagged isError");
+    var good = codec_process_message("{\"jsonrpc\":\"2.0\",\"id\":6,\"method\":\"tools/call\",\"params\":{\"name\":\"itihas_figure\",\"arguments\":{\"domain\":\"scientist\"}}}", d, 0);   #skip-lint
+    check(str_contains(str_from(good), str_from("\"isError\":true")), 0, "a successful call is not flagged isError");
 
     return assert_summary();
 }
