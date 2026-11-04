@@ -1,6 +1,6 @@
 # Development Roadmap
 
-> **Current**: 2.6.0 | **Compiler**: cyrius 6.7.9 | **Tests**: 309 + 51 MCP | **Coverage**: 94% | **Lint**: clean
+> **Current**: 2.6.1 | **Compiler**: cyrius 6.7.18 | **Tests**: 309 + 51 MCP | **Coverage**: 94% | **Lint**: clean
 
 This file tracks **open work only**. Completed releases are recorded in
 [CHANGELOG.md](../../CHANGELOG.md) — they are not duplicated here.
@@ -65,6 +65,7 @@ regressions elsewhere in the suite. See CHANGELOG.
 |------|--------|--------|
 | **Generic filter/lookup helpers** | Large | ~31 near-identical filter bodies across the 10 data modules. One shape per cycle behind the benchmark gate. Do not start before the 2.4.2 token-membership semantics have settled in use. |
 | **Static-data footprint** | Large | The data modules embed ~300 KB of inline description strings. Restructuring to runtime `alloc()` touches every data module; demand-gated. |
+| **bayan's Unicode tables** | Upstream | Since cyrius 6.7.13, `lib/bayan.cyr` includes `lib/unicode/*` (case-fold, categories, normalization) and `lib/math.cyr` for every consumer. DCE removes unreachable functions, but not data. In 2.6.1, measured on the DCE build, `.rodata` went 66,814 → 408,802 B and the binary 251,800 → 535,392 B, though itihas only calls `bayan_json_parse` and `bayan_json_get_by_cstr` from `src/hoosh.cyr`. The fix belongs in bayan: a JSON-only profile, or tables that only the Unicode-aware functions reach. A hand-rolled JSON reader in itihas would trade an AGNOS dependency for local code, against "own the stack". |
 
 ## 2.7.x — Structural arc
 
@@ -102,7 +103,7 @@ treatment and its own before/after A/B.
 | Dependency | Repo | Needed for | Status |
 |-----------|------|-----------|--------|
 | **hoosh** | MacCracken/hoosh | 2.2.0 | ✅ Integrated (`src/hoosh.cyr`) |
-| **bote** | MacCracken/bote | 2.5.0 | ✅ **Ready** — 3.4.10, cyrius 6.7.9, builds clean, full surface exported |
+| **bote** | MacCracken/bote | 2.5.0 | ✅ **Ready** — 3.8.9, cyrius 6.7.18, builds clean, full surface exported |
 | **argonaut** | MacCracken/argonaut | shared JSON library | Ported upstream (424 tests) but **not integrated**. itihas ships its own `src/serial.cyr`, so this is an optional consolidation rather than a gap. |
 
 ## Port coverage

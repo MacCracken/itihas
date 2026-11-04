@@ -4,7 +4,7 @@ version = "${file:VERSION}"
 description = "Itihas — structured world history: civilizations, eras, events, figures, campaigns, sites, trade routes, calendars"
 license = "GPL-3.0-only"
 language = "cyrius"
-cyrius = "6.7.9"
+cyrius = "6.7.18"
 repository = "https://github.com/MacCracken/itihas"
 
 [build]
@@ -40,9 +40,12 @@ modules = [
 # tagged: needed transitively (sakshi + net use Result).
 # bayan: the data-format stdlib carve (cyrius 6.1.25) moved json/toml/csv/base64/
 # bigint out of the stdlib into the bayan sibling, folded back as lib/bayan.cyr.
-# itihas's hoosh tool-call parsing uses json_parse/json_get (bayan compat aliases
-# for bayan_json_*). Replaces the former standalone "json" dep, which no longer
-# exists. result + io are bayan's internal prereqs.
+# itihas's hoosh tool-call parsing calls bayan_json_parse and
+# bayan_json_get_by_cstr directly (2.6.1: the bare json_get alias is deprecated,
+# and the bare-name block is marked for removal). Replaces the former standalone
+# "json" dep, which no longer exists. result + io are bayan's internal prereqs.
+# Since cyrius 6.7.13, lib/bayan.cyr also includes lib/unicode/* and lib/math.cyr,
+# whose tables cost ~340 KB of .rodata; there is no narrower bayan profile.
 stdlib = ["string", "fmt", "alloc", "vec", "str", "syscalls", "assert", "tagged", "result", "io", "fnptr", "bench", "net", "http", "bayan", "sakshi"]
 
 # bote — MCP tool definitions, registry and dispatcher, for src/mcp.cyr.
@@ -61,7 +64,7 @@ stdlib = ["string", "fmt", "alloc", "vec", "str", "syscalls", "assert", "tagged"
 [deps.bote]
 optional = true
 git = "https://github.com/MacCracken/bote.git"
-tag = "3.4.10"
+tag = "3.8.9"
 modules = ["dist/bote.cyr"]
 
 # `mcp` activates the optional bote dep. It is deliberately NOT in `default`:

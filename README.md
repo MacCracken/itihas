@@ -48,7 +48,7 @@ CYRIUS_DCE=1 cyrius build src/main.cyr build/itihas
 cyrius test tests/itihas.tcyr
 ```
 
-Requires Cyrius 6.7.9 (`cyriusly install 6.7.9`) — pinned in `cyrius.cyml`.
+Requires Cyrius 6.7.18 (`cyriusly install 6.7.18`) — pinned in `cyrius.cyml`.
 
 ### MCP tools (optional)
 
@@ -117,8 +117,9 @@ cyrius distlib                  # Regenerate dist/itihas.cyr
 ## Port History
 
 Ported from Rust v1.5.0 (8,846 lines) to Cyrius v2.0.0 (1,591 lines, 128 functions, 97 tests) on 2026-04-12.
-That release produced a 141KB static ELF binary; the current build is 674KB, having grown with the
-stdlib snapshot. The Rust v1.5.0 source lives in git history only — it was removed once
+That release produced a 141KB static ELF binary. The current DCE build is 535KB (1.3MB without
+DCE). It grew with the stdlib snapshot, most recently by ~340KB of Unicode tables that bayan has
+included since cyrius 6.7.13. The Rust v1.5.0 source lives in git history only — it was removed once
 the port completed; see `docs/development/mcp-port-reference.md` for the one module that
 had not shipped.
 See [benchmarks-rust-v-cyrius.md](benchmarks-rust-v-cyrius.md) for comparison.

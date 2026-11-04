@@ -454,16 +454,16 @@ fn main() {
     check(parse_tool_call("events_in_range", "{}"), 0, "parse missing args=0");
 
     # resolve_era_lookup
-    var era_args1 = json_parse(str_from("{\"name\": \"Bronze Age\"}"));
+    var era_args1 = bayan_json_parse(str_from("{\"name\": \"Bronze Age\"}"));
     var elr1 = resolve_era_lookup(era_args1);
     ok(elr1, "era lookup by name");
     ok(str_contains(resp_content(elr1), "Bronze Age"), "era content has name");
 
-    var era_args2 = json_parse(str_from("{\"year\": -500}"));
+    var era_args2 = bayan_json_parse(str_from("{\"year\": -500}"));
     var elr2 = resolve_era_lookup(era_args2);
     ok(elr2, "era lookup by year");
 
-    var era_args3 = json_parse(str_from("{\"name\": \"Space Age\"}"));
+    var era_args3 = bayan_json_parse(str_from("{\"name\": \"Space Age\"}"));
     var elr3 = resolve_era_lookup(era_args3);
     check(elr3, 0, "era lookup unknown=0");
 
@@ -608,27 +608,27 @@ fn main() {
     var hostile = era_new(str_from("Tab\tAnd \"Quote\""), 1, 2, str_from("R"),
       str_from("back\\slash\r\nlines"), ANCIENT, SCOPE_GLOBAL);
     var hj = era_to_json(hostile);
-    ok(json_parse(hj), "hostile era json parses");
+    ok(bayan_json_parse(hj), "hostile era json parses");
     ok(str_contains_cstr(hj, "\\t"), "hostile era escapes tab");
     ok(str_contains_cstr(hj, "\\r"), "hostile era escapes CR");
-    # bayan's json_get returns the RAW escaped span, so the decode step is the
+    # bayan_json_get_by_cstr returns the RAW escaped span, so the decode step is the
     # caller's; json_unescape is the inverse of what the serializer emitted.
-    var hp = json_parse(hj);
-    ok(str_eq(json_unescape(json_get(hp, str_from("name"))), str_from("Tab\tAnd \"Quote\"")), "hostile name round-trips");
+    var hp = bayan_json_parse(hj);
+    ok(str_eq(json_unescape(bayan_json_get_by_cstr(hp, "name")), str_from("Tab\tAnd \"Quote\"")), "hostile name round-trips");
 
     # The three *_to_json functions with no previous assertions.
     var caus0 = vec_get(all_causalities(), 0);
-    ok(json_parse(causality_to_json(caus0)), "causality json parses");
+    ok(bayan_json_parse(causality_to_json(caus0)), "causality json parses");
     var int0 = vec_get(all_interactions(), 0);
-    ok(json_parse(interaction_to_json(int0)), "interaction json parses");
+    ok(bayan_json_parse(interaction_to_json(int0)), "interaction json parses");
     var camp0 = vec_get(all_campaigns(), 0);
-    ok(json_parse(campaign_to_json(camp0)), "campaign json parses");
+    ok(bayan_json_parse(campaign_to_json(camp0)), "campaign json parses");
 
     # resp_data had zero call sites anywhere in the repo.
     var rdq = query_causes_of(str_from("French Revolution"));
     var rdr = answer_from_data(rdq);
     ok(rdr, "causes_of data response");
-    ok(json_parse(resp_data(rdr)), "resp_data is valid json");
+    ok(bayan_json_parse(resp_data(rdr)), "resp_data is valid json");
 
     # ---------------------------------------------------------------
     # 2.4.2 regressions — hoosh wire path (no network required)
@@ -683,7 +683,7 @@ fn main() {
 
     # The outgoing request must stay valid JSON for a hostile question.
     var req = _build_inference_request(str_from("What\tabout \"Rome\"\r\nand C:\\path?"), str_from("llama3.2:1b"));
-    ok(json_parse(req), "inference request is valid json");
+    ok(bayan_json_parse(req), "inference request is valid json");
     ok(str_contains_cstr(req, "\\t"), "request escapes tab");
 
     # Offline failure path: port 1 refuses connect immediately.
@@ -769,7 +769,7 @@ fn main() {
     bat_add(nm, str_from("Test Battle"), 1, str_from("Loc"), str_from("d"));
     var nbats = load64(nm + CAMP_BATTLES);
     check(vec_len(nbats), 1, "camp_new + bat_add");
-    ok(json_parse(battle_to_json(vec_get(nbats, 0))), "battle_to_json parses");
+    ok(bayan_json_parse(battle_to_json(vec_get(nbats, 0))), "battle_to_json parses");
 
     # The build_* table builders, called directly.
     ok(vec_len(build_eras()) > 0, "build_eras");

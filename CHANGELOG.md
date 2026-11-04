@@ -7,6 +7,90 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.6.1] - 2026-11-04
+
+Toolchain and dependency cut to the newest of each: cyrius 6.7.9 → 6.7.18, and
+bote 3.4.10 → 3.8.9, the latest bote tag, which pins 6.7.18. The one source
+change is a rename that the new bayan snapshot forced: its bare `json_get` is
+deprecated. Behaviour is unchanged. The cost is binary size: bayan now carries
+Unicode tables that dead-code elimination cannot remove. Suite **309** tests +
+**51** MCP.
+
+### Changed — toolchain and dependencies
+
+- **Toolchain `6.7.9` → `6.7.18`, bote `3.4.10` → `3.8.9`.** The graph moves
+  to libro 2.11.3 (from 2.11.0), majra 2.13.0 (from 2.12.0), patra 1.16.6 (from
+  1.16.0) and sigil 3.13.15 (from 3.13.12). bote's changelog across 3.4.11–3.8.9
+  changes no function itihas calls. Its one Breaking section (3.5.2) reaches
+  only the HTTP functions 3.5.1 added. 3.8.3 grows `ToolSchema`, and itihas
+  builds its schemas with `schema_new`, which is covered. The MCP suite passes
+  51/51 unchanged.
+
+- **`lib/` and `cyrius.lock` rebuilt from empty**, the same procedure as the
+  last two releases: 84 file hashes, one commit pin each for bote, libro, majra,
+  patra and sigil, and a `cyrius 6.7.18` trailer. `cyrius deps --features mcp
+  --verify` passes 84/84. **New in 6.7.18:** on a fresh checkout, a plain
+  `cyrius deps` drops the 42 hashes for MCP-only files, keeping the five commit
+  pins, and plain `cyrius deps --verify` then passes 42/42. On 6.6.20 it needed
+  `--features mcp`. An mcp resolve puts the full lock back byte-identically.
+  CI runs only a plain resolve and does not diff the lock, so it is unaffected.
+  The committed lock is the full one.
+
+- **`dist/itihas.deps` still names the same 11 leaves.** `dist/itihas.cyr`
+  changes only by its version line and the `src/hoosh.cyr` rename below.
+
+### Changed — bayan JSON calls use the typed names
+
+- **`src/hoosh.cyr` calls `bayan_json_get_by_cstr` and `bayan_json_parse`.**
+  bayan 1.11.0, in this snapshot, deprecated `json_get`, because the bare name
+  did not say whether its key is a `Str` or a C string (bayan ADR 0014). That
+  made 9 `#deprecated` warnings in every build, and the cleanliness gate needs
+  none. All nine sites passed a literal through `str_from`, so they now use the
+  cstr-key form. It is the same first-match lookup, and it no longer builds a
+  throwaway `Str` per key. `json_parse` raised no warning, but it sits in
+  bayan's compat block, marked "migration window only; will be removed once
+  consumers re-pin". Its two call sites move to `bayan_json_parse` now rather
+  than at a future bump. `tests/itihas.tcyr` gets the same rename at 12 sites:
+  11 `json_parse` calls and one `json_get`.
+
+### Benchmarks — release gate
+
+Interleaved A/B of the 2.6.0 bench binary (6.7.9) against this one (6.7.18): 6
+rounds each, at load average 2–3.5, with spreads of 1.1–3.3%. The gate run is
+in `bench-history.csv`.
+
+- **The 28 query and JSON rows are flat:** −1.3% to +2.0%. The largest move is
+  `interactions_for_rome` at 754 → 769 ns (+2.0%, minimum +2.5%). That is just
+  outside its 1.2% spread but under the 3% floor, so it is recorded rather than
+  chased. Examples elsewhere: `eras_containing_500bce` 173 → 173 ns,
+  `chain_writing_depth3` 2626 → 2622 ns, `json_array_events` 316.9 → 312.8 us.
+- **`all_*` accessors:** code placement again. At picosecond resolution the ten
+  identical bodies swap between their ~4.1 / 4.3 / 4.6 ns levels in both
+  directions, and their sum moved −0.8%.
+
+### Binary size — bayan's Unicode tables
+
+- **The DCE `build/itihas` grew 251,800 → 535,392 B (+113%).** `.text` grew 672
+  B. `.rodata` grew 66,814 → 408,802 B. Since cyrius 6.7.13, `lib/bayan.cyr`'s
+  requires block includes `lib/unicode/*` (case-fold, categories and
+  normalization tables) and `lib/math.cyr` for every consumer. DCE removes
+  unreachable functions but keeps data, so itihas carries ~340 KB of tables it
+  never reads: it calls only the two JSON functions above.
+  - The non-DCE build went 784,280 → 1,317,728 B, the `--features mcp` test
+    binary 3,046,136 → 3,760,408 B, and the bench binary 277,800 → 565,480 B.
+  - The 6.7.18 snapshot has no narrower bayan module.
+  - Consumers of `dist/itihas.cyr` already have bayan as a sidecar leaf, so they
+    pay this on 6.7.13+ regardless of itihas.
+  - The fix belongs in bayan, so it is on the roadmap as an upstream item, with
+    the reasoning against a hand-rolled JSON reader here.
+
+### Known
+
+- Unchanged: `cyrius distlib` warns that `SYS_SOCKET` / `SYS_CONNECT` are
+  undefined on x86_64-windows and x86_64-agnos (roadmap, *Portability*).
+- Resolved upstream: the `--features mcp` build no longer warns about a static
+  array in `lib/sigil.cyr`, which sigil 3.13.15 fixed.
+
 ## [2.6.0] - 2026-11-04
 
 Toolchain and dependency cut onto the 6.7 line: cyrius 6.6.20 → 6.7.9, and

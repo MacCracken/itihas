@@ -148,11 +148,11 @@ fn answer_from_data(q) {
 
 # ----------------------------------------------------------------
 # resolve_era_lookup — special tool handler (not a HistoryQuery type)
-# args is a parsed JSON pairs vec from json_parse()
+# args is a parsed JSON pairs vec from bayan_json_parse()
 # ----------------------------------------------------------------
 #must_use
 fn resolve_era_lookup(args) {
-    var name_val = json_get(args, str_from("name"));
+    var name_val = bayan_json_get_by_cstr(args, "name");
     if (name_val != 0) {
         if (str_len(name_val) > 0) {
             var era = era_by_name(name_val);
@@ -173,7 +173,7 @@ fn resolve_era_lookup(args) {
             return resp_new(SRC_DATA, content, data);
         }
     }
-    var year_val = json_get(args, str_from("year"));
+    var year_val = bayan_json_get_by_cstr(args, "year");
     if (year_val != 0) {
         if (str_len(year_val) > 0) {
             var year = str_to_int(year_val);
@@ -442,7 +442,7 @@ fn _extract_tool_call(body, body_len) {
     else { if (load8(data + i) == 34) {
             # Stringified JSON — the OpenAI /v1/chat/completions shape, and what
             # hoosh's own emitter always produces. The span is JSON-*encoded*, so
-            # it must be decoded before json_parse sees it; returning the raw
+            # it must be decoded before bayan_json_parse sees it; returning the raw
             # escaped bytes made every tool call parse to zero pairs and silently
             # drop the structured-data answer.
             # `else if`, not a second `if`: the object branch above already advanced
@@ -468,34 +468,34 @@ fn _extract_tool_call(body, body_len) {
 # ----------------------------------------------------------------
 #must_use
 fn parse_tool_call(name: Str, args_json: Str) {
-    var args = json_parse(args_json);
+    var args = bayan_json_parse(args_json);
 
     if (str_eq_cstr(name, "events_in_range") == 1) {
-        var sv = json_get(args, str_from("start"));
-        var ev = json_get(args, str_from("end"));
+        var sv = bayan_json_get_by_cstr(args, "start");
+        var ev = bayan_json_get_by_cstr(args, "end");
         if (sv == 0) { return 0; }
         if (ev == 0) { return 0; }
         return query_events_in_range(str_to_int(sv), str_to_int(ev));
     }
     if (str_eq_cstr(name, "civilizations_at") == 1) {
-        var yv = json_get(args, str_from("year"));
+        var yv = bayan_json_get_by_cstr(args, "year");
         if (yv == 0) { return 0; }
         return query_civs_at(str_to_int(yv));
     }
     if (str_eq_cstr(name, "causes_of") == 1) {
-        var ev = json_get(args, str_from("event"));
+        var ev = bayan_json_get_by_cstr(args, "event");
         if (ev == 0) { return 0; }
         return query_causes_of(ev);
     }
     if (str_eq_cstr(name, "interactions_between") == 1) {
-        var av = json_get(args, str_from("civ_a"));
-        var bv = json_get(args, str_from("civ_b"));
+        var av = bayan_json_get_by_cstr(args, "civ_a");
+        var bv = bayan_json_get_by_cstr(args, "civ_b");
         if (av == 0) { return 0; }
         if (bv == 0) { return 0; }
         return query_interactions_between(av, bv);
     }
     if (str_eq_cstr(name, "figure_lookup") == 1) {
-        var nv = json_get(args, str_from("name"));
+        var nv = bayan_json_get_by_cstr(args, "name");
         if (nv == 0) { return 0; }
         return query_figure_lookup(nv);
     }
@@ -567,7 +567,7 @@ fn llm_answer(port, question: Str, model: Str) {
 
         # era_lookup — special case
         if (str_eq_cstr(tool_name, "era_lookup") == 1) {
-            var args = json_parse(tool_args_str);
+            var args = bayan_json_parse(tool_args_str);
             var era_resp = resolve_era_lookup(args);
             if (era_resp != 0) {
                 store64(era_resp+RESP_SRC, SRC_HYBRID);
