@@ -15,24 +15,38 @@ fn evt_new(name: Str, year, era: Str, cat, desc: Str, civs: Str, sig) {
     store64(p+EVT_CAT,cat); store64(p+EVT_DESC,desc); store64(p+EVT_CIVS,civs); store64(p+EVT_SIG,sig);
     return p;
 }
+# The event's name (Str).
 #must_use
 fn evt_name(p) { return load64(p+EVT_NAME); }
+# The year it happened: negative is BCE, no year zero.
 #must_use
 fn evt_year(p) { return load64(p+EVT_YEAR); }
+# The era it belongs to, by era name (Str); era_by_name resolves it.
+#must_use
+fn evt_era(p) { return load64(p+EVT_ERA); }
+# Category, one of the CAT_* values.
 #must_use
 fn evt_cat(p) { return load64(p+EVT_CAT); }
+# One-line description (Str).
+#must_use
+fn evt_desc(p) { return load64(p+EVT_DESC); }
+# Civilizations involved, as a free-text `;`-list (Str); may be empty.
+#must_use
+fn evt_civs(p) { return load64(p+EVT_CIVS); }
+# Significance, one of the SIG_* values.
 #must_use
 fn evt_sig(p) { return load64(p+EVT_SIG); }
 
 # Build the event table (105 rows). Called once by the lazy initializer.
+#must_use
 fn build_events() {
     var v = vec_new();
     vec_push(v,evt_new("Invention of Writing",(0-3400),"Bronze Age",CAT_INVENTION,"Development of cuneiform in Sumer, enabling record-keeping and literature","Mesopotamia",SIG_GLOBAL));   #skip-lint
     vec_push(v,evt_new("Construction of the Great Pyramid",(0-2560),"Bronze Age",CAT_FOUNDING,"Completion of the Great Pyramid of Giza under Pharaoh Khufu","Ancient Egypt",SIG_REGIONAL));   #skip-lint
     vec_push(v,evt_new("Code of Hammurabi",(0-1754),"Bronze Age",CAT_FOUNDING,"One of the earliest written legal codes, established by King Hammurabi of Babylon","Mesopotamia",SIG_GLOBAL));   #skip-lint
-    vec_push(v,evt_new("Bronze Age Collapse",(0-1177),"Bronze Age",CAT_COLLAPSE,"Widespread societal collapse across the Eastern Mediterranean","Mesopotamia;Ancient Egypt;Ancient Greece",SIG_CONTINENTAL));   #skip-lint
+    vec_push(v,evt_new("Bronze Age Collapse",(0-1177),"Bronze Age",CAT_COLLAPSE,"Widespread societal collapse across the Eastern Mediterranean","Mesopotamia;Ancient Egypt;Mycenaean Civilization",SIG_CONTINENTAL));   #skip-lint
     vec_push(v,evt_new("Battle of Kadesh",(0-1274),"Bronze Age",CAT_WAR,"Major chariot battle between Egypt and the Hittites in modern Syria","Ancient Egypt;Hittite Empire",SIG_CONTINENTAL));   #skip-lint
-    vec_push(v,evt_new("Trojan War",(0-1180),"Bronze Age",CAT_WAR,"Legendary conflict between Mycenaean Greeks and the city of Troy","Ancient Greece",SIG_REGIONAL));   #skip-lint
+    vec_push(v,evt_new("Trojan War",(0-1180),"Bronze Age",CAT_WAR,"Legendary conflict between Mycenaean Greeks and the city of Troy","Mycenaean Civilization",SIG_REGIONAL));   #skip-lint
     vec_push(v,evt_new("Unification of Upper and Lower Egypt",(0-3100),"Bronze Age",CAT_FOUNDING,"Narmer unifies Upper and Lower Egypt, founding the First Dynasty","Ancient Egypt",SIG_CONTINENTAL));   #skip-lint
     vec_push(v,evt_new("Egyptian-Hittite Peace Treaty",(0-1259),"Bronze Age",CAT_TREATY,"Earliest known international peace treaty, between Ramesses II and Hattusili III","Ancient Egypt;Hittite Empire",SIG_CONTINENTAL));   #skip-lint
     vec_push(v,evt_new("Founding of the Shang Dynasty",(0-1600),"Bronze Age",CAT_FOUNDING,"Earliest archaeologically attested Chinese dynasty, with oracle bone writing","Ancient China",SIG_REGIONAL));   #skip-lint
@@ -45,7 +59,7 @@ fn build_events() {
     vec_push(v,evt_new("Assyrian Conquest of Egypt",(0-671),"Iron Age",CAT_WAR,"Esarhaddon's Assyrian army conquers Memphis and controls Egypt","Assyrian Empire;Ancient Egypt",SIG_CONTINENTAL));   #skip-lint
     vec_push(v,evt_new("Invention of Iron Smelting",(0-1100),"Iron Age",CAT_INVENTION,"Widespread adoption of iron smelting, replacing bronze tools and weapons","",SIG_GLOBAL));   #skip-lint
     vec_push(v,evt_new("Rise of the Kingdom of Kush",(0-1070),"Iron Age",CAT_FOUNDING,"Kush gains independence from Egypt and becomes a major Nubian power","Kingdom of Kush",SIG_REGIONAL));   #skip-lint
-    vec_push(v,evt_new("Phoenician Alphabet Spreads",(0-1050),"Iron Age",CAT_DISCOVERY,"Phoenician consonantal alphabet adopted by Greeks and other Mediterranean cultures","Phoenicia;Ancient Greece",SIG_GLOBAL));   #skip-lint
+    vec_push(v,evt_new("Phoenician Alphabet Spreads",(0-1050),"Iron Age",CAT_DISCOVERY,"Phoenician consonantal alphabet spreads through Mediterranean trade; the Greeks adapt it in the 8th century BCE","Phoenicia",SIG_GLOBAL));   #skip-lint
     vec_push(v,evt_new("Battle of Marathon",(0-490),"Classical Antiquity",CAT_WAR,"Greek victory over Persian invasion, preserving Athenian democracy","Ancient Greece;Persian Empire",SIG_CONTINENTAL));   #skip-lint
     vec_push(v,evt_new("Conquests of Alexander the Great",(0-334),"Classical Antiquity",CAT_WAR,"Macedonian conquest from Greece to India, spreading Hellenistic culture","Ancient Greece;Persian Empire",SIG_GLOBAL));   #skip-lint
     vec_push(v,evt_new("Maurya Empire under Ashoka",(0-268),"Classical Antiquity",CAT_FOUNDING,"Ashoka's reign unifies most of South Asia, promotes Buddhism and non-violence","Maurya Empire",SIG_CONTINENTAL));   #skip-lint
@@ -64,8 +78,8 @@ fn build_events() {
     vec_push(v,evt_new("Battle of Thermopylae",(0-480),"Classical Antiquity",CAT_WAR,"Spartan-led Greek force delays the Persian invasion at a narrow coastal pass","Ancient Greece;Persian Empire",SIG_CONTINENTAL));   #skip-lint
     vec_push(v,evt_new("Discovery of the Silk Road",(0-130),"Classical Antiquity",CAT_DISCOVERY,"Zhang Qian's missions open trade routes connecting China to Central Asia and beyond","Ancient China;Parthian Empire",SIG_GLOBAL));   #skip-lint
     vec_push(v,evt_new("Olmec Civilization Decline",(0-400),"Classical Antiquity",CAT_COLLAPSE,"Decline of the Olmec, the earliest major Mesoamerican civilization","Olmec",SIG_REGIONAL));   #skip-lint
-    vec_push(v,evt_new("Bantu Migration",(0-500),"Classical Antiquity",CAT_MIGRATION,"Bantu-speaking peoples begin large-scale migration across sub-Saharan Africa","",SIG_CONTINENTAL));   #skip-lint
-    vec_push(v,evt_new("Rise of Islam",622,"Middle Ages",CAT_FOUNDING,"Muhammad's Hijra to Medina, founding the Islamic community","Arab Caliphates",SIG_GLOBAL));   #skip-lint
+    vec_push(v,evt_new("Bantu Migration",(0-1500),"Bronze Age",CAT_MIGRATION,"Bantu-speaking peoples begin spreading from the Nigeria-Cameroon borderlands across sub-Saharan Africa","",SIG_CONTINENTAL));   #skip-lint
+    vec_push(v,evt_new("Rise of Islam",622,"Middle Ages",CAT_FOUNDING,"Muhammad's Hijra to Medina, founding the Islamic community","Quraysh",SIG_GLOBAL));   #skip-lint
     vec_push(v,evt_new("Mongol Conquests",1206,"Middle Ages",CAT_WAR,"Genghis Khan unifies Mongol tribes and launches largest contiguous land empire","Mongol Empire;Ancient China",SIG_GLOBAL));   #skip-lint
     vec_push(v,evt_new("Fall of Constantinople",1453,"Middle Ages",CAT_COLLAPSE,"Ottoman conquest of Constantinople, ending the Byzantine Empire","Ottoman Empire;Byzantine Empire",SIG_CONTINENTAL));   #skip-lint
     vec_push(v,evt_new("Construction of Angkor Wat",1113,"Middle Ages",CAT_FOUNDING,"Suryavarman II builds the largest religious monument in the world","Khmer Empire",SIG_REGIONAL));   #skip-lint
@@ -73,21 +87,21 @@ fn build_events() {
     vec_push(v,evt_new("Black Death Reaches Europe",1347,"Middle Ages",CAT_COLLAPSE,"Bubonic plague pandemic kills an estimated third of Europe's population","",SIG_GLOBAL));   #skip-lint
     vec_push(v,evt_new("Viking Raids Begin",793,"Middle Ages",CAT_WAR,"Norse raiders attack Lindisfarne, marking the start of the Viking Age","Viking/Norse",SIG_CONTINENTAL));   #skip-lint
     vec_push(v,evt_new("Coronation of Charlemagne",800,"Middle Ages",CAT_FOUNDING,"Pope Leo III crowns Charlemagne Emperor, reviving the concept of a Western Empire","Carolingian Empire",SIG_CONTINENTAL));   #skip-lint
-    vec_push(v,evt_new("Founding of the Ghana Empire",830,"Middle Ages",CAT_FOUNDING,"Ghana Empire becomes the first major West African trading state","Ghana Empire",SIG_REGIONAL));   #skip-lint
-    vec_push(v,evt_new("First Crusade",1096,"Middle Ages",CAT_WAR,"European Christians capture Jerusalem and establish Crusader states","Byzantine Empire;Holy Roman Empire",SIG_CONTINENTAL));   #skip-lint
+    vec_push(v,evt_new("Founding of the Ghana Empire",300,"Classical Antiquity",CAT_FOUNDING,"Ghana Empire emerges as the first major West African trading state (first written mention c. 830)","Ghana Empire",SIG_REGIONAL));   #skip-lint
+    vec_push(v,evt_new("First Crusade",1096,"Middle Ages",CAT_WAR,"European Christians capture Jerusalem and establish Crusader states","Byzantine Empire;Holy Roman Empire;Kingdom of France",SIG_CONTINENTAL));   #skip-lint
     vec_push(v,evt_new("Founding of the Mali Empire",1235,"Middle Ages",CAT_FOUNDING,"Sundiata Keita defeats Sumanguru and establishes the Mali Empire","Mali Empire",SIG_REGIONAL));   #skip-lint
     vec_push(v,evt_new("Invention of Gunpowder Weapons",900,"Middle Ages",CAT_INVENTION,"Chinese alchemists develop gunpowder, later adapted for military use","Ancient China",SIG_GLOBAL));   #skip-lint
     vec_push(v,evt_new("Great Zimbabwe Constructed",1100,"Middle Ages",CAT_FOUNDING,"Stone city of Great Zimbabwe becomes center of a powerful trading kingdom","Great Zimbabwe",SIG_REGIONAL));   #skip-lint
     vec_push(v,evt_new("Norman Conquest of England",1066,"Middle Ages",CAT_WAR,"William the Conqueror defeats Harold II at Hastings and takes the English crown","Kingdom of England;Normandy",SIG_REGIONAL));   #skip-lint
     vec_push(v,evt_new("Mansa Musa's Pilgrimage to Mecca",1324,"Middle Ages",CAT_MIGRATION,"Mali emperor's lavish hajj destabilizes gold prices across the Mediterranean","Mali Empire",SIG_CONTINENTAL));   #skip-lint
-    vec_push(v,evt_new("Founding of Tenochtitlan",1325,"Middle Ages",CAT_FOUNDING,"The Mexica found their capital city on an island in Lake Texcoco","Aztec Empire",SIG_REGIONAL));   #skip-lint
+    vec_push(v,evt_new("Founding of Tenochtitlan",1325,"Middle Ages",CAT_FOUNDING,"The Mexica found their capital city on an island in Lake Texcoco","Mexica",SIG_REGIONAL));   #skip-lint
     vec_push(v,evt_new("Polynesian Settlement of New Zealand",1280,"Middle Ages",CAT_MIGRATION,"Polynesian navigators reach and settle Aotearoa, becoming the Maori","Polynesia",SIG_REGIONAL));   #skip-lint
     vec_push(v,evt_new("Srivijaya Maritime Dominance",683,"Middle Ages",CAT_FOUNDING,"Srivijaya controls the Strait of Malacca, dominating Southeast Asian trade","Srivijaya",SIG_REGIONAL));   #skip-lint
-    vec_push(v,evt_new("Invention of the Compass",1040,"Middle Ages",CAT_INVENTION,"Chinese navigators develop the magnetic compass for maritime use","Ancient China",SIG_GLOBAL));   #skip-lint
+    vec_push(v,evt_new("Invention of the Compass",1040,"Middle Ages",CAT_INVENTION,"Chinese texts describe the magnetic compass; its use at sea is attested by 1117","Ancient China",SIG_GLOBAL));   #skip-lint
     vec_push(v,evt_new("Mongol Sack of Baghdad",1258,"Middle Ages",CAT_COLLAPSE,"Mongol siege destroys the Abbasid Caliphate's capital, ending the Islamic Golden Age","Mongol Empire",SIG_GLOBAL));   #skip-lint
     vec_push(v,evt_new("Founding of the Ottoman Empire",1299,"Middle Ages",CAT_FOUNDING,"Osman I establishes a small Anatolian beylik that grows into a world empire","Ottoman Empire",SIG_CONTINENTAL));   #skip-lint
     vec_push(v,evt_new("Chola Naval Expeditions",1025,"Middle Ages",CAT_WAR,"Rajendra Chola I launches naval raids against Srivijaya, projecting Indian power into Southeast Asia","Chola Dynasty;Srivijaya",SIG_CONTINENTAL));   #skip-lint
-    vec_push(v,evt_new("Ethiopian Zagwe Dynasty",1137,"Middle Ages",CAT_FOUNDING,"Zagwe dynasty comes to power and later builds the rock-hewn churches of Lalibela","Ethiopian Empire",SIG_LOCAL));   #skip-lint
+    vec_push(v,evt_new("Ethiopian Zagwe Dynasty",1137,"Middle Ages",CAT_FOUNDING,"Zagwe dynasty comes to power and later builds the rock-hewn churches of Lalibela","Zagwe Dynasty",SIG_LOCAL));   #skip-lint
     vec_push(v,evt_new("Gutenberg Printing Press",1440,"Renaissance",CAT_INVENTION,"Movable type printing revolutionizes information dissemination in Europe","Holy Roman Empire",SIG_GLOBAL));   #skip-lint
     vec_push(v,evt_new("Spanish Inquisition",1478,"Renaissance",CAT_FOUNDING,"Ferdinand and Isabella establish the Inquisition to enforce Catholic orthodoxy","Spanish Empire",SIG_REGIONAL));   #skip-lint
     vec_push(v,evt_new("Columbus Reaches the Americas",1492,"Renaissance",CAT_DISCOVERY,"Christopher Columbus lands in the Caribbean, initiating sustained European contact with the Americas","Spanish Empire",SIG_GLOBAL));   #skip-lint
@@ -96,11 +110,11 @@ fn build_events() {
     vec_push(v,evt_new("Fall of the Aztec Empire",1521,"Renaissance",CAT_COLLAPSE,"Hernan Cortes and indigenous allies conquer Tenochtitlan, ending the Aztec Empire","Aztec Empire;Spanish Empire",SIG_CONTINENTAL));   #skip-lint
     vec_push(v,evt_new("Tokugawa Shogunate Established",1603,"Renaissance",CAT_FOUNDING,"Tokugawa Ieyasu unifies Japan and begins over two centuries of stability","Tokugawa Shogunate",SIG_REGIONAL));   #skip-lint
     vec_push(v,evt_new("French Revolution",1789,"Age of Enlightenment",CAT_REVOLUTION,"Overthrow of the monarchy, establishing principles of liberty and equality","Kingdom of France",SIG_GLOBAL));   #skip-lint
-    vec_push(v,evt_new("Treaty of Westphalia",1648,"Age of Enlightenment",CAT_TREATY,"Ends the Thirty Years' War and establishes the principle of state sovereignty","Holy Roman Empire;Kingdom of France",SIG_CONTINENTAL));   #skip-lint
+    vec_push(v,evt_new("Peace of Westphalia",1648,"Age of Enlightenment",CAT_TREATY,"Treaties of Osnabruck and Munster end the Thirty Years' War and establish the principle of state sovereignty","Holy Roman Empire;Kingdom of France",SIG_CONTINENTAL));   #skip-lint
     vec_push(v,evt_new("American Revolution",1776,"Age of Enlightenment",CAT_REVOLUTION,"Thirteen colonies declare independence from Britain, creating the United States","British Empire",SIG_GLOBAL));   #skip-lint
     vec_push(v,evt_new("Newton's Principia Published",1687,"Age of Enlightenment",CAT_DISCOVERY,"Isaac Newton publishes laws of motion and universal gravitation","Kingdom of England",SIG_GLOBAL));   #skip-lint
     vec_push(v,evt_new("Founding of the Maratha Empire",1674,"Age of Enlightenment",CAT_FOUNDING,"Shivaji Maharaj crowned Chhatrapati, establishing a major Indian power","Maratha Empire",SIG_REGIONAL));   #skip-lint
-    vec_push(v,evt_new("Abolition of the Atlantic Slave Trade",1807,"Industrial Age",CAT_TREATY,"British Parliament passes the Slave Trade Act, banning the transatlantic slave trade","British Empire",SIG_GLOBAL));   #skip-lint
+    vec_push(v,evt_new("Abolition of the Atlantic Slave Trade",1807,"Industrial Age",CAT_TREATY,"British Parliament's Slave Trade Act bans British participation in the transatlantic slave trade","British Empire",SIG_GLOBAL));   #skip-lint
     vec_push(v,evt_new("Opening of the Suez Canal",1869,"Industrial Age",CAT_INVENTION,"Artificial waterway connects the Mediterranean and Red Sea, transforming global trade","",SIG_GLOBAL));   #skip-lint
     vec_push(v,evt_new("World War I",1914,"Industrial Age",CAT_WAR,"Global conflict between the Allied and Central Powers, reshaping the political order","British Empire;Ottoman Empire",SIG_GLOBAL));   #skip-lint
     vec_push(v,evt_new("World War II",1939,"Industrial Age",CAT_WAR,"Deadliest conflict in human history, ending with the atomic bomb and the UN's founding","British Empire",SIG_GLOBAL));   #skip-lint
@@ -108,8 +122,8 @@ fn build_events() {
     vec_push(v,evt_new("Haitian Revolution",1791,"Industrial Age",CAT_REVOLUTION,"Enslaved people in Saint-Domingue revolt, creating the first free Black republic","",SIG_CONTINENTAL));   #skip-lint
     vec_push(v,evt_new("Latin American Wars of Independence",1810,"Industrial Age",CAT_REVOLUTION,"Simon Bolivar and others lead independence movements across South America","Spanish Empire",SIG_CONTINENTAL));   #skip-lint
     vec_push(v,evt_new("Meiji Restoration",1868,"Industrial Age",CAT_REVOLUTION,"Japan restores imperial rule and begins rapid industrialization and modernization","Tokugawa Shogunate",SIG_CONTINENTAL));   #skip-lint
-    vec_push(v,evt_new("Scramble for Africa",1884,"Industrial Age",CAT_TREATY,"Berlin Conference partitions Africa among European colonial powers","British Empire",SIG_GLOBAL));   #skip-lint
-    vec_push(v,evt_new("Russian Revolution",1917,"Industrial Age",CAT_REVOLUTION,"Bolsheviks overthrow the Tsar, establishing the Soviet Union","",SIG_GLOBAL));   #skip-lint
+    vec_push(v,evt_new("Scramble for Africa",1884,"Industrial Age",CAT_TREATY,"Berlin Conference sets rules for European claims, accelerating the partition of Africa","British Empire",SIG_GLOBAL));   #skip-lint
+    vec_push(v,evt_new("Russian Revolution",1917,"Industrial Age",CAT_REVOLUTION,"February Revolution ends Tsarist rule; in October the Bolsheviks seize power from the Provisional Government","",SIG_GLOBAL));   #skip-lint
     vec_push(v,evt_new("Indian Independence",1947,"Industrial Age",CAT_REVOLUTION,"India gains independence from Britain, partitioning into India and Pakistan","British Empire",SIG_GLOBAL));   #skip-lint
     vec_push(v,evt_new("Chinese Revolution",1949,"Industrial Age",CAT_REVOLUTION,"Mao Zedong proclaims the People's Republic of China after civil war","",SIG_GLOBAL));   #skip-lint
     vec_push(v,evt_new("Treaty of Versailles",1919,"Industrial Age",CAT_TREATY,"Peace treaty ending World War I, imposing terms on Germany and redrawing borders","British Empire",SIG_GLOBAL));   #skip-lint
@@ -125,16 +139,17 @@ fn build_events() {
     vec_push(v,evt_new("September 11 Attacks",2001,"Information Age",CAT_WAR,"Terrorist attacks on the United States reshape global security and foreign policy","",SIG_GLOBAL));   #skip-lint
     vec_push(v,evt_new("Dissolution of the Soviet Union",1991,"Information Age",CAT_COLLAPSE,"The USSR dissolves into fifteen independent states, ending the Cold War","",SIG_GLOBAL));   #skip-lint
     vec_push(v,evt_new("Apartheid Ends in South Africa",1994,"Information Age",CAT_REVOLUTION,"Nelson Mandela elected president in South Africa's first multiracial elections","",SIG_CONTINENTAL));   #skip-lint
-    vec_push(v,evt_new("Human Genome Project Completed",2003,"Information Age",CAT_DISCOVERY,"First complete sequencing of the human genome, transforming biology and medicine","",SIG_GLOBAL));   #skip-lint
+    vec_push(v,evt_new("Human Genome Project Completed",2003,"Information Age",CAT_DISCOVERY,"First essentially complete (~92%) human genome sequence; the gapless sequence followed in 2022","",SIG_GLOBAL));   #skip-lint
     vec_push(v,evt_new("Arab Spring",2011,"Information Age",CAT_REVOLUTION,"Wave of pro-democracy protests and uprisings across the Arab world","",SIG_CONTINENTAL));   #skip-lint
     vec_push(v,evt_new("Paris Climate Agreement",2015,"Information Age",CAT_TREATY,"Nearly 200 nations agree to limit global warming to well below 2 degrees Celsius","",SIG_GLOBAL));   #skip-lint
     vec_push(v,evt_new("COVID-19 Pandemic",2020,"Information Age",CAT_COLLAPSE,"Global pandemic disrupts economies, health systems, and daily life worldwide","",SIG_GLOBAL));   #skip-lint
-    vec_push(v,evt_new("Invention of the Smartphone",2007,"Information Age",CAT_INVENTION,"Apple iPhone launches the modern smartphone era, reshaping communication and commerce","",SIG_GLOBAL));   #skip-lint
+    vec_push(v,evt_new("Launch of the iPhone",2007,"Information Age",CAT_INVENTION,"Touchscreen iPhone popularizes the smartphone (the first was IBM Simon, 1994), reshaping communication","",SIG_GLOBAL));   #skip-lint
     vec_push(v,evt_new("European Union Established",1993,"Information Age",CAT_TREATY,"Maastricht Treaty creates the European Union, deepening political and economic integration","",SIG_CONTINENTAL));   #skip-lint
     vec_push(v,evt_new("Rwandan Genocide",1994,"Information Age",CAT_WAR,"Mass killing of Tutsi in Rwanda claims over 800,000 lives in approximately 100 days","",SIG_CONTINENTAL));   #skip-lint
     return v;
 }
 
+# All 105 events in table order; built on first call. Shared: do not modify the vec.
 #must_use
 fn all_events() {
     if (evt_init_done == 0) { evt_vec = build_events(); evt_init_done = 1; }
@@ -182,9 +197,11 @@ fn _evt_lower_bound(v, y) {
     }
     return lo;
 }
+# Number of events (105).
 #must_use
 fn event_count() { return vec_len(all_events()); }
 
+# Events in category `cat` (a CAT_* value).
 #must_use
 fn events_by_category(cat) {
     itrace_i("looking up events by category", "category", cat);
@@ -197,6 +214,7 @@ fn events_by_category(cat) {
     return result;
 }
 
+# Events that happened in exactly `year`.
 #must_use
 fn events_at_year(year) {
     itrace_i("looking up events at year", "year", year);
@@ -211,6 +229,7 @@ fn events_at_year(year) {
 
 fn _cmp_evt_year(a, b) { return load64(a+EVT_YEAR) - load64(b+EVT_YEAR); }
 
+# Events dated within [sy, ey], both ends inclusive, in year order. Empty when sy > ey.
 #must_use
 fn events_between(sy, ey) {
     itrace_range("looking up events between years", sy, ey);
@@ -228,6 +247,7 @@ fn events_between(sy, ey) {
     return result;
 }
 
+# Events with significance `sig` (a SIG_* value).
 #must_use
 fn events_by_significance(sig) {
     itrace_i("looking up events by significance", "significance", sig);
@@ -240,6 +260,7 @@ fn events_by_significance(sig) {
     return result;
 }
 
+# The event whose name matches `name` (case-insensitive), or 0.
 #must_use
 fn event_by_name(name: Str) {
     itrace_s("looking up event by name", "name", name);

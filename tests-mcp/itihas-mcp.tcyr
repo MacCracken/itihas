@@ -2,7 +2,7 @@
 #
 # NOT part of `cyrius tests`, which sweeps tests/ only: this file needs bote in
 # scope, and bote is behind the optional `mcp` feature so the default build
-# stays 696 KB instead of 2.8 MB. Run it with:
+# carries no bote code (2.8 MB with it, measured in 2.5.0). Run it with:
 #
 #     cyrius build --features mcp tests-mcp/itihas-mcp.tcyr build/itihas_mcp_test
 #     ./build/itihas_mcp_test
@@ -24,10 +24,14 @@ include "src/serial.cyr"
 include "src/hoosh.cyr"
 include "src/mcp.cyr"
 
+# Passes when `val` equals `expected`.
 fn check(val, expected, name) { return assert_eq(val, expected, name); }
+# Passes on any non-zero value.
 fn ok(val, name) { return assert_neq(val, 0, name); }
+# Passes when the cstr `hay` contains `needle`.
 fn has(hay, needle, name) { return assert_eq(str_contains(str_from(hay), str_from(needle)), 1, name); }
 
+# The MCP suite; returns the failure count.
 fn main() {
     alloc_init();
     println("=== itihas MCP suite ===");
@@ -73,9 +77,10 @@ fn main() {
     has(itihas_mcp_handle_event("{\"name\":\"French Revolution\"}", 0), "French Revolution", "event by name");
     check(load8(itihas_mcp_handle_event("{\"start_year\":-500,\"end_year\":500}", 0)), 91, "event range is an array");
     check(load8(itihas_mcp_handle_event("{\"category\":\"war\"}", 0)), 91, "event by category is an array");
-    has(itihas_mcp_handle_event("{\"category\":\"nonsense\"}", 0), "unknown event category", "bad category is an error");
-    # A one-sided range must not be mistaken for a range query.
-    check(load8(itihas_mcp_handle_event("{\"start_year\":-500}", 0)), 91, "start_year alone falls through to all events");
+    has(itihas_mcp_handle_event("{\"category\":\"nonsense\"}", 0), "unknown event category", "bad category is an error");   #skip-lint
+    # A one-sided range is an error, as in itihas_timeline. Through 2.6.1 it fell
+    # through to all 105 events.
+    has(itihas_mcp_handle_event("{\"start_year\":-500}", 0), "\"isError\":true", "start_year alone is an error");
 
     println("--- itihas_figure ---");
     has(itihas_mcp_handle_figure("{\"name\":\"Aristotle\"}", 0), "Aristotle", "figure by name");
@@ -90,7 +95,7 @@ fn main() {
     has(t1, "\"eras_at_start\"", "timeline carries eras at the start");
     has(t1, "\"civilizations_at_end\"", "timeline carries civilizations at the end");
     has(itihas_mcp_handle_timeline("{}", 0), "both required", "timeline without a range is an error");
-    has(itihas_mcp_handle_timeline("{\"start_year\":500,\"end_year\":-500}", 0), "must not exceed", "inverted range is an error");
+    has(itihas_mcp_handle_timeline("{\"start_year\":500,\"end_year\":-500}", 0), "must not exceed", "inverted range is an error");   #skip-lint
     has(itihas_mcp_handle_timeline("{}", 0), "\"isError\":true", "a missing range is flagged isError");   #skip-lint
     has(itihas_mcp_handle_figure("{\"domain\":\"wizard\"}", 0), "\"isError\":true", "an unknown domain is flagged isError");   #skip-lint
 
@@ -142,6 +147,33 @@ fn main() {
     has(inv, "\"isError\":true", "an inverted range reaches the client flagged isError");
     var good = codec_process_message("{\"jsonrpc\":\"2.0\",\"id\":6,\"method\":\"tools/call\",\"params\":{\"name\":\"itihas_figure\",\"arguments\":{\"domain\":\"scientist\"}}}", d, 0);   #skip-lint
     check(str_contains(str_from(good), str_from("\"isError\":true")), 0, "a successful call is not flagged isError");
+
+    # 2.6.2: argument handling. Each of these fails on 2.6.1.
+    println("--- 2.6.2 arguments ---");
+    var w_exp = codec_process_message("{\"jsonrpc\":\"2.0\",\"id\":10,\"method\":\"tools/call\",\"params\":{\"name\":\"itihas_timeline\",\"arguments\":{\"start_year\":1e3,\"end_year\":2e3}}}", d, 0);   #skip-lint
+    has(w_exp, "start_year\\\": 1000", "1e3 is read as 1000 (was 13)");
+    var w_dot = codec_process_message("{\"jsonrpc\":\"2.0\",\"id\":11,\"method\":\"tools/call\",\"params\":{\"name\":\"itihas_event\",\"arguments\":{\"start_year\":1789.0,\"end_year\":1789.0}}}", d, 0);   #skip-lint
+    has(w_dot, "French Revolution", "1789.0 is read as 1789 (was 17890)");
+    var w_esc = codec_process_message("{\"jsonrpc\":\"2.0\",\"id\":12,\"method\":\"tools/call\",\"params\":{\"name\":\"itihas_civilization\",\"arguments\":{\"name\":\"Viking\\/Norse\"}}}", d, 0);   #skip-lint
+    has(w_esc, "longship navigation", "an escaped name is decoded before lookup");
+    var w_reg = codec_process_message("{\"jsonrpc\":\"2.0\",\"id\":13,\"method\":\"tools/call\",\"params\":{\"name\":\"itihas_civilization\",\"arguments\":{\"region\":\"near east\"}}}", d, 0);   #skip-lint
+    has(w_reg, "Mesopotamia", "region matching folds case");
+    has(itihas_daimon_invoke("itihas_era", "{\"name\":5}"), "name must be a string",
+      "daimon: a mistyped name is an error");
+    has(itihas_daimon_invoke("itihas_era", "[1,2]"), "arguments must be a JSON object", "daimon: an array is refused");
+    has(itihas_daimon_invoke("itihas_era", "{\"name\":"), "arguments must be a JSON object",
+      "daimon: truncated JSON is refused");
+    has(itihas_daimon_invoke("itihas_era", "{\"year\":\"1453\"}"), "year must be a whole number",
+      "daimon: a string year is refused");
+    has(itihas_daimon_invoke("itihas_era", "{\"year\":-5e2}"), "Classical Antiquity", "daimon: -5e2 is 500 BCE");
+    check(load8(itihas_daimon_invoke("itihas_era", "{\"year\":null}")), 91, "daimon: null counts as absent");
+    has(itihas_daimon_invoke("itihas_event", "{\"start_year\":2,\"end_year\":1}"), "must not exceed",
+      "an inverted event range is an error");
+    has(itihas_daimon_invoke("itihas_event", "{\"end_year\":1}"), "given together", "end_year alone is an error");
+    has(itihas_daimon_invoke("itihas_timeline", "{\"start_year\":1.5,\"end_year\":2}"), "whole number",
+      "a fractional year is an error");
+    check(str_contains(str_from(tool_def_description(vec_get(itihas_mcp_tool_definitions(), 0))), str_from("scope")), 0,
+      "itihas_era no longer advertises a scope parameter it lacks");
 
     return assert_summary();
 }

@@ -17,18 +17,48 @@ fn camp_new(name: Str, region: Str, sy, ey, ba: Str, bb: Str, cmds: Str, out, de
     store64(p+CAMP_BATTLES,vec_new()); store64(p+CAMP_OUT,out); store64(p+CAMP_DESC,desc);
     return p;
 }
+# The campaign's name (Str).
 #must_use
 fn camp_name(p) { return load64(p+CAMP_NAME); }
+# Region (Str); matched by substring in campaigns_by_region.
 #must_use
 fn camp_region(p) { return load64(p+CAMP_REGION); }
+# First year: negative is BCE, no year zero.
+#must_use
+fn camp_start(p) { return load64(p+CAMP_START); }
+# Last year, inclusive.
+#must_use
+fn camp_end(p) { return load64(p+CAMP_END); }
+# Outcome for side A, one of the OUT_* values.
 #must_use
 fn camp_out(p) { return load64(p+CAMP_OUT); }
+# Commanders, as a `;`-list (Str); see campaigns_by_commander.
 #must_use
 fn camp_cmds(p) { return load64(p+CAMP_CMDS); }
+# Side A's belligerents, as a free-text `;`-list (Str).
 #must_use
 fn camp_bella(p) { return load64(p+CAMP_BELLA); }
+# Side B's belligerents, as a free-text `;`-list (Str).
 #must_use
 fn camp_bellb(p) { return load64(p+CAMP_BELLB); }
+# Its battles, a vec of battle records in table order (bat_* accessors).
+#must_use
+fn camp_battles(p) { return load64(p+CAMP_BATTLES); }
+# One-line description (Str).
+#must_use
+fn camp_desc(p) { return load64(p+CAMP_DESC); }
+# A battle's name (Str).
+#must_use
+fn bat_name(p) { return load64(p+BAT_NAME); }
+# A battle's year, inside its campaign's years.
+#must_use
+fn bat_year(p) { return load64(p+BAT_YEAR); }
+# A battle's location (Str).
+#must_use
+fn bat_loc(p) { return load64(p+BAT_LOC); }
+# A battle's one-line description (Str).
+#must_use
+fn bat_desc(p) { return load64(p+BAT_DESC); }
 
 # Append a battle record to `camp`. Used by build_campaigns while assembling the table.
 fn bat_add(camp, name: Str, year, loc: Str, desc: Str) {
@@ -39,6 +69,7 @@ fn bat_add(camp, name: Str, year, loc: Str, desc: Str) {
 }
 
 # Build the military-campaign table, including each campaign's battles. Called once by the lazy initializer.
+#must_use
 fn build_campaigns() {
     var v = vec_new();
     var c = camp_new("Greco-Persian Wars","Mediterranean",(0-499),(0-449),"Persian Empire","Ancient Greece","Darius I;Xerxes I;Themistocles;Leonidas I",OUT_DEFEAT,"Persian attempts to conquer Greece repelled; secured Greek independence and Classical golden age");   #skip-lint
@@ -51,7 +82,7 @@ fn build_campaigns() {
     bat_add(c,"Battle of Granicus",(0-334),"Granicus River, Anatolia","Alexander's first major victory; opens Anatolia to Macedonian conquest");   #skip-lint
     bat_add(c,"Battle of Issus",(0-333),"Issus, Cilicia","Alexander defeats Darius III; captures the Persian royal family");   #skip-lint
     bat_add(c,"Battle of Gaugamela",(0-331),"Gaugamela, Mesopotamia","Decisive defeat of Darius III; Alexander becomes master of the Persian Empire");   #skip-lint
-    bat_add(c,"Battle of the Hydaspes",(0-326),"Hydaspes River, Punjab","Alexander defeats King Porus; easternmost extent of the campaign");   #skip-lint
+    bat_add(c,"Battle of the Hydaspes",(0-326),"Hydaspes River, Punjab","Alexander defeats King Porus; his last major pitched battle before the army refuses to cross the Hyphasis");   #skip-lint
     vec_push(v, c);
     c = camp_new("Second Punic War","Mediterranean",(0-218),(0-201),"Carthage","Roman Republic","Hannibal Barca;Scipio Africanus",OUT_DEFEAT,"Hannibal's invasion of Italy via the Alps; despite tactical genius, Carthage ultimately lost to Roman strategic depth");   #skip-lint
     bat_add(c,"Battle of Cannae",(0-216),"Cannae, Italy","Hannibal's double envelopment destroys 8 Roman legions; worst Roman defeat");   #skip-lint
@@ -85,7 +116,7 @@ fn build_campaigns() {
     bat_add(c,"Battle of Lutzen",1632,"Lutzen, Saxony","Swedish victory but Gustavus Adolphus killed; shifted momentum of the war");   #skip-lint
     bat_add(c,"Battle of Rocroi",1643,"Rocroi, France","French victory ends Spanish military supremacy; beginning of French dominance");   #skip-lint
     vec_push(v, c);
-    c = camp_new("Napoleonic Wars","Europe",1803,1815,"French Empire","British Empire;Russian Empire;Austrian Empire","Napoleon Bonaparte;Duke of Wellington;Mikhail Kutuzov",OUT_DEFEAT,"French bid for European hegemony; reshaped borders, spread revolutionary ideals, ended with Napoleon's exile");   #skip-lint
+    c = camp_new("Napoleonic Wars","Europe",1803,1815,"French Empire","British Empire;Russian Empire;Austrian Empire;Kingdom of Prussia","Napoleon Bonaparte;Duke of Wellington;Mikhail Kutuzov",OUT_DEFEAT,"French bid for European hegemony; reshaped borders, spread revolutionary ideals, ended with Napoleon's exile");   #skip-lint
     bat_add(c,"Battle of Austerlitz",1805,"Austerlitz, Moravia","Napoleon's masterpiece; defeats combined Austro-Russian army on the anniversary of his coronation");   #skip-lint
     bat_add(c,"Battle of Trafalgar",1805,"Cape Trafalgar, Spain","Nelson destroys Franco-Spanish fleet; secures British naval supremacy");   #skip-lint
     bat_add(c,"Battle of Borodino",1812,"Borodino, Russia","Bloodiest single day of the Napoleonic Wars; Pyrrhic French victory before Moscow");   #skip-lint
@@ -93,7 +124,7 @@ fn build_campaigns() {
     vec_push(v, c);
     c = camp_new("American Civil War","North America",1861,1865,"United States (Union)","Confederate States","Ulysses S. Grant;William T. Sherman;Robert E. Lee;Stonewall Jackson",OUT_VICTORY,"Union victory preserving the United States and abolishing slavery; deadliest American conflict");   #skip-lint
     bat_add(c,"Battle of Gettysburg",1863,"Gettysburg, Pennsylvania","Turning point; Lee's invasion of the North repelled with massive casualties");   #skip-lint
-    bat_add(c,"Siege of Vicksburg",1863,"Vicksburg, Mississippi","Grant captures the last Confederate stronghold on the Mississippi; splits the Confederacy");   #skip-lint
+    bat_add(c,"Siege of Vicksburg",1863,"Vicksburg, Mississippi","Grant captures the last major Confederate stronghold on the Mississippi; with Port Hudson days later, splits the Confederacy");   #skip-lint
     vec_push(v, c);
     c = camp_new("Zulu War","Sub-Saharan Africa",1879,1879,"British Empire","Zulu Kingdom","Lord Chelmsford;Cetshwayo kaMpande",OUT_VICTORY,"British conquest of the Zulu Kingdom; ended Zulu military power despite early British defeats");   #skip-lint
     bat_add(c,"Battle of Isandlwana",1879,"Isandlwana, Zululand","Zulu army overruns British camp; worst British defeat against an indigenous force");   #skip-lint
@@ -107,6 +138,7 @@ fn build_campaigns() {
     return v;
 }
 
+# All 14 campaigns in table order; built on first call. Shared: do not modify the vec.
 #must_use
 fn all_campaigns() {
     if (camp_init_done == 0) { camp_vec = build_campaigns(); camp_init_done = 1; }
@@ -143,9 +175,11 @@ fn _camp_upper_bound(v, y) {
     }
     return lo;
 }
+# Number of campaigns (14).
 #must_use
 fn campaign_count() { return vec_len(all_campaigns()); }
 
+# The campaign whose name matches `name` (case-insensitive), or 0.
 #must_use
 fn campaign_by_name(name: Str) {
     itrace_s("looking up campaign by name", "name", name);
@@ -157,18 +191,22 @@ fn campaign_by_name(name: Str) {
     return 0;
 }
 
+# Campaigns whose region contains `region` (case-insensitive substring). An empty region matches none.
 #must_use
 fn campaigns_by_region(region: Str) {
     itrace_s("looking up campaigns by region", "region", region);
     var result = vec_new();
+    # An empty region matches nothing, as in civs_by_region (missing through 2.6.1).
+    if (str_len(region) == 0) { return result; }
     var v = all_campaigns(); var n = vec_len(v);
     for (var i = 0; i < n; i = i + 1) {
         var p = vec_get(v, i);
-        if (str_contains(camp_region(p), region) == 1) { vec_push(result, p); }
+        if (str_contains_ci(camp_region(p), region) == 1) { vec_push(result, p); }
     }
     return result;
 }
 
+# Campaigns with outcome `outcome` (an OUT_* value, from side A's point of view).
 #must_use
 fn campaigns_by_outcome(outcome) {
     itrace_i("looking up campaigns by outcome", "outcome", outcome);
@@ -181,6 +219,8 @@ fn campaigns_by_outcome(outcome) {
     return result;
 }
 
+# Campaigns with a commander whose name starts or ends with `cmd` as whole words ("Napoleon", "Bonaparte");
+# case-insensitive. A word in the middle of a name does not match.
 #must_use
 fn campaigns_by_commander(cmd: Str) {
     itrace_s("looking up campaigns by commander", "commander", cmd);
@@ -193,6 +233,8 @@ fn campaigns_by_commander(cmd: Str) {
     return result;
 }
 
+# Campaigns where `civ` is a whole belligerent on either side (case-insensitive); "Roman Empire"
+# does not match "Holy Roman Empire".
 #must_use
 fn campaigns_by_civilization(civ: Str) {
     itrace_s("looking up campaigns by civilization", "civ", civ);
@@ -207,6 +249,7 @@ fn campaigns_by_civilization(civ: Str) {
     return result;
 }
 
+# Campaigns under way in `year`, start and end inclusive.
 #must_use
 fn campaigns_active_at(year) {
     itrace_i("looking up campaigns active at year", "year", year);
@@ -221,10 +264,14 @@ fn campaigns_active_at(year) {
 
 fn _cmp_camp_start(a, b) { return load64(a+CAMP_START) - load64(b+CAMP_START); }
 
+# Campaigns overlapping [sy, ey], both ends inclusive, in start-year order. Empty when sy > ey.
 #must_use
 fn campaigns_between(sy, ey) {
     itrace_range("looking up campaigns between years", sy, ey);
     var result = vec_new();
+    # An inverted range is empty, as in events_between. Through 2.6.1 the
+    # overlap test let (1450, 1340) return the Hundred Years' War.
+    if (sy > ey) { return result; }
     var v = all_campaigns_by_start();
     # Interval OVERLAP, not containment: a campaign matches when it starts on or
     # before `ey` and ends on or after `sy`. Only the prefix starting at or

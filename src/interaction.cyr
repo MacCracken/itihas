@@ -6,6 +6,7 @@ enum IntOff { INT_CIVA=0; INT_CIVB=8; INT_TYPE=16; INT_START=24; INT_END=32; INT
 var int_vec = 0;
 var int_init_done = 0;
 
+# Allocate an interaction record. Normally only build_interactions calls this.
 #must_use
 fn int_new(ca: Str, cb: Str, itype, sy, ey, desc: Str) {
     var p = xalloc(INT_SIZE);
@@ -13,22 +14,35 @@ fn int_new(ca: Str, cb: Str, itype, sy, ey, desc: Str) {
     store64(p+INT_START,sy); store64(p+INT_END,ey); store64(p+INT_DESC,desc);
     return p;
 }
+# First party, by civilization name (Str).
 #must_use
 fn int_civa(p) { return load64(p+INT_CIVA); }
+# Second party, by civilization name (Str).
 #must_use
 fn int_civb(p) { return load64(p+INT_CIVB); }
+# Interaction type, one of the INT_* values.
 #must_use
 fn int_type(p) { return load64(p+INT_TYPE); }
+# First year: negative is BCE, no year zero.
+#must_use
+fn int_start(p) { return load64(p+INT_START); }
+# Last year, inclusive.
+#must_use
+fn int_end(p) { return load64(p+INT_END); }
+# One-line description (Str).
+#must_use
+fn int_desc(p) { return load64(p+INT_DESC); }
 
 # Build the civilization-interaction table (21 rows). Called once by the lazy initializer.
+#must_use
 fn build_interactions() {
     var v = vec_new();
     vec_push(v, int_new("Mesopotamia","Ancient Egypt",INT_TRADE,(0-3000),(0-1200),"Trade in lapis lazuli, copper, grain"));   #skip-lint
     vec_push(v, int_new("Mesopotamia","Indus Valley",INT_TRADE,(0-2600),(0-1900),"Maritime trade via Persian Gulf"));
-    vec_push(v, int_new("Ancient Egypt","Hittite Empire",INT_WAR,(0-1400),(0-1259),"Battle of Kadesh and first peace treaty"));   #skip-lint
+    vec_push(v, int_new("Ancient Egypt","Hittite Empire",INT_WAR,(0-1350),(0-1259),"Battle of Kadesh and first peace treaty"));   #skip-lint
     vec_push(v, int_new("Ancient Egypt","Hittite Empire",INT_DIPLOMACY,(0-1259),(0-1178),"Peace treaty and royal marriages"));   #skip-lint
     vec_push(v, int_new("Ancient Greece","Persian Empire",INT_WAR,(0-499),(0-449),"Greco-Persian Wars"));
-    vec_push(v, int_new("Ancient Greece","Ancient Egypt",INT_CULTURAL,(0-650),(0-30),"Greek adoption of Egyptian knowledge"));   #skip-lint
+    vec_push(v, int_new("Ancient Greece","Ancient Egypt",INT_CULTURAL,(0-650),(0-146),"Greek adoption of Egyptian knowledge"));   #skip-lint
     vec_push(v, int_new("Roman Empire","Ancient China",INT_TRADE,(0-130),200,"Silk Road trade"));
     vec_push(v, int_new("Roman Empire","Ancient Greece",INT_CONQUEST,(0-146),(0-146),"Roman conquest of Greece"));
     vec_push(v, int_new("Roman Empire","Carthage",INT_CONQUEST,(0-264),(0-146),"Punic Wars"));
@@ -36,25 +50,28 @@ fn build_interactions() {
     vec_push(v, int_new("Mongol Empire","Ancient China",INT_CONQUEST,1211,1279,"Mongol conquest establishing Yuan"));
     vec_push(v, int_new("Mongol Empire","Arab Caliphates",INT_CONQUEST,1258,1258,"Sack of Baghdad ends the Abbasid Caliphate"));   #skip-lint
     vec_push(v, int_new("Mali Empire","Arab Caliphates",INT_TRADE,1235,1500,"Trans-Saharan gold and salt trade"));
-    vec_push(v, int_new("Viking/Norse","Byzantine Empire",INT_TRADE,800,1100,"Varangian trade routes"));
-    vec_push(v, int_new("Khmer Empire","Ancient China",INT_CULTURAL,802,1431,"Chinese cultural influence"));
+    vec_push(v, int_new("Viking/Norse","Byzantine Empire",INT_TRADE,800,1066,"Varangian trade routes"));
+    vec_push(v, int_new("Khmer Empire","Ancient China",INT_DIPLOMACY,802,1431,"Tributary missions and trade with imperial China"));   #skip-lint
     vec_push(v, int_new("Chola Dynasty","Srivijaya",INT_WAR,1025,1025,"Chola naval raids"));
     vec_push(v, int_new("Spanish Empire","Aztec Empire",INT_CONQUEST,1519,1521,"Spanish conquest under Cortes"));
-    vec_push(v, int_new("Spanish Empire","Inca Empire",INT_CONQUEST,1532,1572,"Spanish conquest under Pizarro"));
-    vec_push(v, int_new("Portuguese Empire","Kingdom of Kongo",INT_TRADE,1483,1700,"Ivory, copper trade"));
+    vec_push(v, int_new("Spanish Empire","Inca Empire",INT_CONQUEST,1532,1533,"Spanish conquest under Pizarro; Neo-Inca resistance lasted until 1572"));   #skip-lint
+    vec_push(v, int_new("Portuguese Empire","Kingdom of Kongo",INT_TRADE,1483,1700,"Ivory, copper and slave trade"));
     vec_push(v, int_new("Ottoman Empire","Republic of Venice",INT_TRADE,1400,1700,"Mediterranean spice trade"));
     vec_push(v, int_new("Ancient Egypt","Hittite Empire",INT_ALLIANCE,(0-1259),(0-1178),"Alliance after Treaty of Kadesh"));   #skip-lint
     return v;
 }
 
+# All 21 interactions in table order; built on first call. Shared: do not modify the vec.
 #must_use
 fn all_interactions() {
     if (int_init_done == 0) { int_vec = build_interactions(); int_init_done = 1; }
     return int_vec;
 }
+# Number of interactions (21).
 #must_use
 fn interaction_count() { return vec_len(all_interactions()); }
 
+# Interactions in which `civ` is either party (case-insensitive).
 #must_use
 fn interactions_for(civ: Str) {
     itrace_s("looking up interactions for civilization", "civ", civ);
@@ -67,6 +84,7 @@ fn interactions_for(civ: Str) {
     return result;
 }
 
+# Interactions between `ca` and `cb`, in either order (case-insensitive).
 #must_use
 fn interactions_between(ca: Str, cb: Str) {
     itrace_pair("looking up interactions between civilizations", "civs", ca, cb);
@@ -83,6 +101,7 @@ fn interactions_between(ca: Str, cb: Str) {
     return result;
 }
 
+# Interactions of type `itype` (an INT_* value).
 #must_use
 fn interactions_by_type(itype) {
     itrace_i("looking up interactions by type", "type", itype);
@@ -95,6 +114,7 @@ fn interactions_by_type(itype) {
     return result;
 }
 
+# Distinct civilizations `civ` interacted with, as Strs in first-seen order (case-insensitive match on `civ`).
 #must_use
 fn interaction_neighbors(civ: Str) {
     itrace_s("looking up civilization neighbors", "civ", civ);
@@ -117,6 +137,8 @@ fn interaction_neighbors(civ: Str) {
     return result;
 }
 
+# Weighted sum over the interactions between `ca` and `cb`, either order: conquest 4, war 3,
+# alliance 3, trade 2, cultural 2, diplomacy 1. 0 when they never interacted.
 #must_use
 fn influence_score(ca: Str, cb: Str) {
     itrace_pair("computing influence score", "civs", ca, cb);

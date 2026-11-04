@@ -3,6 +3,12 @@
 enum SiteType { ST_SETTLEMENT; ST_TEMPLE; ST_BURIAL; ST_FORTRESS; ST_MONUMENT; ST_PALACE; ST_WORKSHOP; ST_CAVE; ST_PORT; }   #skip-lint
 enum SiteOff { SITE_NAME=0; SITE_LOC=8; SITE_REG=16; SITE_TYPE=24; SITE_CIV=32; SITE_START=40; SITE_END=48; SITE_DISC=56; SITE_DESC=64; SITE_SIZE=72; }   #skip-lint
 
+# Discovery year of a site that was never lost (Giza, Stonehenge, Longmen,
+# Teotihuacan), so has no discovery year. Year 0 does not exist in this
+# library's numbering, so the value cannot collide with a real year. A
+# discovery-range query must skip it; site_to_json still emits it as 0.
+enum SiteDisc { SITE_DISC_NONE = 0; }
+
 var site_vec = 0;
 var site_init_done = 0;
 
@@ -15,21 +21,45 @@ fn site_new(name: Str, loc: Str, reg: Str, st, civ: Str, sy, ey, disc, desc: Str
     store64(p+SITE_START,sy); store64(p+SITE_END,ey); store64(p+SITE_DISC,disc); store64(p+SITE_DESC,desc);
     return p;
 }
+# The site's name (Str).
 #must_use
 fn site_name(p) { return load64(p+SITE_NAME); }
+# Modern country or location (Str).
+#must_use
+fn site_loc(p) { return load64(p+SITE_LOC); }
+# Region (Str); matched by substring in sites_by_region.
 #must_use
 fn site_region(p) { return load64(p+SITE_REG); }
+# Site type, one of the ST_* values.
+#must_use
+fn site_type(p) { return load64(p+SITE_TYPE); }
+# Civilization, as free text (Str): not necessarily a civilization record.
+#must_use
+fn site_civ(p) { return load64(p+SITE_CIV); }
+# First year of occupation: negative is BCE, no year zero.
+#must_use
+fn site_start(p) { return load64(p+SITE_START); }
+# Last year of occupation, inclusive.
+#must_use
+fn site_end(p) { return load64(p+SITE_END); }
+# Year of first documented (re)discovery, or SITE_DISC_NONE for a site never lost.
+#must_use
+fn site_disc(p) { return load64(p+SITE_DISC); }
+# One-line description (Str).
+#must_use
+fn site_desc(p) { return load64(p+SITE_DESC); }
 
 # Build the archaeological-site table (32 rows). Called once by the lazy initializer.
+#must_use
 fn build_sites() {
     var v = vec_new();
     vec_push(v, site_new("Gobekli Tepe","Turkey","Near East",ST_TEMPLE,"Pre-Pottery Neolithic",(0-9500),(0-8000),1963,"Oldest known monumental sanctuary; massive T-shaped pillars with animal reliefs"));   #skip-lint
     vec_push(v, site_new("Catalhoyuk","Turkey","Near East",ST_SETTLEMENT,"Neolithic Anatolia",(0-7500),(0-5700),1958,"Large Neolithic proto-city; densely packed mudbrick houses entered through rooftops"));   #skip-lint
     vec_push(v, site_new("Ur","Iraq","Near East",ST_SETTLEMENT,"Mesopotamia",(0-3800),(0-500),1853,"Sumerian city-state; Royal Tombs with rich grave goods, Great Ziggurat"));   #skip-lint
     vec_push(v, site_new("Babylon","Iraq","Near East",ST_SETTLEMENT,"Mesopotamia",(0-2300),(0-275),1899,"Capital of Babylonian Empire; Ishtar Gate, Hanging Gardens tradition"));   #skip-lint
-    vec_push(v, site_new("Persepolis","Iran","Near East",ST_PALACE,"Persian Empire",(0-518),(0-330),1620,"Ceremonial capital of the Achaemenid Empire; Apadana reliefs of tribute-bearers"));   #skip-lint
+    vec_push(v, site_new("Persepolis","Iran","Near East",ST_PALACE,"Persian Empire",(0-518),(0-330),1618,"Ceremonial capital of the Achaemenid Empire; Apadana reliefs of tribute-bearers"));   #skip-lint
     vec_push(v, site_new("Petra","Jordan","Near East",ST_SETTLEMENT,"Nabataean Kingdom",(0-312),663,1812,"Rock-cut Nabataean capital; Al-Khazneh treasury facade, water conduit system"));   #skip-lint
-    vec_push(v, site_new("Giza","Egypt","North Africa",ST_MONUMENT,"Ancient Egypt",(0-2580),(0-2510),0,"Great Pyramid of Khufu, Sphinx; Old Kingdom royal necropolis"));   #skip-lint
+    vec_push(v, site_new("Giza","Egypt","North Africa",ST_MONUMENT,"Ancient Egypt",(0-2580),(0-2510),SITE_DISC_NONE,"Great Pyramid of Khufu, Sphinx; Old Kingdom royal necropolis"));   #skip-lint
     vec_push(v, site_new("Valley of the Kings","Egypt","North Africa",ST_BURIAL,"Ancient Egypt",(0-1539),(0-1075),1738,"New Kingdom royal tombs including Tutankhamun's tomb (KV62)"));   #skip-lint
     vec_push(v, site_new("Carthage","Tunisia","North Africa",ST_PORT,"Phoenicia",(0-814),(0-146),1830,"Phoenician maritime capital; circular military harbor, tophet sanctuary"));   #skip-lint
     vec_push(v, site_new("Leptis Magna","Libya","North Africa",ST_SETTLEMENT,"Roman Empire",(0-1000),647,1920,"Roman city; Severan basilica, market, theater, and harbor"));   #skip-lint
@@ -37,47 +67,53 @@ fn build_sites() {
     vec_push(v, site_new("Mycenae","Greece","Mediterranean",ST_FORTRESS,"Mycenaean Civilization",(0-1600),(0-1100),1876,"Mycenaean citadel; Lion Gate, Treasury of Atreus, Schliemann's gold masks"));   #skip-lint
     vec_push(v, site_new("Pompeii","Italy","Mediterranean",ST_SETTLEMENT,"Roman Empire",(0-600),79,1748,"Roman city preserved by Vesuvius eruption; complete urban snapshot of 79 CE"));   #skip-lint
     vec_push(v, site_new("Mohenjo-daro","Pakistan","South Asia",ST_SETTLEMENT,"Indus Valley",(0-2500),(0-1900),1922,"Indus Valley city; Great Bath, grid-plan streets, standardized brick construction"));   #skip-lint
-    vec_push(v, site_new("Harappa","Pakistan","South Asia",ST_SETTLEMENT,"Indus Valley",(0-2600),(0-1900),1826,"Indus Valley city; granaries, worker quarters, and extensive craft production"));   #skip-lint
+    vec_push(v, site_new("Harappa","Pakistan","South Asia",ST_SETTLEMENT,"Indus Valley",(0-2600),(0-1900),1829,"Indus Valley city; granaries, worker quarters, and extensive craft production"));   #skip-lint
     vec_push(v, site_new("Sanchi","India","South Asia",ST_TEMPLE,"Maurya Empire",(0-300),1200,1818,"Buddhist stupa complex; Great Stupa with carved gateways (toranas)"));   #skip-lint
-    vec_push(v, site_new("Ajanta Caves","India","South Asia",ST_CAVE,"Gupta Empire",(0-200),650,1819,"Rock-cut Buddhist monasteries and prayer halls; masterwork murals and sculpture"));   #skip-lint
+    vec_push(v, site_new("Ajanta Caves","India","South Asia",ST_CAVE,"Vakataka Dynasty",(0-200),650,1819,"Rock-cut Buddhist monasteries and prayer halls; masterwork murals and sculpture"));   #skip-lint
     vec_push(v, site_new("Terracotta Army","China","East Asia",ST_BURIAL,"Ancient China",(0-246),(0-208),1974,"Mausoleum guard of Qin Shi Huang; 8,000+ life-size clay warriors"));   #skip-lint
-    vec_push(v, site_new("Longmen Grottoes","China","East Asia",ST_TEMPLE,"Ancient China",493,1127,0,"Buddhist rock-cut shrines; 100,000+ statues across 2,345 caves"));   #skip-lint
+    vec_push(v, site_new("Longmen Grottoes","China","East Asia",ST_TEMPLE,"Ancient China",493,1127,SITE_DISC_NONE,"Buddhist rock-cut shrines; 100,000+ statues across 2,345 caves"));   #skip-lint
     vec_push(v, site_new("Nara Heijo Palace","Japan","East Asia",ST_PALACE,"Japan",710,784,1852,"Imperial capital; modeled on Tang Chang'an, wooden palace complex"));   #skip-lint
     vec_push(v, site_new("Angkor Wat","Cambodia","Southeast Asia",ST_TEMPLE,"Khmer Empire",1113,1431,1860,"Largest religious monument; Hindu-Buddhist temple with bas-relief galleries"));   #skip-lint
     vec_push(v, site_new("Borobudur","Indonesia","Southeast Asia",ST_TEMPLE,"Sailendra Dynasty",780,1006,1814,"Largest Buddhist temple; 2,672 relief panels, 504 Buddha statues"));   #skip-lint
-    vec_push(v, site_new("Teotihuacan","Mexico","Mesoamerica",ST_SETTLEMENT,"Teotihuacan Civilization",(0-200),550,0,"Largest pre-Columbian city in the Americas; Pyramid of the Sun, Avenue of the Dead"));   #skip-lint
+    vec_push(v, site_new("Teotihuacan","Mexico","Mesoamerica",ST_SETTLEMENT,"Teotihuacan Civilization",(0-200),550,SITE_DISC_NONE,"Largest pre-Columbian city in the Americas; Pyramid of the Sun, Avenue of the Dead"));   #skip-lint
     vec_push(v, site_new("Tikal","Guatemala","Mesoamerica",ST_SETTLEMENT,"Maya",(0-600),900,1848,"Major Maya city; towering temple pyramids, stelae with Long Count dates"));   #skip-lint
     vec_push(v, site_new("Chichen Itza","Mexico","Mesoamerica",ST_TEMPLE,"Maya",600,1200,1843,"Maya-Toltec city; El Castillo pyramid with equinox serpent shadow"));   #skip-lint
     vec_push(v, site_new("Machu Picchu","Peru","South America",ST_SETTLEMENT,"Inca Empire",1450,1572,1911,"Inca royal estate; dry-stone terraces, Intihuatana sundial, cloud-forest setting"));   #skip-lint
     vec_push(v, site_new("Great Zimbabwe","Zimbabwe","Sub-Saharan Africa",ST_SETTLEMENT,"Great Zimbabwe",1100,1450,1871,"Medieval stone city; Great Enclosure with drystone walls up to 11m high"));   #skip-lint
     vec_push(v, site_new("Lalibela","Ethiopia","Sub-Saharan Africa",ST_TEMPLE,"Zagwe Dynasty",1181,1221,1520,"11 monolithic rock-hewn churches; carved top-down from living rock"));   #skip-lint
-    vec_push(v, site_new("Stonehenge","England","Europe",ST_MONUMENT,"Neolithic Britain",(0-3000),(0-1500),0,"Megalithic stone circle; sarsen trilithons aligned to solstice sunrise"));   #skip-lint
+    vec_push(v, site_new("Stonehenge","England","Europe",ST_MONUMENT,"Neolithic Britain",(0-3000),(0-1500),SITE_DISC_NONE,"Megalithic stone circle; sarsen trilithons aligned to solstice sunrise"));   #skip-lint
     vec_push(v, site_new("Lascaux","France","Europe",ST_CAVE,"Upper Paleolithic",(0-17000),(0-15000),1940,"Paleolithic cave paintings; Hall of Bulls, polychrome animal figures"));   #skip-lint
-    vec_push(v, site_new("Altamira","Spain","Europe",ST_CAVE,"Upper Paleolithic",(0-36000),(0-13000),1868,"Paleolithic cave art; polychrome bison ceiling, earliest known artistic masterwork"));   #skip-lint
+    vec_push(v, site_new("Altamira","Spain","Europe",ST_CAVE,"Upper Paleolithic",(0-34000),(0-11000),1868,"Paleolithic cave art made ~36,000 to ~13,000 years ago; Magdalenian polychrome bison ceiling"));   #skip-lint
     vec_push(v, site_new("Newgrange","Ireland","Europe",ST_BURIAL,"Neolithic Ireland",(0-3200),(0-2900),1699,"Passage tomb; roof box aligned to winter solstice sunrise illuminating chamber"));   #skip-lint
     return v;
 }
 
+# All 32 sites in table order; built on first call. Shared: do not modify the vec.
 #must_use
 fn all_sites() {
     if (site_init_done == 0) { site_vec = build_sites(); site_init_done = 1; }
     return site_vec;
 }
+# Number of sites (32).
 #must_use
 fn site_count() { return vec_len(all_sites()); }
 
+# Sites whose region contains `region` (case-insensitive substring). An empty region matches none.
 #must_use
 fn sites_by_region(region: Str) {
     itrace_s("looking up sites by region", "region", region);
     var result = vec_new();
+    # An empty region matches nothing, as in civs_by_region (missing through 2.6.1).
+    if (str_len(region) == 0) { return result; }
     var v = all_sites(); var n = vec_len(v);
     for (var i = 0; i < n; i = i + 1) {
         var p = vec_get(v, i);
-        if (str_contains(site_region(p), region) == 1) { vec_push(result, p); }
+        if (str_contains_ci(site_region(p), region) == 1) { vec_push(result, p); }
     }
     return result;
 }
 
+# Sites of type `stype` (an ST_* value).
 #must_use
 fn sites_by_type(stype) {
     itrace_i("looking up sites by type", "type", stype);
@@ -90,6 +126,7 @@ fn sites_by_type(stype) {
     return result;
 }
 
+# Sites whose civilization is exactly `civ` (case-insensitive).
 #must_use
 fn sites_by_civilization(civ: Str) {
     itrace_s("looking up sites by civilization", "civ", civ);
@@ -102,6 +139,7 @@ fn sites_by_civilization(civ: Str) {
     return result;
 }
 
+# Sites occupied in `year`, first and last year inclusive.
 #must_use
 fn sites_active_at(year) {
     itrace_i("looking up sites active at year", "year", year);
@@ -114,6 +152,7 @@ fn sites_active_at(year) {
     return result;
 }
 
+# The site whose name matches `name` (case-insensitive), or 0.
 #must_use
 fn site_by_name(name: Str) {
     itrace_s("looking up site by name", "name", name);

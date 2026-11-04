@@ -16,3 +16,9 @@ References for calendar system types, epochs, month counts, and leap rules.
 
 - Parker, Richard A. *The Calendars of Ancient Egypt*. Chicago: University of Chicago Press, 1950.
   Egyptian Civil calendar as fixed (non-solar) system: 365 days, no leap correction, Sothic cycle drift.
+
+## 2.6.2 corrections
+
+- **Chinese** leap rule: a leap month is inserted where a lunar month contains
+  no principal solar term (zhongqi), about 7 times in 19 years; "7 in 19" alone
+  was the approximation, not the rule. https://ytliu0.github.io/ChineseCalendar/rules.html

@@ -7,6 +7,256 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.6.2] - 2026-11-04
+
+P(-1) scaffold-hardening release on the cyrius 6.7.18 pin. Four independent
+reviews ran in parallel: two code reviews (the network, parsing and
+serialization layer; the data, query and MCP layer) and two audits of the
+historical data against external sources. Every finding was re-verified before
+it was repaired: by a probe, a local test server, a web source, or the repo's
+own tables. Every repair has a test that fails on 2.6.1.
+
+| Measure | 2.6.1 | 2.6.2 |
+|---|---|---|
+| Unit assertions | 309 | 442 |
+| MCP assertions | 51 | 65 |
+| Reference coverage | 81% | 87% |
+| Undocumented public functions (`cyrius audit`) | 134 | 0 |
+| Lint warnings, `src/` + tests (`cyrius audit`) | 16 | 0 |
+
+### Breaking
+
+Consumers matching on names or exact query results should check these. All
+are corrections; none is a new behaviour for its own sake.
+
+- **Two events renamed.** `"Treaty of Westphalia"` is now `"Peace of
+  Westphalia"`, since the settlement is two treaties. `"Invention of the
+  Smartphone"` (2007) is now `"Launch of the iPhone"`: the first smartphone was
+  IBM's Simon in 1994. `event_by_name` with an old name returns 0.
+- **Two causal links replaced.** Code of Hammurabi -> Founding of Rome and
+  French Revolution -> Invention of the World Wide Web are links no historian
+  recognises. They are now Migration of the Sea Peoples -> Bronze Age Collapse
+  and French Revolution -> Haitian Revolution. The table still has 13 links,
+  but `causes_of`, `effects_of` and `causal_chain` return different rows.
+- **Corrected data changes query results.** For example,
+  `events_between(-500, 500)` no longer includes the Bantu Migration (now
+  -1500), and `civs_active_at(1600)` now includes the Maya (now ending 1697).
+  The full list is under *Fixed — historical data*.
+- **Region filters fold case.** `civs_by_region("near east")` used to return
+  nothing; it now matches "Near East", like every other lookup.
+- **Commander search matches a surname as well as a first name.**
+  `campaigns_by_commander("Bonaparte")` now finds the Napoleonic Wars.
+- **Stricter arguments.** On the hoosh path and the MCP tools, a year must be
+  a whole JSON number: `"500 BC"` and, on `itihas_daimon_invoke`, the string
+  `"1453"` are now refused instead of being read digit by digit. `itihas_event`
+  refuses a one-sided or inverted year range with `isError`.
+- **`llm_answer` returns 0 for an empty reply.** A reply with no data answer
+  and no text used to come back as a "successful" `SRC_LLM` response with empty
+  content.
+
+Migration: use the new event names; re-check any stored expectation of
+`causes_of` / `effects_of` / `causal_chain` output; pass whole-number years;
+treat a 0 from `llm_answer` as "no answer".
+
+### Fixed — network path (`src/hoosh.cyr`)
+
+Each confirmed against a local test server or with a probe.
+
+- **A reset connection could kill the host process.** `_write_all` used a raw
+  `SYS_WRITE`, so a peer that reset mid-body raised SIGPIPE. Measured on 2.6.1
+  with a 16 MiB body: exit 141. It now writes through the stdlib's
+  `_fd_write_nosigpipe` (MSG_NOSIGNAL on Linux, SO_NOSIGPIPE on macOS), and the
+  failure is logged as a short write. CYRIUS-2026-0025 fixed this class in the
+  stdlib; itihas had bypassed it.
+- **`Content-Length` was ignored.** A body cut short before EOF was parsed and
+  returned as a success ("The Western Roman Empire fell in 4"). A server that
+  kept the connection open held the read until the 30 s timeout, and the
+  complete answer was then discarded as a read error. The reader now stops when
+  the declared body is in (12 ms instead of 30 s), refuses a short body, and
+  ignores bytes past it.
+- **Failures that looked like answers.** A non-200 reply returned 0 with no
+  log; it is now a WARN with the status. A reply with neither a data answer nor
+  text returned an empty `SRC_LLM` response; it is now 0 with a WARN.
+- **Tool-call extraction was not structural.** `"name"` and `"arguments"`
+  were searched for anywhere in the body, so `{"arguments":{"name":"Bronze
+  Age"},"name":"era_lookup"}` produced the tool "Bronze Age". `"arguments":
+  null` took the next quoted token, and a `}` inside a string cut the arguments
+  short. A small string-aware walker now reads the members of the call's
+  `function` object (or of the call itself, when it has no wrapper).
+  `_extract_content` takes only a string, where it used to return "type" for
+  an array of content parts.
+- **Numbers were parsed digit by digit.** `str_to_int` skips every non-digit,
+  so `-500.0` read as -5000, `1.5e3` as 153 and `"500 BC"` as 500. Years now go
+  through `itihas_parse_int` (below).
+- **Arguments.** JSON `null` counts as absent, and string arguments are
+  unescaped before lookup. `resolve_era_lookup` falls through to `year` when
+  `name` misses: `{"name": null, "year": 1200}` returned 0.
+- `_build_post_header` used `xalloc` for a 32-byte buffer, which aborts on OOM
+  on the one path meant to degrade. It now uses a stack buffer.
+
+### Fixed — MCP (`src/mcp.cyr`)
+
+- **Integer arguments were misread** by the same `str_to_int`, and bote 3.4.8+
+  accepts `1e3` and `476.0` as integers. Through 2.6.1 a timeline over
+  `1e3..2e3` covered 13..23, and `476.0..1453` was refused as inverted (4760).
+  Integers now parse strictly, and a non-integer is an `isError` naming the
+  argument.
+- **`itihas_daimon_invoke` validated nothing.** `{"name":5}`, `[1,2]` and a
+  truncated object returned the whole collection, and `{"year":null}` the eras
+  of year 0. Arguments must now be a JSON object, a mistyped argument is an
+  `isError`, and `null` counts as absent.
+- **String arguments were not unescaped**, so `"Viking\/Norse"` missed its
+  record.
+- **`itihas_event`** returned all 105 events for a one-sided range, and `[]`
+  for an inverted one. Both are now errors, as `itihas_timeline` already did.
+- The `itihas_era` description advertised a `scope` parameter the tool never
+  had. The header comment said bote was in `[features] default`; it is not.
+
+### Fixed — queries
+
+- **Three region filters lacked the 2.4.2 empty-string guard**:
+  `sites_by_region("")`, `routes_by_region("")` and `campaigns_by_region("")`
+  returned all 32, 15 and 14 records.
+- **Region filters were the only case-sensitive lookups.** All five now use
+  `str_contains_ci`.
+- **`campaigns_between(1450, 1340)`** returned the Hundred Years' War. An
+  inverted range is now empty, as in `events_between`.
+- **Commander "surname search" matched only a leading prefix.** "Napoleon"
+  worked, but "Bonaparte", "Caesar", "Grant" and "Wellington" found nothing.
+  `str_list_has_name` now matches a leading or a trailing run of whole words of
+  one name, and "Darius I" still does not match "Darius III". A middle word
+  ("E." in "Robert E. Lee") does not match: allowing it cost +62% on the
+  commander query, where checking both ends costs +6.5% on the matcher.
+- **No global era covered 1611-1647.** The Renaissance now ends in 1647, and a
+  test checks global coverage for every year from 3500 BCE to 2025.
+
+### Fixed — historical data
+
+Each change was checked against a reference; `docs/sources/*.md` records it.
+No entity count changes.
+
+- **Dates:** Harappa discovered 1829 (not 1826: Masson deserted only in
+  1827); Persepolis identified 1618 (not 1620); Altamira -34000..-11000 (the
+  sources' "years ago" had been stored as BCE); Bantu Migration -1500 (not -500;
+  era now Bronze Age); Founding of the Ghana Empire 300, matching its own record
+  (830 is the first written mention); Maya end 1697, the fall of Nojpeten (1500
+  predates Spanish contact); Muisca end 1540; Via Maris in use until 1517 (not
+  -300); Egypt-Hittite war from -1350.
+- **Records that contradicted the civilization they name** (the rule
+  `docs/guides/usage.md` states): the Silk Road named the Achaemenid "Persian
+  Empire", which ended two centuries before the route began (now Parthian
+  Empire). Six events named a civilization that did not yet exist: Bronze Age
+  Collapse and Trojan War (now Mycenaean Civilization), Phoenician Alphabet
+  (Phoenicia), Rise of Islam (Quraysh), Founding of Tenochtitlan (Mexica), Zagwe
+  Dynasty (Zagwe Dynasty). Three interactions outlasted a party
+  (Greece-Egypt, Viking-Byzantine, Spain-Inca). A test now enforces the rule
+  across all 200 resolving references.
+- **Attribution:** Ajanta Caves under the Vakataka Dynasty, not the Guptas;
+  Prussia added to the Napoleonic Wars; Kingdom of France added to the First
+  Crusade; Khmer-China is diplomacy and trade, not cultural influence; the
+  Portugal-Kongo trade includes the slave trade.
+- **Causal links:** two replaced (see *Breaking*); three strengths lowered to
+  WEAK (Bronze Age Collapse -> Rome, Marathon -> Alexander, Gutenberg -> World
+  Wide Web); three rationales rewritten to match their nodes (Alexander ->
+  Maurya, Fall of the West -> Rise of Islam, Rise of Islam -> Mongols).
+- **Descriptions:** Russian Revolution (February ended Tsarist rule; October
+  overthrew the Provisional Government), Invention of the Compass (maritime use
+  attested by 1117), Abolition of the Atlantic Slave Trade (British
+  participation only), Scramble for Africa (the Berlin Conference set rules; it
+  did not partition), Human Genome Project (~92% in 2003), Phoenician Alphabet,
+  Altamira, Hydaspes (not the easternmost point), Vicksburg (the last *major*
+  stronghold), Qin (linked the walls, did not begin them), and the Chinese
+  calendar's leap rule.
+
+### Fixed — util (`src/util.cyr`)
+
+- **`json_unescape` turned surrogate pairs into two U+FFFD**, losing
+  cuneiform, Linear B, hieroglyphs and every other non-BMP script from servers
+  that escape non-ASCII. A valid pair now decodes to its 4-byte UTF-8; a lone
+  half is still U+FFFD.
+- `json_escape_into` allocated a 16-byte `Str` header for every clean run, and
+  `itrace_i` 24 bytes for every DEBUG trace; both now use the stack.
+
+### Added
+
+- **36 field accessors** that had none, so consumers no longer read raw offsets
+  that the 2.7.x struct migration may move: `civ_peak`, `civ_traits`,
+  `civ_script`, `civ_lang`; `fig_birth`, `fig_death`, `fig_civ`, `fig_desc`;
+  `evt_era`, `evt_desc`, `evt_civs`; `site_loc`, `site_type`, `site_civ`,
+  `site_start`, `site_end`, `site_disc`, `site_desc`; `rt_regions`, `rt_type`,
+  `rt_civs`, `rt_start`, `rt_end`, `rt_desc`; `int_start`, `int_end`,
+  `int_desc`; `caus_strength`, `caus_desc`; `cal_leap`; `camp_start`,
+  `camp_end`, `camp_battles`, `camp_desc`; `bat_name`, `bat_year`, `bat_loc`,
+  `bat_desc`.
+- `SITE_DISC_NONE`: the named value (0) of a never-lost site's discovery year.
+- `itihas_parse_int(s, out)`: a JSON number that is a whole number, so `5.0`,
+  `1e2` and `-5e2` are accepted and `1.5`, `"500 BC"` and `1e400` refused.
+- `str_contains_ci(hay, needle)`: an ASCII-folded substring test that answers 0
+  for an empty needle.
+- **Tests**, 309 -> 442 unit and 51 -> 65 MCP:
+  - the cross-table date rule, with a floor of checked references so it cannot
+    pass vacuously;
+  - global-era coverage for every year from 3500 BCE to 2025;
+  - causal-link integrity (both events exist, cause first);
+  - the four year-sorted views (complete, ordered, stable);
+  - every new accessor against a real value;
+  - every repair above.
+- `#must_use` on the ten `build_*` tables and the five MCP handlers.
+
+### Changed — documentation
+
+- **Doc comments on every public function** (134 undocumented -> 0). They
+  state each lookup's matching rule, its bounds, and what it returns on a miss.
+- `docs/guides/usage.md`:
+  - The Quick Start did not compile (it omitted `src/util.cyr`); it now uses
+    the bundle.
+  - The year convention said "astronomical"; the data uses historical
+    numbering with no year zero, and the guide now says so.
+  - New sections: *Matching Rules* and *Collections Are Shared*.
+  - The free-text count is now 97 of 256 references.
+- README, the architecture overview and CONTRIBUTING describe the code as it
+  is: module claims, suite and benchmark counts, the module map, binary size,
+  and the data-entry rules.
+- `docs/sources/` records every 2.6.2 correction with its source, and fixes its
+  own "astronomical" and Silk Road start-date errors.
+- **Roadmap reorganized.** Completed arcs, the port-coverage table and the
+  finished dependency rows are gone. Open work is pinned to 2.7.x (native
+  structs, one module per patch, in order), 2.8.x (shared query helpers,
+  static-data footprint), 2.9.x (new records, formatters, the JSON `null`, open
+  data questions), 2.10.x (portability) and an unpinned 2.x.x backlog.
+
+### Benchmarks — release gate
+
+Interleaved A/B of the 2.6.1 bench binary against this one, both on cyrius
+6.7.18. One 6-round run had spreads of 1-2%; later runs, at load average 4-9
+from other work on the machine, were checked against each side's minimum.
+The gate run is in `bench-history.csv`.
+
+- **Wins from the repairs:**
+  - Region filters: `routes_by_region_east_asia` 1821 -> 1159 ns (-36%),
+    `civs_by_region_mediterranean` 1919 -> 1581 ns (-18%),
+    `sites_by_region_near_east` 1445 -> 1222 ns (-15%). `str_contains_ci`
+    skips a position on its first byte, where `str_contains` called `memeq` at
+    every position.
+  - JSON serialization, -3% to -4%: `json_array_events` 319.6 -> 307.5 us,
+    `json_array_campaigns` 145.4 -> 139.5 us, `json_array_eras` 71.2 -> 68.8 us.
+    `json_escape_into` no longer allocates a header per clean run.
+- **`chain_writing_depth3` 2668 -> 2219 ns (-17%)** is the corrected causal
+  data, not code: the walk from "Invention of Writing" visits different links.
+- **`campaigns_by_commander_napoleon` +4% to +10% (about +60 to +140 ns)** is
+  the cost of surname matching; the matcher alone measures +6.5%. A first
+  version that tried every word position cost +62% and was replaced.
+- **`calendar_by_name_gregorian` reads +16% in the full suite, from code
+  that did not change.** Run first, in a reduced bench at nine heap offsets,
+  2.6.2 is 5% faster (100-105 ns against 105-112 ns). Run after other rows it
+  is 16-23% slower, and the gap depends on which rows precede it. This release
+  changed what those rows do (fewer events in range, different causal walks),
+  and every row allocates per call, so the row reflects the suite's history,
+  not the lookup.
+- The other rows are flat: every change is inside its spread.
+- **Binary size:** the DCE `build/itihas` went 535,392 -> 536,320 B (+928 B
+  for the new code).
+
 ## [2.6.1] - 2026-11-04
 
 Toolchain and dependency cut to the newest of each: cyrius 6.7.9 → 6.7.18, and

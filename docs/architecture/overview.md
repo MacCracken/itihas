@@ -9,7 +9,7 @@ itihas/
 ├── src/
 │   ├── main.cyr          — binary entry point / smoke test
 │   ├── lib.cyr           — library aggregator (public API; drives distlib bundle)
-│   ├── util.cyr          — shared string/print/number helpers
+│   ├── util.cyr          — xalloc, case folding, sort, tracing, JSON escaping, strict integers
 │   ├── error.cyr         — ItihasError enum (integer error codes)
 │   ├── era.cyr           — historical periods, date ranges, era categories
 │   │                       25 eras (8 global + 17 regional), temporal/scope lookups
@@ -33,10 +33,13 @@ itihas/
 │   │                       15 trade routes with civilization context
 │   ├── logging.cyr       — sakshi logging init (itihas_log_init)
 │   ├── serial.cyr        — JSON serialization for all types (*_to_json)
-│   └── hoosh.cyr         — LLM-powered historical queries + data-answer path
+│   ├── hoosh.cyr         — LLM-powered historical queries + data-answer path
+│   └── mcp.cyr           — five MCP tools over bote (opt-in, not in the bundle)
 ├── tests/
-│   ├── itihas.tcyr       — full 285-assertion suite (cyrius test)
-│   └── itihas.bcyr       — 28-benchmark suite (cyrius bench)
+│   ├── itihas.tcyr       — full unit suite, 442 assertions (cyrius test)
+│   └── itihas.bcyr       — 32-benchmark suite (cyrius bench)
+├── tests-mcp/
+│   └── itihas-mcp.tcyr   — MCP suite, 65 assertions (--features mcp)
 ├── dist/
 │   ├── itihas.cyr        — single-file consumer bundle (cyrius distlib)
 │   └── itihas.deps       — stdlib leaves the bundle needs in scope (cyrius deps)
@@ -104,5 +107,6 @@ itihas
 - **No third-party deps**: Cyrius stdlib only, regenerated into `lib/` from the
   `[package].cyrius` pin rather than vendored in-repo
 - **Graph-ready**: Causality chains and interaction graphs for relational queries
-- **Compact**: 674KB static ELF binary with all 338 entities (`CYRIUS_DCE=1` NOPs ~397KB of
-  unreachable stdlib rather than stripping it, so it improves locality, not file size)
+- **Compact**: a 536 KB static ELF with all 338 entities under `CYRIUS_DCE=1` (1.3 MB
+  without). About 340 KB of it is Unicode tables that bayan has pulled in since cyrius
+  6.7.13; DCE removes unreachable functions but not data

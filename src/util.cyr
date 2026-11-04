@@ -1,5 +1,7 @@
 # util.cyr — itihas utility functions
-# Case conversion, comparison, and sorting helpers
+# Checked allocation (xalloc), ASCII case folding and comparison, a stable sort,
+# query tracing, JSON string escaping/unescaping, strict integer parsing, and
+# delimited-list membership. Included first: every other module uses it.
 
 # ----------------------------------------------------------------
 # Checked allocation
@@ -147,9 +149,10 @@ fn vec_sort(v, cmp) {
 # Trace a query with one integer argument (a year, a depth, an enum tag).
 fn itrace_i(msg, key, val) {
     if (sakshi_get_level() < SK_DEBUG) { return 0; }
-    var b = xalloc(24);
-    var n = fmt_int_buf(val, b);
-    sakshi_log_kv(SK_DEBUG, msg, strlen(msg), key, strlen(key), b, n);
+    # A stack buffer: through 2.6.1 every DEBUG trace leaked a 24-byte xalloc.
+    var b[24];
+    var n = fmt_int_buf(val, &b);
+    sakshi_log_kv(SK_DEBUG, msg, strlen(msg), key, strlen(key), &b, n);
     return 0;
 }
 
@@ -205,12 +208,20 @@ fn json_escape_into(sb, val: Str) {
     # calls. `run` is the start of the current clean run.
     var run = 0;
     var i = 0;
+    # One stack Str header, re-pointed at each clean run. Through 2.6.1 every
+    # run allocated a fresh 16-byte header with str_new, at least one per
+    # serialized string field, and the bump allocator never got them back.
+    var run_h[16];
     while (i < vlen) {
         var c = load8(vd + i);
         # load8 is unsigned, so the three tests below cover everything JSON
         # requires escaping: the C0 controls, the quote, and the backslash.
         if (c < 32 || c == 34 || c == 92) {
-            if (i > run) { str_builder_add(sb, str_new(vd + run, i - run)); }
+            if (i > run) {
+                store64(&run_h, vd + run);
+                store64(&run_h + 8, i - run);
+                str_builder_add(sb, &run_h);
+            }
             if (c == 34) { str_builder_add_cstr(sb, "\\\""); }
             else { if (c == 92) { str_builder_add_cstr(sb, "\\\\"); }
                 else { if (c == 8)  { str_builder_add_cstr(sb, "\\b"); }
@@ -232,14 +243,21 @@ fn json_escape_into(sb, val: Str) {
         }
         i = i + 1;
     }
-    if (vlen > run) { str_builder_add(sb, str_new(vd + run, vlen - run)); }
+    if (vlen > run) {
+        store64(&run_h, vd + run);
+        store64(&run_h + 8, vlen - run);
+        str_builder_add(sb, &run_h);
+    }
     return 0;
 }
 
 # Decode a JSON string body (the bytes BETWEEN the quotes) into a new Str.
-# Inverse of json_escape_into for the escapes it produces. A \u escape is decoded to
-# UTF-8 for the Basic Multilingual Plane; a surrogate half is emitted as U+FFFD
-# rather than as raw bytes, so output is always valid UTF-8.
+# Inverse of json_escape_into for the escapes it produces. A \u escape is decoded
+# to UTF-8. A high surrogate followed by a low one (\uD808\uDC2D) is combined
+# into one supplementary-plane code point and emitted as 4 bytes: through 2.6.1
+# each half became U+FFFD, which lost cuneiform, Linear B, hieroglyphs and
+# other non-BMP scripts from any server that escapes non-ASCII. A LONE surrogate
+# half is still emitted as U+FFFD, so the output is always valid UTF-8.
 #
 # Needed because a tool call's `arguments` arrives JSON-encoded-as-a-string on
 # the OpenAI /v1/chat/completions wire shape, so the raw span is double-escaped
@@ -269,8 +287,18 @@ fn json_unescape(s: Str): Str {
                                                     var cp = _hex4(sd + i + 2);
                                                     if (cp < 0) { str_builder_add_byte(sb, c); i = i + 1; }
                                                     else {
-                                                        _utf8_add(sb, cp);
                                                         i = i + 6;
+                                                        # High surrogate: combine with an immediately following low one.
+                                                        if (cp >= 0xD800 && cp <= 0xDBFF && i + 5 < slen) {
+                                                            if (load8(sd + i) == 92 && load8(sd + i + 1) == 117) {
+                                                                var lo = _hex4(sd + i + 2);
+                                                                if (lo >= 0xDC00 && lo <= 0xDFFF) {
+                                                                    cp = 0x10000 + (cp - 0xD800) * 1024 + (lo - 0xDC00);
+                                                                    i = i + 6;
+                                                                }
+                                                            }
+                                                        }
+                                                        _utf8_add(sb, cp);
                                                     }
                                                 }
                                                 else {
@@ -310,11 +338,114 @@ fn _utf8_add(sb, cp) {
         str_builder_add_byte(sb, 0x80 + (cp - (cp / 64) * 64));
         return 0;
     }
-    str_builder_add_byte(sb, 0xE0 + cp / 4096);
-    var mid = cp / 64;
-    str_builder_add_byte(sb, 0x80 + (mid - (cp / 4096) * 64));
-    str_builder_add_byte(sb, 0x80 + (cp - mid * 64));
+    if (cp < 0x10000) {
+        str_builder_add_byte(sb, 0xE0 + cp / 4096);
+        var mid = cp / 64;
+        str_builder_add_byte(sb, 0x80 + (mid - (cp / 4096) * 64));
+        str_builder_add_byte(sb, 0x80 + (cp - mid * 64));
+        return 0;
+    }
+    # Supplementary planes (U+10000..U+10FFFF), from a combined surrogate pair.
+    str_builder_add_byte(sb, 0xF0 + cp / 262144);
+    str_builder_add_byte(sb, 0x80 + (cp / 4096 - (cp / 262144) * 64));
+    str_builder_add_byte(sb, 0x80 + (cp / 64 - (cp / 4096) * 64));
+    str_builder_add_byte(sb, 0x80 + (cp - (cp / 64) * 64));
     return 0;
+}
+
+# ----------------------------------------------------------------
+# Strict integer parsing
+# ----------------------------------------------------------------
+# Parse `s` as a JSON number whose value is a whole number, store it at `out`
+# and return 1. The whole of `s` must match  -?digits(.digits)?([eE][+-]?digits)?
+# and the value must be integral with magnitude below 10^15, far outside any
+# year here. Anything else returns 0 and leaves `out` untouched: "", "null",
+# "500 BC", "1.5", "5e", "+5", "1e400".
+#
+# Accepts what JSON Schema 2020-12 calls an integer, so "5.0", "1e2" and "-5e2"
+# are 5, 100 and -500. Through 2.6.1 both the MCP tools and the hoosh path used
+# the stdlib's str_to_int, which skips every non-digit byte instead of stopping:
+# "1e3" read as 13, "476.0" as 4760 and "500 BC" as 500.
+#must_use
+fn itihas_parse_int(s: Str, out) {
+    var n = str_len(s);
+    var d = str_data(s);
+    var limit = 1000000000000000;
+    var i = 0;
+    var neg = 0;
+    if (i < n) { if (load8(d) == 45) { neg = 1; i = 1; } }
+    # Integer part: at least one digit. Digits are accumulated into `m` with
+    # `scale` counting those after the point, so the value is m * 10^(exp-scale).
+    var m = 0;
+    var digits = 0;
+    var scale = 0;
+    while (i < n) {
+        var c = load8(d + i);
+        if (c < 48 || c > 57) { break; }
+        if (m >= limit) { return 0; }
+        m = m * 10 + (c - 48);
+        digits = digits + 1;
+        i = i + 1;
+    }
+    if (digits == 0) { return 0; }
+    if (i < n) {
+        if (load8(d + i) == 46) {
+            i = i + 1;
+            var fd = 0;
+            while (i < n) {
+                var c2 = load8(d + i);
+                if (c2 < 48 || c2 > 57) { break; }
+                if (m >= limit) { return 0; }
+                m = m * 10 + (c2 - 48);
+                scale = scale + 1;
+                fd = fd + 1;
+                i = i + 1;
+            }
+            if (fd == 0) { return 0; }
+        }
+    }
+    var ex = 0;
+    if (i < n) {
+        var e = load8(d + i);
+        if (e == 101 || e == 69) {
+            i = i + 1;
+            var eneg = 0;
+            if (i < n) {
+                if (load8(d + i) == 45) { eneg = 1; i = i + 1; }
+                elif (load8(d + i) == 43) { i = i + 1; }
+            }
+            var ed = 0;
+            while (i < n) {
+                var c3 = load8(d + i);
+                if (c3 < 48 || c3 > 57) { break; }
+                if (ex > 1000) { return 0; }
+                ex = ex * 10 + (c3 - 48);
+                ed = ed + 1;
+                i = i + 1;
+            }
+            if (ed == 0) { return 0; }
+            if (eneg == 1) { ex = 0 - ex; }
+        }
+    }
+    if (i != n) { return 0; }
+    var net = ex - scale;
+    while (net > 0) {
+        if (m >= limit / 10) {
+            if (m != 0) { return 0; }
+        }
+        m = m * 10;
+        net = net - 1;
+    }
+    while (net < 0) {
+        var q = m / 10;
+        if (q * 10 != m) { return 0; }
+        m = q;
+        net = net + 1;
+    }
+    if (m >= limit) { return 0; }
+    if (neg == 1) { m = 0 - m; }
+    store64(out, m);
+    return 1;
 }
 
 # ----------------------------------------------------------------
@@ -337,6 +468,33 @@ fn _ci_eq_bytes(pa, pb, n) {
         i = i + 1;
     }
     return 1;
+}
+
+# Case-insensitive (ASCII) substring test: 1 when `needle` occurs anywhere in
+# `hay`. Unlike str_contains, an EMPTY needle answers 0: every caller is a
+# filter, and an empty filter must match nothing rather than everything. Used
+# by the five `*_by_region` filters, which fold case like every other lookup.
+#must_use
+fn str_contains_ci(hay: Str, needle: Str) {
+    var hl = str_len(hay);
+    var nl = str_len(needle);
+    if (nl == 0) { return 0; }
+    if (nl > hl) { return 0; }
+    var hd = str_data(hay);
+    var nd = str_data(needle);
+    var c0 = load8(nd);
+    if (c0 >= 65) { if (c0 <= 90) { c0 = c0 + 32; } }
+    var last = hl - nl;
+    var i = 0;
+    while (i <= last) {
+        var c = load8(hd + i);
+        if (c >= 65) { if (c <= 90) { c = c + 32; } }
+        if (c == c0) {
+            if (_ci_eq_bytes(hd + i, nd, nl) == 1) { return 1; }
+        }
+        i = i + 1;
+    }
+    return 0;
 }
 
 # True when `needle` equals one whole `sep`-delimited token of `list`
@@ -370,19 +528,22 @@ fn str_list_has(list: Str, needle: Str, sep) {
     return 0;
 }
 
-# True when `needle` matches a whole `sep`-delimited token of `list`, OR is a
-# leading WHOLE-WORD prefix of one (case-insensitive).
+# True when `needle` is a LEADING or TRAILING run of whole words of one
+# `sep`-delimited token of `list` (case-insensitive), or the whole token.
 #
-# Person-name fields want surname search — campaigns_by_commander("Napoleon")
-# must still find "Napoleon Bonaparte". A bare substring test also matched
-# "Darius I" inside "Darius III" (a different king, 152 years apart); requiring
-# the next character to be a space rejects that while keeping the prefix case:
-#   "Napoleon" vs "Napoleon Bonaparte" -> next char is ' '  -> match
-#   "Darius I" vs "Darius III"         -> next char is 'I'  -> no match
+# Person-name fields want search by first name or by surname. Through 2.6.1
+# only the leading run counted, so campaigns_by_commander("Napoleon") worked
+# but "Bonaparte", "Caesar", "Grant" and "Wellington" found nothing. A bare
+# substring test is still wrong: it matched "Darius I" inside "Darius III" (a
+# different king, 152 years apart). Word boundaries keep that out:
+#   "Napoleon"  vs "Napoleon Bonaparte" -> leading, then ' '   -> match
+#   "Bonaparte" vs "Napoleon Bonaparte" -> trailing, after ' ' -> match
+#   "Darius I"  vs "Darius III"         -> next char is 'I'    -> no match
+# A word in the middle of a name ("E." in "Robert E. Lee") does not match.
+# Matching every word position instead cost +62% on
+# campaigns_by_commander_napoleon (a second pass over every byte); checking the
+# two ends is one more comparison per token.
 #
-# Identity fields (civilizations, commodities) use str_list_has instead, which
-# requires whole-token equality — "Roman Empire" must not match the distinct
-# polity "Holy Roman Empire".
 #must_use
 fn str_list_has_name(list: Str, needle: Str, sep) {
     var llen = str_len(list);
@@ -403,8 +564,14 @@ fn str_list_has_name(list: Str, needle: Str, sep) {
             if (_ci_eq_bytes(ld + start, nd, nlen) == 1) { return 1; }
         }
         if (tlen > nlen) {
+            # Leading run: the needle, then a space.
             if (load8(ld + start + nlen) == 32) {
                 if (_ci_eq_bytes(ld + start, nd, nlen) == 1) { return 1; }
+            }
+            # Trailing run: a space, then the needle to the token's end.
+            var ts = e - nlen;
+            if (load8(ld + ts - 1) == 32) {
+                if (_ci_eq_bytes(ld + ts, nd, nlen) == 1) { return 1; }
             }
         }
         start = e + 1;

@@ -13,7 +13,7 @@ References for trade route active periods, commodities, endpoints, and civilizat
 ## Silk Roads
 
 - Liu, Xinru. *The Silk Road in World History*. Oxford: Oxford University Press, 2010.
-  Silk Road start date (Zhang Qian mission ~119 BCE), commodity flows, civilizations involved.
+  Silk Road start date (Zhang Qian's missions, 138-126 BCE; the data uses c. 130 BCE), commodity flows, civilizations involved.
 
 ## Indian Ocean and Maritime
 
@@ -34,3 +34,13 @@ References for trade route active periods, commodities, endpoints, and civilizat
 
 - Mintz, Sidney W. *Sweetness and Power: The Place of Sugar in Modern History*. New York: Penguin, 1985.
   Triangular Trade commodity flows and periodization.
+
+## 2.6.2 corrections
+
+- **Silk Road** civilizations: "Persian Empire" -> "Parthian Empire". The
+  library's Persian Empire record is the Achaemenid state (550-330 BCE), which
+  ended two centuries before the route's start; the Parthians held the Iranian
+  stretch. https://en.wikipedia.org/wiki/Parthian_Empire
+- **Via Maris** end -300 -> 1517. The coastal road stayed in use through the
+  Roman, Byzantine and Islamic periods until the end of the Mamluk Sultanate.
+  https://en.wikipedia.org/wiki/Via_Maris

@@ -6,6 +6,7 @@ enum CausOff { CAUS_CAUSE=0; CAUS_EFFECT=8; CAUS_STR=16; CAUS_DESC=24; CAUS_SIZE
 var caus_vec = 0;
 var caus_init_done = 0;
 
+# Allocate a causal-link record. Normally only build_causalities calls this.
 #must_use
 fn caus_new(cause: Str, effect: Str, str, desc: Str) {
     var p = xalloc(CAUS_SIZE);
@@ -13,38 +14,50 @@ fn caus_new(cause: Str, effect: Str, str, desc: Str) {
     store64(p+CAUS_STR,str); store64(p+CAUS_DESC,desc);
     return p;
 }
+# The cause, by event name (Str); event_by_name resolves it.
 #must_use
 fn caus_cause(p) { return load64(p+CAUS_CAUSE); }
+# The effect, by event name (Str); always later than the cause.
 #must_use
 fn caus_effect(p) { return load64(p+CAUS_EFFECT); }
+# Strength of the link, one of the STRENGTH_* values.
+#must_use
+fn caus_strength(p) { return load64(p+CAUS_STR); }
+# Why the cause led to the effect (Str).
+#must_use
+fn caus_desc(p) { return load64(p+CAUS_DESC); }
 
 # Build the causal-link table (13 rows). Called once by the lazy initializer.
+#must_use
 fn build_causalities() {
     var v = vec_new();
     vec_push(v, caus_new("Invention of Writing","Code of Hammurabi",STRENGTH_STRONG,"Written law codes required writing systems"));   #skip-lint
-    vec_push(v, caus_new("Bronze Age Collapse","Founding of Rome",STRENGTH_MODERATE,"Power vacuum allowed new Mediterranean polities"));   #skip-lint
-    vec_push(v, caus_new("Battle of Marathon","Conquests of Alexander the Great",STRENGTH_MODERATE,"Greek survival enabled rise of Macedon"));   #skip-lint
-    vec_push(v, caus_new("Conquests of Alexander the Great","Maurya Empire under Ashoka",STRENGTH_MODERATE,"Alexander destabilized the Nanda dynasty"));   #skip-lint
-    vec_push(v, caus_new("Fall of the Western Roman Empire","Rise of Islam",STRENGTH_WEAK,"Byzantine-Sassanid exhaustion enabled Islam's expansion"));   #skip-lint
-    vec_push(v, caus_new("Rise of Islam","Mongol Conquests",STRENGTH_WEAK,"Islamic caliphates drew Mongol expansion westward"));   #skip-lint
+    vec_push(v, caus_new("Bronze Age Collapse","Founding of Rome",STRENGTH_WEAK,"Power vacuum allowed new Mediterranean polities"));   #skip-lint
+    vec_push(v, caus_new("Battle of Marathon","Conquests of Alexander the Great",STRENGTH_WEAK,"Greek victory kept Greece free of Persia, the world in which Macedon later rose"));   #skip-lint
+    vec_push(v, caus_new("Conquests of Alexander the Great","Maurya Empire under Ashoka",STRENGTH_MODERATE,"Alexander's withdrawal left a vacuum in the north-west that Chandragupta Maurya filled"));   #skip-lint
+    vec_push(v, caus_new("Fall of the Western Roman Empire","Rise of Islam",STRENGTH_WEAK,"Left Byzantium to fight Sassanid Persia alone; both were exhausted when the Arab conquests began"));   #skip-lint
+    vec_push(v, caus_new("Rise of Islam","Mongol Conquests",STRENGTH_WEAK,"Khwarazm's massacre of Mongol envoys at Otrar (1218) drew the Mongols into the Islamic world"));   #skip-lint
     vec_push(v, caus_new("Mongol Conquests","Fall of Constantinople",STRENGTH_MODERATE,"Mongol disruption empowered Ottoman Turks"));   #skip-lint
     vec_push(v, caus_new("Fall of Constantinople","French Revolution",STRENGTH_WEAK,"Accelerated Renaissance and Enlightenment ideals"));   #skip-lint
     vec_push(v, caus_new("Gutenberg Printing Press","French Revolution",STRENGTH_STRONG,"Mass printing spread Enlightenment ideas"));   #skip-lint
-    vec_push(v, caus_new("French Revolution","Invention of the World Wide Web",STRENGTH_WEAK,"Open knowledge ideals influenced info-sharing tech"));   #skip-lint
+    vec_push(v, caus_new("French Revolution","Haitian Revolution",STRENGTH_STRONG,"Revolutionary ideals and France's turmoil sparked the 1791 uprising in Saint-Domingue"));   #skip-lint
     vec_push(v, caus_new("Invention of Writing","Gutenberg Printing Press",STRENGTH_STRONG,"Printing mechanized written text reproduction"));   #skip-lint
-    vec_push(v, caus_new("Code of Hammurabi","Founding of Rome",STRENGTH_WEAK,"Legal code traditions influenced Roman law"));   #skip-lint
-    vec_push(v, caus_new("Gutenberg Printing Press","Invention of the World Wide Web",STRENGTH_STRONG,"Printing democratized information; web is successor"));   #skip-lint
+    vec_push(v, caus_new("Migration of the Sea Peoples","Bronze Age Collapse",STRENGTH_MODERATE,"Sea Peoples' raids are among the leading proposed causes of the collapse"));   #skip-lint
+    vec_push(v, caus_new("Gutenberg Printing Press","Invention of the World Wide Web",STRENGTH_WEAK,"Both widened access to text; a lineage rather than a direct cause"));   #skip-lint
     return v;
 }
 
+# All 13 causal links in table order; built on first call. Shared: do not modify the vec.
 #must_use
 fn all_causalities() {
     if (caus_init_done == 0) { caus_vec = build_causalities(); caus_init_done = 1; }
     return caus_vec;
 }
+# Number of causal links (13).
 #must_use
 fn causality_count() { return vec_len(all_causalities()); }
 
+# Links whose effect is the event `event_name` (case-insensitive): what led to it.
 #must_use
 fn causes_of(event_name: Str) {
     itrace_s("looking up causes of event", "event", event_name);
@@ -57,6 +70,7 @@ fn causes_of(event_name: Str) {
     return result;
 }
 
+# Links whose cause is the event `event_name` (case-insensitive): what it led to.
 #must_use
 fn effects_of(event_name: Str) {
     itrace_s("looking up effects of event", "event", event_name);
@@ -72,6 +86,8 @@ fn effects_of(event_name: Str) {
 # BFS causal chain: returns vec of [name_str, depth] pairs stored as 16-byte entries
 enum ChainOff { CH_NAME=0; CH_DEPTH=8; CH_SIZE=16; }
 
+# Events reachable from `event_name` through effects, breadth-first, up to `max_depth` links; a vec
+# of chain entries (name, depth). Empty when max_depth < 1.
 #must_use
 fn causal_chain(event_name: Str, max_depth) {
     itrace_i("tracing causal chain", "max_depth", max_depth);
@@ -135,7 +151,9 @@ fn causal_chain(event_name: Str, max_depth) {
     return results;
 }
 
+# A chain entry's event name (Str).
 #must_use
 fn chain_entry_name(p) { return load64(p + CH_NAME); }
+# A chain entry's distance from the starting event, from 1.
 #must_use
 fn chain_entry_depth(p) { return load64(p + CH_DEPTH); }

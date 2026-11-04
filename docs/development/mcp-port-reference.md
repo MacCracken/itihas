@@ -73,7 +73,8 @@ signed, negative meaning BCE, matching the rest of itihas.
 
 Descriptions as originally written:
 
-- `itihas_era` — "Look up historical eras by name, year, scope, or region"
+- `itihas_era` — "Look up historical eras by name, year, scope, or region" (since 2.6.2
+  "…by name, year, or region": there never was a `scope` parameter)
 - `itihas_civilization` — "Look up civilizations by name, region, or active year"
 - `itihas_event` — "Look up historical events by name, year range, or category"
 - `itihas_figure` — "Look up historical figures by name or domain"

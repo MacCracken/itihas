@@ -5,6 +5,7 @@ enum CivOff { CIV_NAME=0; CIV_REGION=8; CIV_PEAK=16; CIV_FOUND=24; CIV_END=32; C
 var civ_vec = 0;
 var civ_init_done = 0;
 
+# Allocate a civilization record. Normally only build_civs calls this.
 #must_use
 fn civ_new(name: Str, region: Str, peak: Str, fy, ey, traits: Str, script: Str, lang: Str) {
     var p = xalloc(CIV_SIZE);
@@ -13,16 +14,33 @@ fn civ_new(name: Str, region: Str, peak: Str, fy, ey, traits: Str, script: Str, 
     store64(p+CIV_TRAITS, traits); store64(p+CIV_SCRIPT, script); store64(p+CIV_LANG, lang);
     return p;
 }
+# The civilization's name (Str).
 #must_use
 fn civ_name(p) { return load64(p+CIV_NAME); }
+# Its region, comma-joined and coarse (Str); matched by substring in civs_by_region.
 #must_use
 fn civ_region(p) { return load64(p+CIV_REGION); }
+# The era of its peak, by era name (Str).
+#must_use
+fn civ_peak(p) { return load64(p+CIV_PEAK); }
+# Founding year: negative is BCE, no year zero.
 #must_use
 fn civ_found(p) { return load64(p+CIV_FOUND); }
+# End year, inclusive; ERA_ONGOING for a civilization that has not ended.
 #must_use
 fn civ_end(p) { return load64(p+CIV_END); }
+# Characteristic traits as a `;`-list (Str).
+#must_use
+fn civ_traits(p) { return load64(p+CIV_TRAITS); }
+# Writing system (Str).
+#must_use
+fn civ_script(p) { return load64(p+CIV_SCRIPT); }
+# ISO 639 language code, or empty when there is none (Str).
+#must_use
+fn civ_lang(p) { return load64(p+CIV_LANG); }
 
 # Build the civilization table (53 rows). Called once by the lazy initializer.
+#must_use
 fn build_civs() {
     var v = vec_new();
     vec_push(v, civ_new("Mesopotamia","Near East","Bronze Age",(0-3500),(0-539),"cuneiform writing;irrigation;law codes;astronomy","Cuneiform","akk;sux"));   #skip-lint
@@ -31,7 +49,7 @@ fn build_civs() {
     vec_push(v, civ_new("Ancient China","East Asia","Classical Antiquity",(0-2070),1912,"paper;gunpowder;compass;printing","Chinese characters","zh"));   #skip-lint
     vec_push(v, civ_new("Ancient Greece","Mediterranean","Classical Antiquity",(0-800),(0-146),"democracy;philosophy;theater;mathematics","Greek alphabet","grc"));   #skip-lint
     vec_push(v, civ_new("Roman Empire","Mediterranean, Europe","Classical Antiquity",(0-753),476,"engineering;law;roads;aqueducts","Latin alphabet","la"));   #skip-lint
-    vec_push(v, civ_new("Maya","Mesoamerica","Mesoamerican Classic",(0-2000),1500,"hieroglyphic writing;calendar systems;astronomy;pyramids","Maya script","yua"));   #skip-lint
+    vec_push(v, civ_new("Maya","Mesoamerica","Mesoamerican Classic",(0-2000),1697,"hieroglyphic writing;calendar systems;astronomy;pyramids","Maya script","yua"));   #skip-lint
     vec_push(v, civ_new("Persian Empire","Near East, Central Asia","Classical Antiquity",(0-550),(0-330),"postal system;road network;religious tolerance;administration","Old Persian cuneiform","peo"));   #skip-lint
     vec_push(v, civ_new("Mongol Empire","Central Asia, East Asia, Europe","Middle Ages",1206,1368,"cavalry warfare;Silk Road trade;religious tolerance;postal relay","Mongolian script","mn"));   #skip-lint
     vec_push(v, civ_new("Ottoman Empire","Near East, Southeast Europe, North Africa","Renaissance",1299,1922,"millet system;architecture;military innovation;trade networks","Ottoman Turkish script","ota"));   #skip-lint
@@ -55,7 +73,7 @@ fn build_civs() {
     vec_push(v, civ_new("Aztec Empire","Mesoamerica","Mesoamerican Postclassic",1428,1521,"chinampas agriculture;tribute system;monumental architecture;calendar systems","Aztec pictographs","nah"));   #skip-lint
     vec_push(v, civ_new("Inca Empire","South America","Renaissance",1438,1533,"road network;terrace farming;quipu record-keeping;masonry","Quipu","qu"));   #skip-lint
     vec_push(v, civ_new("Mississippian Culture","North America","Middle Ages",800,1600,"mound building;maize agriculture;chiefdom organization;shell trade","oral tradition",""));   #skip-lint
-    vec_push(v, civ_new("Muisca Confederation","South America","Middle Ages",600,1541,"goldworking;emerald mining;salt trade","oral tradition",""));   #skip-lint
+    vec_push(v, civ_new("Muisca Confederation","South America","Middle Ages",600,1540,"goldworking;emerald mining;salt trade","oral tradition",""));   #skip-lint
     vec_push(v, civ_new("Tiwanaku","South America","Middle Ages",550,1000,"raised-field agriculture;monolithic architecture;high-altitude adaptation","oral tradition","ay"));   #skip-lint
     vec_push(v, civ_new("Byzantine Empire","Mediterranean, Europe","Middle Ages",330,1453,"Roman law codification;Orthodox Christianity;mosaic art;Greek fire","Greek alphabet","grc"));   #skip-lint
     vec_push(v, civ_new("Viking/Norse","Northern Europe","Middle Ages",793,1066,"longship navigation;Norse mythology;exploration;saga literature","Runic/Futhark","non"));   #skip-lint
@@ -81,6 +99,7 @@ fn build_civs() {
     return v;
 }
 
+# All 53 civilizations in table order; built on first call. Shared: do not modify the vec.
 #must_use
 fn all_civilizations() {
     if (civ_init_done == 0) { civ_vec = build_civs(); civ_init_done = 1; }
@@ -123,28 +142,31 @@ fn _civ_upper_bound(v, y) {
     }
     return lo;
 }
+# Number of civilizations (53).
 #must_use
 fn civ_count() { return vec_len(all_civilizations()); }
+# The civilization at table index `idx`.
 #must_use
 fn civ_get(idx) { return vec_get(all_civilizations(), idx); }
 
+# Civilizations whose region contains `region` (case-insensitive substring). An empty region matches none.
 #must_use
 fn civs_by_region(region: Str) {
     itrace_s("looking up civilizations by region", "region", region);
     var result = vec_new();
-    # str_contains reports a match for a zero-length needle, so an empty region
-    # used to return every civilization rather than none.
+    # An empty region matches nothing (2.4.2); str_contains_ci also answers 0.
     if (str_len(region) == 0) { return result; }
     var v = all_civilizations(); var n = vec_len(v);
     for (var i = 0; i < n; i = i + 1) {
         var p = vec_get(v, i);
-        if (str_contains(civ_region(p), region) == 1) { vec_push(result, p); }
+        if (str_contains_ci(civ_region(p), region) == 1) { vec_push(result, p); }
     }
     return result;
 }
 
 fn _cmp_civ_found(a, b) { return load64(a+CIV_FOUND) - load64(b+CIV_FOUND); }
 
+# Civilizations in existence in `year`, founding and end inclusive, in founding-year order.
 #must_use
 fn civs_active_at(year) {
     itrace_i("looking up civilizations active at year", "year", year);
@@ -163,6 +185,7 @@ fn civs_active_at(year) {
     return result;
 }
 
+# The civilization whose name matches `name` (case-insensitive), or 0.
 #must_use
 fn civ_by_name(name: Str) {
     itrace_s("looking up civilization by name", "name", name);

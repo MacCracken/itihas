@@ -35,6 +35,7 @@ struct Era {
 var era_vec = 0;
 var era_init_done = 0;
 
+# Allocate an era record. Normally only build_eras calls this.
 #must_use
 fn era_new(name: Str, sy, ey, region: Str, desc: Str, cat, scope) {
     var p = xalloc(ERA_SIZE);
@@ -48,16 +49,20 @@ fn era_new(name: Str, sy, ey, region: Str, desc: Str, cat, scope) {
     return p;
 }
 
+# The era's name (Str).
 #must_use
 fn era_name(p) { return Era_name(p); }
+# First year: negative is BCE, no year zero.
 #must_use
 fn era_start(p) { return Era_start_year(p); }
+# Last year, inclusive; ERA_ONGOING for an era that has not ended.
 #must_use
 fn era_end(p) { return Era_end_year(p); }
 
 # True when this era has no end year yet (end == ERA_ONGOING).
 #must_use
 fn era_is_ongoing(p) { return Era_end_year(p) == ERA_ONGOING; }
+# Regions it applies to, comma-joined (Str); matched by substring in eras_by_region.
 #must_use
 fn era_region(p) { return Era_region(p); }
 
@@ -65,12 +70,15 @@ fn era_region(p) { return Era_region(p); }
 # reached through `load64(p + ERA_DESC)` directly.
 #must_use
 fn era_desc(p) { return Era_description(p); }
+# Category, one of the EraCategory values (ANCIENT..CONTEMPORARY).
 #must_use
 fn era_cat(p) { return Era_category(p); }
+# SCOPE_GLOBAL or SCOPE_REGIONAL.
 #must_use
 fn era_scope(p) { return Era_scope(p); }
 
 # Build the era table (25 rows). Called once by the lazy initializer.
+#must_use
 fn build_eras() {
     var v = vec_new();
     # Global
@@ -78,7 +86,7 @@ fn build_eras() {
     vec_push(v, era_new("Iron Age", (0-1200), (0-550), "Near East, Mediterranean, South Asia", "Widespread iron smelting, alphabetic writing, rise of empires", ANCIENT, SCOPE_GLOBAL));   #skip-lint
     vec_push(v, era_new("Classical Antiquity", (0-800), 476, "Mediterranean, Europe", "Greek and Roman civilization, philosophy, democracy, republic", CLASSICAL, SCOPE_GLOBAL));   #skip-lint
     vec_push(v, era_new("Middle Ages", 476, 1453, "Europe, Near East", "Feudalism, monasticism, Islamic Golden Age, Crusades", MEDIEVAL, SCOPE_GLOBAL));   #skip-lint
-    vec_push(v, era_new("Renaissance", 1400, 1610, "Europe", "Revival of classical learning, art, science, and exploration", EARLY_MODERN, SCOPE_GLOBAL));   #skip-lint
+    vec_push(v, era_new("Renaissance", 1400, 1647, "Europe", "Revival of classical learning, art, science, and exploration", EARLY_MODERN, SCOPE_GLOBAL));   #skip-lint
     vec_push(v, era_new("Age of Enlightenment", 1648, 1789, "Europe", "Rationalism, empiricism, natural rights, social contract theory", EARLY_MODERN, SCOPE_GLOBAL));   #skip-lint
     vec_push(v, era_new("Industrial Age", 1760, 1970, "Global", "Mechanization, mass production, urbanization, world wars", MODERN, SCOPE_GLOBAL));   #skip-lint
     vec_push(v, era_new("Information Age", 1970, ERA_ONGOING, "Global", "Digital revolution, internet, AI, globalization", CONTEMPORARY, SCOPE_GLOBAL));   #skip-lint
@@ -86,7 +94,7 @@ fn build_eras() {
     vec_push(v, era_new("Xia Dynasty", (0-2070), (0-1600), "East Asia", "Semi-legendary first dynasty of China, Yellow River valley", ANCIENT, SCOPE_REGIONAL));   #skip-lint
     vec_push(v, era_new("Shang Dynasty", (0-1600), (0-1046), "East Asia", "Oracle bones, bronze casting, earliest Chinese writing", ANCIENT, SCOPE_REGIONAL));   #skip-lint
     vec_push(v, era_new("Zhou Dynasty", (0-1046), (0-256), "East Asia", "Mandate of Heaven, Confucius, Laozi, Hundred Schools of Thought", ANCIENT, SCOPE_REGIONAL));   #skip-lint
-    vec_push(v, era_new("Qin Dynasty", (0-221), (0-206), "East Asia", "First unification of China, Great Wall begun, Legalism, terracotta army", CLASSICAL, SCOPE_REGIONAL));   #skip-lint
+    vec_push(v, era_new("Qin Dynasty", (0-221), (0-206), "East Asia", "First unification of China, earlier walls linked into the Great Wall, Legalism, terracotta army", CLASSICAL, SCOPE_REGIONAL));   #skip-lint
     vec_push(v, era_new("Han Dynasty", (0-206), 220, "East Asia", "Silk Road, Confucian state, paper invention, civil service exams", CLASSICAL, SCOPE_REGIONAL));   #skip-lint
     vec_push(v, era_new("Tang Dynasty", 618, 907, "East Asia", "Golden age of Chinese poetry, cosmopolitan culture, woodblock printing", MEDIEVAL, SCOPE_REGIONAL));   #skip-lint
     vec_push(v, era_new("Song Dynasty", 960, 1279, "East Asia", "Movable type, gunpowder weapons, compass navigation, Neo-Confucianism", MEDIEVAL, SCOPE_REGIONAL));   #skip-lint
@@ -105,6 +113,7 @@ fn build_eras() {
     return v;
 }
 
+# All 25 eras in table order; built on first call. Shared: do not modify the vec.
 #must_use
 fn all_eras() {
     if (era_init_done == 0) { era_vec = build_eras(); era_init_done = 1; }
@@ -147,13 +156,16 @@ fn _era_upper_bound(v, y) {
     }
     return lo;
 }
+# Number of eras (25).
 #must_use
 fn era_count() { return vec_len(all_eras()); }
+# The era at table index `idx`.
 #must_use
 fn era_get(idx) { return vec_get(all_eras(), idx); }
 
 fn _cmp_era_start(a, b) { return load64(a+ERA_START) - load64(b+ERA_START); }
 
+# Eras that include `year`, start and end inclusive, in start-year order.
 #must_use
 fn eras_containing(year) {
     itrace_i("looking up eras containing year", "year", year);
@@ -169,6 +181,7 @@ fn eras_containing(year) {
     return result;
 }
 
+# Eras with scope `scope` (SCOPE_GLOBAL or SCOPE_REGIONAL).
 #must_use
 fn eras_by_scope(scope) {
     itrace_i("looking up eras by scope", "scope", scope);
@@ -182,6 +195,7 @@ fn eras_by_scope(scope) {
     return result;
 }
 
+# Eras whose region contains `region` (case-insensitive substring). An empty region matches none.
 #must_use
 fn eras_by_region(region: Str) {
     itrace_s("looking up eras by region", "region", region);
@@ -192,11 +206,12 @@ fn eras_by_region(region: Str) {
     var n = vec_len(v);
     for (var i = 0; i < n; i = i + 1) {
         var p = vec_get(v, i);
-        if (str_contains(era_region(p), region) == 1) { vec_push(result, p); }
+        if (str_contains_ci(era_region(p), region) == 1) { vec_push(result, p); }
     }
     return result;
 }
 
+# The era whose name matches `name` (case-insensitive), or 0.
 #must_use
 fn era_by_name(name: Str) {
     itrace_s("looking up era by name", "name", name);

@@ -8,7 +8,7 @@
 # 338 entities across 10 data modules.
 #
 # Modules:
-#   util         - shared helpers (string/print/number utilities)
+#   util         - xalloc, case folding, sort, tracing, JSON escaping, strict integers
 #   error        - ItihasError codes
 #   era          - 25 historical eras (scope/region queries, containment)
 #   calendar     - 8 calendar systems

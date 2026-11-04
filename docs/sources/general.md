@@ -16,7 +16,7 @@ Standard reference works consulted across all itihas data modules.
 ## Chronology
 
 - Bickerman, Elias J. *Chronology of the Ancient World*. 2nd ed. London: Thames and Hudson, 1980.
-  Standard reference for ancient date conventions, astronomical year numbering (negative = BCE), and calendar epoch correlations.
+  Standard reference for ancient date conventions, including historical versus astronomical year numbering, and calendar epoch correlations.
 
 - Grun, Bernard. *The Timetables of History*. 4th ed. New York: Simon and Schuster, 2005.
   Cross-referenced year-by-year chronology for event dating verification.

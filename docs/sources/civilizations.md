@@ -27,3 +27,12 @@ References for civilization founding/end dates, geographic regions, traits, scri
 - Daniels, Peter T., and William Bright, eds. *The World's Writing Systems*. Oxford: Oxford University Press, 1996.
   Script identifications and classifications.
 - ISO 639-3, SIL International. Language code assignments.
+
+## 2.6.2 corrections
+
+- **Maya** end 1500 -> 1697, the fall of Nojpeten, the last independent Maya
+  kingdom; 1500 predates any Spanish contact.
+  https://en.wikipedia.org/wiki/Nojpet%C3%A9n
+- **Muisca Confederation** end 1541 -> 1540, when the conquest ended with the
+  execution of the last zaque.
+  https://en.wikipedia.org/wiki/Spanish_conquest_of_the_Muisca

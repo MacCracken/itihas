@@ -23,3 +23,20 @@ References for archaeological site occupation dates, discovery dates, locations,
   Catalhoyuk occupation dates and settlement structure.
 - Woolley, C. Leonard. *Ur of the Chaldees*. Rev. ed. London: Herbert Press, 1982.
   Ur Royal Tombs, ziggurat dating.
+
+## 2.6.2 corrections
+
+- **Harappa** discovery 1826 -> 1829. Charles Masson deserted the East India
+  Company army only in July 1827; Possehl dates his visit to March-April 1829.
+  https://www.harappa.com/content/charles-masson-1829
+- **Persepolis** discovery 1620 -> 1618, when Garcia de Silva Figueroa first
+  identified the ruins as Persepolis.
+  https://en.wikipedia.org/wiki/Garc%C3%ADa_de_Silva_Figueroa
+- **Altamira** occupation -36000..-13000 -> -34000..-11000. The sources give
+  ~36,000 and ~13,000 years before present; those had been stored as BCE.
+  https://en.wikipedia.org/wiki/Cave_of_Altamira
+- **Ajanta Caves** civilization "Gupta Empire" -> "Vakataka Dynasty": the
+  second-phase caves were made under the Vakataka king Harishena (c. 460-480).
+  https://en.wikipedia.org/wiki/Ajanta_Caves
+- Giza, Longmen, Teotihuacan and Stonehenge were never lost, so they carry
+  `SITE_DISC_NONE` (0) instead of a discovery year.

@@ -14,12 +14,27 @@ fn fig_new(name: Str, by, dy, civ: Str, dom, desc: Str) {
     store64(p+FIG_CIV,civ); store64(p+FIG_DOM,dom); store64(p+FIG_DESC,desc);
     return p;
 }
+# The figure's name (Str).
 #must_use
 fn fig_name(p) { return load64(p+FIG_NAME); }
+# Birth year: negative is BCE, no year zero. Approximate for ancient figures.
+#must_use
+fn fig_birth(p) { return load64(p+FIG_BIRTH); }
+# Death year, same convention as fig_birth.
+#must_use
+fn fig_death(p) { return load64(p+FIG_DEATH); }
+# Civilization, as free text (Str): not necessarily a civilization record.
+#must_use
+fn fig_civ(p) { return load64(p+FIG_CIV); }
+# Domain, one of the DOM_* values.
 #must_use
 fn fig_domain(p) { return load64(p+FIG_DOM); }
+# One-line description (Str).
+#must_use
+fn fig_desc(p) { return load64(p+FIG_DESC); }
 
 # Build the historical-figure table (52 rows). Called once by the lazy initializer.
+#must_use
 fn build_figs() {
     var v = vec_new();
     vec_push(v, fig_new("Hammurabi",(0-1810),(0-1750),"Mesopotamia",DOM_RULER,"King of Babylon, author of one of the earliest written law codes"));   #skip-lint
@@ -77,14 +92,17 @@ fn build_figs() {
     return v;
 }
 
+# All 52 figures in table order; built on first call. Shared: do not modify the vec.
 #must_use
 fn all_figures() {
     if (fig_init_done == 0) { fig_vec = build_figs(); fig_init_done = 1; }
     return fig_vec;
 }
+# Number of figures (52).
 #must_use
 fn figure_count() { return vec_len(all_figures()); }
 
+# Figures in domain `dom` (a DOM_* value).
 #must_use
 fn figures_by_domain(dom) {
     itrace_i("looking up figures by domain", "domain", dom);
@@ -97,6 +115,7 @@ fn figures_by_domain(dom) {
     return result;
 }
 
+# The figure whose name matches `name` (case-insensitive), or 0.
 #must_use
 fn figure_by_name(name: Str) {
     itrace_s("looking up figure by name", "name", name);

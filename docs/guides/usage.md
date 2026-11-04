@@ -11,14 +11,10 @@ All data is initialized lazily on first call and cached in a global pointer. Sub
 ## Quick Start
 
 ```cyrius
-include "lib/string.cyr"
-include "lib/alloc.cyr"
-include "lib/vec.cyr"
-include "lib/str.cyr"
-
-include "src/era.cyr"
-include "src/civilization.cyr"
-include "src/event.cyr"
+# The single-file bundle. `cyrius deps` vendors the stdlib leaves named in
+# dist/itihas.deps, and the bundle's own `# Requires` block includes them.
+# Inside this repo, `include "src/lib.cyr"` is the equivalent.
+include "itihas/dist/itihas.cyr"
 
 alloc_init();
 
@@ -179,7 +175,7 @@ The `civilization` field on a figure, site, trade route or event — and the
 belligerent fields on a campaign — are **free-text labels, not foreign keys into
 `all_civilizations()`**. This is a deliberate decision, not an oversight.
 
-Of the 223 such references in the dataset, **72 (32%) name something that has no
+Of the 256 such references in the dataset, **97 (38%) name something that has no
 `civ_new` record**, and they fall into two groups:
 
 - **Real polities outside the curated set.** The civilization table is 53
@@ -197,23 +193,48 @@ Of the 223 such references in the dataset, **72 (32%) name something that has no
 - A name absent from `all_civilizations()` is still a **valid query**.
   `sites_by_civilization("Nabataean Kingdom")` returns its sites even though
   there is no Nabataean civilization record.
-- Matching is on the string. For the `;`-delimited fields (site, route, event,
-  campaign belligerents) it is whole-token and case-insensitive, so
-  `"Roman Empire"` does not match the distinct polity `"Holy Roman Empire"`.
+- Matching is on the string. The civilization filters (`sites_by_civilization`,
+  `routes_by_civilization`, `campaigns_by_civilization`) match a whole
+  `;`-delimited token, case-insensitive, so `"Roman Empire"` does not match the
+  distinct polity `"Holy Roman Empire"`. Events carry their civilizations too
+  (`evt_civs`), but there is no events-by-civilization filter.
 - **Do not** write a test asserting that every civilization reference resolves
   to a record. It would fail on correct data. If you need the subset that does
   resolve, intersect against `all_civilizations()` explicitly at the call site.
 
 If a reference is genuinely wrong — naming a civilization whose own dates
 exclude the record pointing at it — that is a data bug and worth reporting. Two
-such cases were corrected in 2.4.2.
+such cases were corrected in 2.4.2 and eleven in 2.6.2, and `tests/itihas.tcyr`
+now checks the rule for every reference that resolves to a record.
 
 ## Year Conventions
 
-All years use **astronomical year numbering**:
-- Negative = BCE: use `(0 - 500)` for 500 BCE
+All years use **historical numbering with no year zero**. This is not
+astronomical numbering, where -500 would mean 501 BCE.
+- Negative = BCE: use `(0 - 500)` for 500 BCE, and `-1` is 1 BCE
 - Positive = CE: `476` = 476 CE
 - `2147483647` = ongoing (`ERA_ONGOING`, i32 max, equivalent to "present")
+- Year `0` does not exist. Queries accept it as a plain integer between -1
+  and 1, and no record is dated to it. The one stored 0 is `SITE_DISC_NONE`,
+  the discovery year of a site that was never lost.
+
+## Matching Rules
+
+| Lookup | How it matches |
+|--------|----------------|
+| `*_by_name` | Whole name, case-insensitive |
+| `*_by_region` | Substring, case-insensitive; an empty region matches nothing |
+| `*_by_civilization`, `routes_by_commodity` | Whole `;`-delimited token, case-insensitive |
+| `campaigns_by_commander` | A leading or trailing run of whole words of one commander's name, case-insensitive: `"Napoleon"` and `"Bonaparte"` both match `"Napoleon Bonaparte"`; `"Darius I"` does not match `"Darius III"`, and a middle word (`"E."` in `"Robert E. Lee"`) does not match |
+| `*_between(sy, ey)`, `*_active_at`, `*_containing` | Both ends inclusive; an inverted range is empty |
+
+## Collections Are Shared
+
+`all_eras()`, `all_civilizations()` and the other `all_*()` functions return the
+cached table itself, not a copy. Treat it as read-only: the year-sorted views
+the range queries search are built from it once, so a record pushed onto it
+later is visible to `era_count()` and `era_by_name()` but not to
+`eras_containing()`.
 
 ## Error Handling
 

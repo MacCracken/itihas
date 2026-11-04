@@ -39,3 +39,13 @@ References for military campaign dates, battles, commanders, belligerents, and o
 
 - Connaughton, R. M. *The War of the Rising Sun and Tumbling Bear: A Military History of the Russo-Japanese War*. London: Routledge, 1988.
   Russo-Japanese War: Port Arthur, Tsushima.
+
+## 2.6.2 corrections
+
+- **Battle of the Hydaspes**: not the campaign's easternmost point; the army
+  turned back at the Hyphasis (Beas). https://en.wikipedia.org/wiki/Hyphasis
+- **Siege of Vicksburg**: the last *major* Confederate stronghold on the
+  Mississippi; Port Hudson held out until 9 July 1863.
+  https://en.wikipedia.org/wiki/Siege_of_Port_Hudson
+- **Napoleonic Wars**: Kingdom of Prussia added to side B, consistent with
+  Blucher's part at Waterloo.

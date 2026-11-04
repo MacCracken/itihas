@@ -1,9 +1,10 @@
 # itihas.tcyr — integration test suite for itihas (run via `cyrius test`)
 #
-# 285 assertions covering module counts, lookups, filters, cross-module
-# integration, case-insensitive lookups, chronological sort, JSON
-# serialization, the hoosh data-answer and wire-parsing paths, the 2.4.2
-# hardening regressions, and one assertion per public accessor/constructor.
+# Covers module counts, lookups, filters, cross-module integration,
+# case-insensitive lookups, chronological sort, JSON serialization, the hoosh
+# data-answer and wire-parsing paths, the 2.4.2 and 2.6.2 hardening
+# regressions, the cross-table date rule, and one assertion per public
+# accessor and constructor.
 # Ported from the legacy inline harness that used to live in src/main.cyr.
 
 # Stdlib auto-included via cyrius.cyml
@@ -28,9 +29,138 @@ include "src/hoosh.cyr"
 # pass/fail counts. ok() passes on any non-zero value (often a pointer), so it
 # maps to assert_neq(_, 0) rather than assert() (which requires cond == 1).
 fn check(val, expected, name) { return assert_eq(val, expected, name); }
+# Passes on any non-zero value, usually a pointer.
 fn ok(val, name) { return assert_neq(val, 0, name); }
+# Passes on exactly 0: a miss, or an empty count.
 fn zero(val, name) { return assert_eq(val, 0, name); }
 
+# ---------------------------------------------------------------
+# 2.6.2 helpers
+# ---------------------------------------------------------------
+# The cross-table date rule from docs/guides/usage.md: a record must not
+# contradict the dates of a civilization record it names. Each `;`-token of
+# `list` that resolves to a civilization is checked against [a, b]:
+#   mode 0: the year a lies inside the civilization's years
+#   mode 1: [a, b] overlaps them
+#   mode 2: [a, b] lies inside them
+var _inv_checked = 0;
+var _inv_violations = 0;
+fn _inv_list(list, a, b, mode) {
+    var n = str_len(list);
+    var d = str_data(list);
+    var i = 0;
+    while (i <= n) {
+        var j = i;
+        while (j < n) {
+            if (load8(d + j) == 59) { break; }
+            j = j + 1;
+        }
+        if (j > i) {
+            var c = civ_by_name(str_new(d + i, j - i));
+            if (c != 0) {
+                _inv_checked = _inv_checked + 1;
+                var f = civ_found(c);
+                var e = civ_end(c);
+                var good = 1;
+                if (mode == 0) { if (a < f || a > e) { good = 0; } }
+                if (mode == 1) { if (b < f || a > e) { good = 0; } }
+                if (mode == 2) { if (a < f || b > e) { good = 0; } }
+                if (good == 0) { _inv_violations = _inv_violations + 1; }
+            }
+        }
+        i = j + 1;
+    }
+    return 0;
+}
+fn _inv_sweep() {
+    var v = all_events();
+    for (var i = 0; i < vec_len(v); i = i + 1) {
+        var p = vec_get(v, i);
+        _inv_list(evt_civs(p), evt_year(p), evt_year(p), 0);
+    }
+    var iv = all_interactions();
+    for (var k = 0; k < vec_len(iv); k = k + 1) {
+        var q = vec_get(iv, k);
+        _inv_list(int_civa(q), int_start(q), int_end(q), 2);
+        _inv_list(int_civb(q), int_start(q), int_end(q), 2);
+    }
+    var fv = all_figures();
+    for (var fi = 0; fi < vec_len(fv); fi = fi + 1) {
+        var fp = vec_get(fv, fi);
+        _inv_list(fig_civ(fp), fig_birth(fp), fig_death(fp), 1);
+    }
+    var sv = all_sites();
+    for (var si = 0; si < vec_len(sv); si = si + 1) {
+        var sp = vec_get(sv, si);
+        _inv_list(site_civ(sp), site_start(sp), site_end(sp), 1);
+    }
+    var rv = all_routes();
+    for (var ri = 0; ri < vec_len(rv); ri = ri + 1) {
+        var rp = vec_get(rv, ri);
+        _inv_list(rt_civs(rp), rt_start(rp), rt_end(rp), 1);
+    }
+    var cv = all_campaigns();
+    for (var ci = 0; ci < vec_len(cv); ci = ci + 1) {
+        var cp = vec_get(cv, ci);
+        _inv_list(camp_bella(cp), camp_start(cp), camp_end(cp), 1);
+        _inv_list(camp_bellb(cp), camp_start(cp), camp_end(cp), 1);
+    }
+    return 0;
+}
+
+# Global eras containing `year`.
+fn _global_era_count(year) {
+    var v = eras_containing(year);
+    var n = 0;
+    for (var i = 0; i < vec_len(v); i = i + 1) {
+        if (era_scope(vec_get(v, i)) == SCOPE_GLOBAL) { n = n + 1; }
+    }
+    return n;
+}
+
+# Position of record `p` in table `t`, or -1.
+fn _table_index(t, p) {
+    for (var i = 0; i < vec_len(t); i = i + 1) {
+        if (vec_get(t, i) == p) { return i; }
+    }
+    return 0 - 1;
+}
+
+# 1 when `view` holds every record of `table`, ordered by the i64 at `off`,
+# and records sharing a key keep their table order (a stable sort).
+fn _view_ok(view, table, off) {
+    if (vec_len(view) != vec_len(table)) { return 0; }
+    for (var i = 1; i < vec_len(view); i = i + 1) {
+        var a = vec_get(view, i - 1);
+        var b = vec_get(view, i);
+        if (load64(a + off) > load64(b + off)) { return 0; }
+        if (load64(a + off) == load64(b + off)) {
+            if (_table_index(table, a) > _table_index(table, b)) { return 0; }
+        }
+    }
+    return 1;
+}
+
+# itihas_parse_int: the parsed value, or 777 when it refuses.
+fn _pint(txt) {
+    var o[8];
+    if (itihas_parse_int(str_from(txt), &o) == 0) { return 777; }
+    return load64(&o);
+}
+
+# A tool call's name and arguments as Strs, or 0.
+fn _tc_name(body) {
+    var tc = _extract_tool_call(body, strlen(body));
+    if (tc == 0) { return 0; }
+    return load64(tc);
+}
+fn _tc_args(body) {
+    var tc = _extract_tool_call(body, strlen(body));
+    if (tc == 0) { return 0; }
+    return load64(tc + 8);
+}
+
+# The suite, one section per module and per regression set; returns the failure count.
 fn main() {
     alloc_init();
     println("=== itihas test suite ===");
@@ -157,7 +287,8 @@ fn main() {
     ok(vec_len(interactions_for("Roman Empire")) > 0, "int for Rome");
     ok(influence_score("Ancient Egypt", "Hittite Empire") > 0, "inf score Egypt-Hittite");
     # Symmetric
-    check(influence_score("Ancient Egypt", "Hittite Empire"), influence_score("Hittite Empire", "Ancient Egypt"), "inf score symmetric");
+    check(influence_score("Ancient Egypt", "Hittite Empire"), influence_score("Hittite Empire", "Ancient Egypt"),
+      "inf score symmetric");
     check(influence_score("Inca Empire", "Ancient China"), 0, "inf score unrelated=0");
     ok(vec_len(interactions_by_type(INT_WAR)) > 0, "int type War");
     ok(vec_len(interactions_by_type(INT_TRADE)) > 0, "int type Trade");
@@ -276,7 +407,8 @@ fn main() {
     check(region_proximity("Inca Empire", "Ancient China"), 0, "prox Inca-China=0");
     check(region_proximity("Atlantis", "Ancient Greece"), 0, "prox unknown=0");
     # Symmetric
-    check(region_proximity("Roman Empire", "Ancient Greece"), region_proximity("Ancient Greece", "Roman Empire"), "prox symmetric");
+    check(region_proximity("Roman Empire", "Ancient Greece"), region_proximity("Ancient Greece", "Roman Empire"),
+      "prox symmetric");
 
     # Logging init (just verify it doesn't crash)
     itihas_log_init();
@@ -321,7 +453,9 @@ fn main() {
     var sorted_camps = campaigns_between(-500, 500);
     var camp_sort_ok = 1;
     for (var sci = 1; sci < vec_len(sorted_camps); sci = sci + 1) {
-        if (load64(vec_get(sorted_camps, sci)+CAMP_START) < load64(vec_get(sorted_camps, sci - 1)+CAMP_START)) { camp_sort_ok = 0; }
+        var camp_start_cur = camp_start(vec_get(sorted_camps, sci));
+        var camp_start_prev = camp_start(vec_get(sorted_camps, sci - 1));
+        if (camp_start_cur < camp_start_prev) { camp_sort_ok = 0; }
     }
     ok(camp_sort_ok, "campaigns_between sorted by start");
 
@@ -467,7 +601,6 @@ fn main() {
     var elr3 = resolve_era_lookup(era_args3);
     check(elr3, 0, "era lookup unknown=0");
 
-
     # ---------------------------------------------------------------
     # Query tracing
     # ---------------------------------------------------------------
@@ -483,7 +616,8 @@ fn main() {
     ok(era_by_name("Bronze Age"), "trace: era_by_name works at DEBUG");
     check(vec_len(civs_by_region("Mediterranean")) > 0, 1, "trace: civs_by_region works at DEBUG");
     check(vec_len(events_between(-500, 500)) > 0, 1, "trace: events_between (range shape) works at DEBUG");
-    check(influence_score("Ancient Egypt", "Hittite Empire"), 7, "trace: influence_score (pair shape) unchanged at DEBUG");
+    check(influence_score("Ancient Egypt", "Hittite Empire"), 7,
+      "trace: influence_score (pair shape) unchanged at DEBUG");
     check(vec_len(causes_of("French Revolution")), 2, "trace: causes_of unchanged at DEBUG");
     check(vec_len(campaigns_by_commander("Napoleon")) > 0, 1, "trace: campaigns_by_commander works at DEBUG");
     check(vec_len(routes_by_commodity("silk")), 2, "trace: routes_by_commodity unchanged at DEBUG");
@@ -532,7 +666,8 @@ fn main() {
     check(str_list_has(toks, str_from(""), 59), 0, "list_has empty needle");
     check(str_list_has(str_from("French Empire"), str_from("French Empire"), 59), 1, "list_has single token");
     # Name matching allows a leading whole-word prefix but not a partial word.
-    check(str_list_has_name(str_from("Darius III;Alexander"), str_from("Darius I"), 59), 0, "name rejects Darius I/III");
+    check(str_list_has_name(str_from("Darius III;Alexander"), str_from("Darius I"), 59), 0,
+      "name rejects Darius I/III");
     check(str_list_has_name(str_from("Napoleon Bonaparte"), str_from("Napoleon"), 59), 1, "name allows surname prefix");
     check(str_list_has_name(str_from("Napoleon Bonaparte"), str_from("Napo"), 59), 0, "name rejects partial word");
 
@@ -568,8 +703,10 @@ fn main() {
 
     # Causality and interaction lookups now fold case like every *_by_name.
     check(vec_len(causes_of("french revolution")), vec_len(causes_of("French Revolution")), "causes_of folds case");
-    check(vec_len(effects_of("invention of writing")), vec_len(effects_of("Invention of Writing")), "effects_of folds case");
-    check(vec_len(interactions_for("roman empire")), vec_len(interactions_for("Roman Empire")), "interactions_for folds case");
+    check(vec_len(effects_of("invention of writing")), vec_len(effects_of("Invention of Writing")),
+      "effects_of folds case");
+    check(vec_len(interactions_for("roman empire")), vec_len(interactions_for("Roman Empire")),
+      "interactions_for folds case");
     check(vec_len(interactions_between("roman empire", "ancient egypt")),
       vec_len(interactions_between("Roman Empire", "Ancient Egypt")), "interactions_between folds case");
     zero(vec_len(causes_of("No Such Event")), "causes_of unknown = 0");
@@ -614,7 +751,7 @@ fn main() {
     # bayan_json_get_by_cstr returns the RAW escaped span, so the decode step is the
     # caller's; json_unescape is the inverse of what the serializer emitted.
     var hp = bayan_json_parse(hj);
-    ok(str_eq(json_unescape(bayan_json_get_by_cstr(hp, "name")), str_from("Tab\tAnd \"Quote\"")), "hostile name round-trips");
+    ok(str_eq(json_unescape(bayan_json_get_by_cstr(hp, "name")), str_from("Tab\tAnd \"Quote\"")), "hostile name round-trips");   #skip-lint
 
     # The three *_to_json functions with no previous assertions.
     var caus0 = vec_get(all_causalities(), 0);
@@ -643,7 +780,7 @@ fn main() {
     ok(str_contains_cstr(hstr, "POST /v1/chat/completions HTTP/1.0\r\n"), "request line");
 
     # The wire shape hoosh actually emits: arguments as a JSON-ENCODED STRING.
-    var wire_esc = "{\"choices\":[{\"message\":{\"tool_calls\":[{\"function\":{\"name\":\"causes_of\",\"arguments\":\"{\\\"event\\\": \\\"French Revolution\\\"}\"}}]}}]}";
+    var wire_esc = "{\"choices\":[{\"message\":{\"tool_calls\":[{\"function\":{\"name\":\"causes_of\",\"arguments\":\"{\\\"event\\\": \\\"French Revolution\\\"}\"}}]}}]}";   #skip-lint
     var tc1 = _extract_tool_call(wire_esc, strlen(wire_esc));
     ok(tc1, "extract tool call (escaped args)");
     ok(str_eq(load64(tc1), str_from("causes_of")), "escaped args tool name");
@@ -659,7 +796,7 @@ fn main() {
     ok(q2, "object args resolve to a query");
     check(load64(q2 + Q_ARG1), -500, "object args value parsed");
 
-    var wire_rng = "{\"tool_calls\":[{\"function\":{\"name\":\"events_in_range\",\"arguments\":\"{\\\"start\\\": -500, \\\"end\\\": 500}\"}}]}";
+    var wire_rng = "{\"tool_calls\":[{\"function\":{\"name\":\"events_in_range\",\"arguments\":\"{\\\"start\\\": -500, \\\"end\\\": 500}\"}}]}";   #skip-lint
     var tc3 = _extract_tool_call(wire_rng, strlen(wire_rng));
     var q3 = parse_tool_call(load64(tc3), load64(tc3 + 8));
     ok(q3, "escaped range args resolve");
@@ -689,7 +826,6 @@ fn main() {
     # Offline failure path: port 1 refuses connect immediately.
     check(hoosh_post(1, str_from("{}")), 0, "hoosh_post connect refused = 0");
     check(llm_answer(1, str_from("q"), str_from("m")), 0, "llm_answer connect refused = 0");
-
 
     # ---------------------------------------------------------------
     # Public accessor coverage — every getter asserted at least once
@@ -751,7 +887,8 @@ fn main() {
     check(era_start(ne), 1, "era_new");
     var nc = cal_new(str_from("Test Cal"), CAL_SOLAR, 1, 12, str_from("none"));
     check(cal_months(nc), 12, "cal_new");
-    var nv = civ_new(str_from("Test Civ"), str_from("R"), str_from("E"), 1, 2, str_from("t"), str_from("s"), str_from("l"));
+    var nv = civ_new(str_from("Test Civ"), str_from("R"), str_from("E"), 1, 2, str_from("t"), str_from("s"),
+      str_from("l"));
     check(civ_found(nv), 1, "civ_new");
     var nf = fig_new(str_from("Test Fig"), 1, 2, str_from("C"), DOM_SCIENTIST, str_from("d"));
     check(fig_domain(nf), DOM_SCIENTIST, "fig_new");
@@ -761,11 +898,14 @@ fn main() {
     ok(str_eq(caus_cause(nk), str_from("A")), "caus_new");
     var ni = int_new(str_from("A"), str_from("B"), INT_TRADE, 1, 2, str_from("d"));
     check(int_type(ni), INT_TRADE, "int_new");
-    var ns = site_new(str_from("Test Site"), str_from("X"), str_from("R"), ST_SETTLEMENT, str_from("C"), 1, 2, 3, str_from("d"));
+    var ns = site_new(str_from("Test Site"), str_from("X"), str_from("R"), ST_SETTLEMENT, str_from("C"), 1, 2, 3,
+      str_from("d"));
     ok(str_eq(site_name(ns), str_from("Test Site")), "site_new");
-    var nr = rt_new(str_from("Test Route"), str_from("R"), ROUTE_LAND, str_from("C"), str_from("goods"), 1, 2, str_from("d"));
+    var nr = rt_new(str_from("Test Route"), str_from("R"), ROUTE_LAND, str_from("C"), str_from("goods"), 1, 2,
+      str_from("d"));
     ok(str_eq(rt_name(nr), str_from("Test Route")), "rt_new");
-    var nm = camp_new(str_from("Test Camp"), str_from("R"), 1, 2, str_from("A"), str_from("B"), str_from("C"), OUT_VICTORY, str_from("d"));
+    var nm = camp_new(str_from("Test Camp"), str_from("R"), 1, 2, str_from("A"), str_from("B"), str_from("C"),
+      OUT_VICTORY, str_from("d"));
     bat_add(nm, str_from("Test Battle"), 1, str_from("Loc"), str_from("d"));
     var nbats = load64(nm + CAMP_BATTLES);
     check(vec_len(nbats), 1, "camp_new + bat_add");
@@ -789,6 +929,205 @@ fn main() {
     vec_push(sortv, era_new(str_from("A"), 10, 11, str_from("R"), str_from("d"), MODERN, SCOPE_GLOBAL));
     vec_sort(sortv, &_cmp_era_start);
     check(era_start(vec_get(sortv, 0)), 10, "vec_sort orders ascending");
+
+    # ---------------------------------------------------------------
+    # 2.6.2 P(-1) hardening. Every assertion here fails on 2.6.1.
+    # ---------------------------------------------------------------
+    println("--- 2.6.2: cross-table data rules ---");
+    _inv_sweep();
+    check(_inv_violations, 0, "no record contradicts the dates of a civilization it names");
+    # 200 references resolve today; the floor keeps the rule from passing
+    # vacuously if names ever stop resolving.
+    ok(_inv_checked >= 150, "the date rule checks real references");
+    var gap_years = 0;
+    for (var gy = 0 - 3500; gy <= 2025; gy = gy + 1) {
+        if (gy != 0) {
+            if (_global_era_count(gy) == 0) { gap_years = gap_years + 1; }
+        }
+    }
+    check(gap_years, 0, "global eras cover 3500 BCE..2025 with no gap (1611..1647 was uncovered)");
+    var all_links = all_causalities();
+    var links_ok = 1;
+    for (var li = 0; li < vec_len(all_links); li = li + 1) {
+        var lk = vec_get(all_links, li);
+        var le_cause = event_by_name(caus_cause(lk));
+        var le_effect = event_by_name(caus_effect(lk));
+        if (le_cause == 0 || le_effect == 0) { links_ok = 0; }
+        elif (evt_year(le_cause) >= evt_year(le_effect)) { links_ok = 0; }
+    }
+    ok(links_ok, "every causal link joins two events, cause first");
+
+    println("--- 2.6.2: data corrections ---");
+    var silk2 = route_by_name("Silk Road");
+    ok(str_list_has(rt_civs(silk2), str_from("Parthian Empire"), 59), "Silk Road names the Parthian Empire");
+    zero(str_list_has(rt_civs(silk2), str_from("Persian Empire"), 59), "Silk Road no longer names the Achaemenids");
+    check(rt_end(route_by_name("Via Maris")), 1517, "Via Maris in use until 1517");
+    check(site_disc(site_by_name("Harappa")), 1829, "Harappa first described 1829");
+    check(site_disc(site_by_name("Persepolis")), 1618, "Persepolis identified 1618");
+    check(site_start(site_by_name("Altamira")), 0 - 34000, "Altamira dated in BCE, not years ago");
+    check(site_end(site_by_name("Altamira")), 0 - 11000, "Altamira sealed c. 11000 BCE");
+    ok(str_eq(site_civ(site_by_name("Ajanta Caves")), str_from("Vakataka Dynasty")), "Ajanta under the Vakatakas");
+    check(site_disc(site_by_name("Giza")), SITE_DISC_NONE, "Giza was never lost");
+    check(civ_end(civ_by_name("Maya")), 1697, "Maya end at Nojpeten 1697");
+    check(evt_year(event_by_name("Bantu Migration")), 0 - 1500, "Bantu expansion begins c. 1500 BCE");
+    check(evt_year(event_by_name("Founding of the Ghana Empire")), civ_found(civ_by_name("Ghana Empire")),
+      "Ghana founding event matches its record");
+    ok(event_by_name("Peace of Westphalia"), "Peace of Westphalia");
+    zero(event_by_name("Treaty of Westphalia"), "Treaty of Westphalia renamed");
+    ok(event_by_name("Launch of the iPhone"), "iPhone launch, not the smartphone's invention");
+    ok(str_list_has(camp_bellb(campaign_by_name("Napoleonic Wars")), str_from("Kingdom of Prussia"), 59),
+      "Prussia fought Napoleon");
+    check(vec_len(causes_of("Bronze Age Collapse")), 1, "Sea Peoples -> Bronze Age Collapse");
+    var fr_effects = effects_of("French Revolution");
+    check(vec_len(fr_effects), 1, "French Revolution has one effect");
+    ok(str_eq(caus_effect(vec_get(fr_effects, 0)), str_from("Haitian Revolution")), "French -> Haitian Revolution");
+    zero(vec_len(effects_of("Code of Hammurabi")), "no Code of Hammurabi -> Founding of Rome link");
+
+    println("--- 2.6.2: accessors ---");
+    var acc_c = civ_by_name("Maya");
+    ok(str_eq(civ_peak(acc_c), str_from("Mesoamerican Classic")), "civ_peak");
+    ok(str_eq(civ_traits(acc_c), str_from("hieroglyphic writing;calendar systems;astronomy;pyramids")), "civ_traits");
+    ok(str_eq(civ_script(acc_c), str_from("Maya script")), "civ_script");
+    ok(str_eq(civ_lang(acc_c), str_from("yua")), "civ_lang");
+    var acc_f = figure_by_name("Aristotle");
+    check(fig_birth(acc_f), 0 - 384, "fig_birth");
+    check(fig_death(acc_f), 0 - 322, "fig_death");
+    ok(str_eq(fig_civ(acc_f), str_from("Ancient Greece")), "fig_civ");
+    ok(str_contains_cstr(fig_desc(acc_f), "Lyceum"), "fig_desc");
+    var acc_e = event_by_name("French Revolution");
+    ok(str_eq(evt_era(acc_e), str_from("Age of Enlightenment")), "evt_era");
+    ok(str_contains_cstr(evt_desc(acc_e), "monarchy"), "evt_desc");
+    ok(str_eq(evt_civs(acc_e), str_from("Kingdom of France")), "evt_civs");
+    var acc_s = site_by_name("Machu Picchu");
+    ok(str_eq(site_loc(acc_s), str_from("Peru")), "site_loc");
+    check(site_type(acc_s), ST_SETTLEMENT, "site_type");
+    ok(str_eq(site_civ(acc_s), str_from("Inca Empire")), "site_civ");
+    check(site_start(acc_s), 1450, "site_start");
+    check(site_end(acc_s), 1572, "site_end");
+    check(site_disc(acc_s), 1911, "site_disc");
+    ok(str_contains_cstr(site_desc(acc_s), "Intihuatana"), "site_desc");
+    var acc_r = route_by_name("Tea-Horse Road");
+    ok(str_eq(rt_regions(acc_r), str_from("East Asia;South Asia")), "rt_regions");
+    check(rt_type(acc_r), ROUTE_LAND, "rt_type");
+    ok(str_eq(rt_civs(acc_r), str_from("Ancient China;Tibet")), "rt_civs");
+    check(rt_start(acc_r), 600, "rt_start");
+    check(rt_end(acc_r), 1950, "rt_end");
+    ok(str_contains_cstr(rt_desc(acc_r), "Sichuan"), "rt_desc");
+    var acc_i = vec_get(interactions_between("Roman Empire", "Carthage"), 0);
+    check(int_start(acc_i), 0 - 264, "int_start");
+    check(int_end(acc_i), 0 - 146, "int_end");
+    ok(str_eq(int_desc(acc_i), str_from("Punic Wars")), "int_desc");
+    var acc_k = vec_get(causes_of("Code of Hammurabi"), 0);
+    check(caus_strength(acc_k), STRENGTH_STRONG, "caus_strength");
+    ok(str_contains_cstr(caus_desc(acc_k), "law codes"), "caus_desc");
+    ok(str_contains_cstr(cal_leap(calendar_by_name("Gregorian")), "400"), "cal_leap");
+    var acc_cp = campaign_by_name("Napoleonic Wars");
+    check(camp_start(acc_cp), 1803, "camp_start");
+    check(camp_end(acc_cp), 1815, "camp_end");
+    check(vec_len(camp_battles(acc_cp)), 4, "camp_battles");
+    ok(str_contains_cstr(camp_desc(acc_cp), "hegemony"), "camp_desc");
+    var acc_b = vec_get(camp_battles(acc_cp), 3);
+    ok(str_eq(bat_name(acc_b), str_from("Battle of Waterloo")), "bat_name");
+    check(bat_year(acc_b), 1815, "bat_year");
+    ok(str_eq(bat_loc(acc_b), str_from("Waterloo, Belgium")), "bat_loc");
+    ok(str_contains_cstr(bat_desc(acc_b), "Blucher"), "bat_desc");
+
+    println("--- 2.6.2: sorted views and collections ---");
+    ok(_view_ok(all_eras_by_start(), all_eras(), ERA_START), "eras_by_start: complete, ordered, stable");
+    ok(_view_ok(all_civs_by_founded(), all_civilizations(), CIV_FOUND), "civs_by_founded: complete, ordered, stable");
+    ok(_view_ok(all_events_by_year(), all_events(), EVT_YEAR), "events_by_year: complete, ordered, stable");
+    ok(_view_ok(all_campaigns_by_start(), all_campaigns(), CAMP_START),
+      "campaigns_by_start: complete, ordered, stable");
+    check(vec_len(all_calendars()), 8, "all_calendars");
+    check(vec_len(all_figures()), 52, "all_figures");
+    check(vec_len(all_events()), 105, "all_events");
+    check(vec_len(events_between(1989, 1989)), 2, "events_between keeps duplicate years");
+    check(vec_len(events_between(2, 1)), 0, "events_between inverted is empty");
+    ok(vec_len(eras_containing(ERA_ONGOING)) >= 1, "eras_containing(ERA_ONGOING) finds the open era");
+
+    println("--- 2.6.2: query semantics ---");
+    zero(vec_len(sites_by_region("")), "sites_by_region empty matches none");
+    zero(vec_len(routes_by_region("")), "routes_by_region empty matches none");
+    zero(vec_len(campaigns_by_region("")), "campaigns_by_region empty matches none");
+    check(vec_len(sites_by_region("near east")), vec_len(sites_by_region("Near East")), "sites region folds case");
+    check(vec_len(civs_by_region("NEAR EAST")), vec_len(civs_by_region("Near East")), "civs region folds case");
+    check(vec_len(eras_by_region("europe")), vec_len(eras_by_region("Europe")), "eras region folds case");
+    check(vec_len(routes_by_region("east asia")), vec_len(routes_by_region("East Asia")), "routes region folds case");
+    check(vec_len(campaigns_by_region("europe")), vec_len(campaigns_by_region("Europe")),
+      "campaigns region folds case");
+    ok(vec_len(sites_by_region("near east")) > 0, "folded region still matches");
+    zero(vec_len(campaigns_between(1450, 1340)), "campaigns_between inverted is empty");
+    check(vec_len(campaigns_by_commander("Bonaparte")), 1, "commander by surname: Bonaparte");
+    check(vec_len(campaigns_by_commander("Grant")), 1, "commander by surname: Grant");
+    check(vec_len(campaigns_by_commander("Caesar")), 1, "commander by surname: Caesar");
+    check(vec_len(campaigns_by_commander("Wellington")), 1, "commander by later word: Wellington");
+    zero(vec_len(campaigns_by_commander("apoleon")), "commander needs whole words");
+    zero(vec_len(campaigns_by_commander("E.")), "a middle word of a name does not match");
+    check(vec_len(campaigns_by_commander("Robert E. Lee")), 1, "the whole name still matches");
+    ok(str_contains_ci(str_from("Near East, Mediterranean"), str_from("MEDITERRANEAN")), "str_contains_ci folds");
+    zero(str_contains_ci(str_from("abc"), str_from("")), "str_contains_ci empty needle is 0");
+    zero(str_contains_ci(str_from("ab"), str_from("abc")), "str_contains_ci longer needle is 0");
+
+    println("--- 2.6.2: strict integers and unicode ---");
+    check(_pint("-500"), 0 - 500, "parse -500");
+    check(_pint("5.0"), 5, "parse 5.0 (JSON Schema integer)");
+    check(_pint("1e2"), 100, "parse 1e2");
+    check(_pint("-5e2"), 0 - 500, "parse -5e2 (was -52)");
+    check(_pint("1.5e3"), 1500, "parse 1.5e3 (was 153)");
+    check(_pint("476.0"), 476, "parse 476.0 (was 4760)");
+    check(_pint("120e-1"), 12, "parse 120e-1");
+    check(_pint("1.5"), 777, "refuse 1.5");
+    check(_pint("500 BC"), 777, "refuse 500 BC (was 500)");
+    check(_pint("null"), 777, "refuse null");
+    check(_pint(""), 777, "refuse empty");
+    check(_pint("+5"), 777, "refuse +5");
+    check(_pint("1e400"), 777, "refuse 1e400");
+    check(_pint("99999999999999999999"), 777, "refuse overflow");
+    var u_pair = json_unescape(str_from("\\uD808\\uDC2D"));
+    check(str_len(u_pair), 4, "surrogate pair decodes to 4 bytes");
+    check(load8(str_data(u_pair)), 240, "surrogate pair lead byte F0");
+    check(load8(str_data(u_pair) + 3), 173, "surrogate pair last byte AD (U+1202D)");
+    var u_lone = json_unescape(str_from("\\uDC2D"));
+    check(str_len(u_lone), 3, "lone surrogate becomes U+FFFD");
+    check(load8(str_data(u_lone)), 239, "U+FFFD lead byte EF");
+
+    println("--- 2.6.2: hoosh wire ---");
+    ok(str_eq(_tc_name("{\"tool_calls\":[{\"function\":{\"arguments\":{\"name\":\"Bronze Age\"},\"name\":\"era_lookup\"}}]}"),   #skip-lint
+        str_from("era_lookup")), "tool name is the function's, not a nested argument's");
+    zero(_tc_name("{\"tool_calls\":[{\"function\":{\"name\":\"causes_of\",\"arguments\":null}}],\"type\":\"x\"}"),   #skip-lint
+      "null arguments: no tool call");
+    ok(str_eq(_tc_args("{\"tool_calls\":[{\"function\":{\"name\":\"causes_of\",\"arguments\":{\"event\":\"Siege }of{ X\"}}}]}"),   #skip-lint
+        str_from("{\"event\":\"Siege }of{ X\"}")), "braces inside strings do not end the arguments");
+    ok(str_eq(_tc_name("{\"note\":\"tool_calls\",\"tool_calls\":[{\"function\":{\"name\":\"figure_lookup\",\"arguments\":{}}}]}"),   #skip-lint
+        str_from("figure_lookup")), "the text tool_calls inside a value is skipped");
+    ok(str_eq(_tc_name("{\"tool_calls\":[{\"name\":\"figure_lookup\",\"arguments\":{\"name\":\"Aristotle\"}}]}"),   #skip-lint
+        str_from("figure_lookup")), "a call without a function wrapper is read directly");
+    var arr_body = "{\"choices\":[{\"message\":{\"content\":[{\"type\":\"text\",\"text\":\"Rome fell\"}]}}]}";   #skip-lint
+    zero(str_len(_extract_content(arr_body, strlen(arr_body))), "array content is not taken as text (was \"type\")");
+    var era_null = resolve_era_lookup(bayan_json_parse(str_from("{\"name\": null, \"year\": 1200}")));
+    ok(era_null, "null name falls through to year");
+    ok(str_contains_cstr(resp_content(era_null), "Middle Ages"), "year 1200 is in the Middle Ages");
+    ok(resolve_era_lookup(bayan_json_parse(str_from("{\"name\": \"Atlantean Age\", \"year\": 1200}"))),
+      "a name that misses falls through to year");
+    zero(resolve_era_lookup(bayan_json_parse(str_from("{\"name\": \"Atlantean Age\"}"))), "a miss with no year is 0");
+    var q_float = parse_tool_call("events_in_range", "{\"start\": -500.0, \"end\": 5e2}");
+    ok(q_float, "float-form whole numbers are accepted");
+    check(load64(q_float + Q_ARG1), 0 - 500, "start -500.0 (was -5000)");
+    check(load64(q_float + Q_ARG2), 500, "end 5e2 (was 52)");
+    zero(parse_tool_call("civilizations_at", "{\"year\": \"500 BC\"}"), "500 BC is refused (was 500)");
+    check(load64(parse_tool_call("civilizations_at", "{\"year\": 1.5e3}") + Q_ARG1), 1500, "1.5e3 is 1500 (was 153)");
+    var q_esc = parse_tool_call("interactions_between", "{\"civ_a\": \"Viking\\/Norse\", \"civ_b\": \"Byzantine Empire\"}");   #skip-lint
+    ok(str_eq(load64(q_esc + Q_ARG1), str_from("Viking/Norse")), "string arguments are unescaped");
+    var http_ok = "HTTP/1.1 200 OK\r\nContent-Length: 5\r\n\r\nhello";
+    check(_http_head_end(http_ok, strlen(http_ok)), strlen(http_ok) - 5, "head ends after the blank line");
+    check(_http_content_length(http_ok, _http_head_end(http_ok, strlen(http_ok))), 5, "Content-Length read");
+    var http_lc = "HTTP/1.1 200 OK\r\ncontent-length:   12\r\n\r\n";
+    check(_http_content_length(http_lc, strlen(http_lc)), 12, "Content-Length matched without case");
+    var http_none = "HTTP/1.0 200 OK\r\nServer: x\r\n\r\n";
+    check(_http_content_length(http_none, strlen(http_none)), 0 - 1, "no Content-Length is -1");
+    var http_bad = "HTTP/1.0 200 OK\r\nContent-Length: abc\r\n\r\n";
+    check(_http_content_length(http_bad, strlen(http_bad)), 0 - 1, "a malformed Content-Length is -1");
+    check(_http_head_end("HTTP/1.1 200 OK\r\nX: y\r\n", 23), 0 - 1, "an incomplete head is -1");
 
     itihas_log_init_level(SK_WARN);
     ok(1, "log level set");

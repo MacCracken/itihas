@@ -9,6 +9,7 @@ enum CalOff { CAL_NAME = 0; CAL_TYPE = 8; CAL_EPOCH = 16; CAL_MONTHS = 24; CAL_L
 var calendar_vec = 0;
 var calendar_init_done = 0;
 
+# Allocate a calendar record. Normally only build_calendars calls this.
 #must_use
 fn cal_new(name: Str, ctype, epoch, months, leap: Str) {
     var p = xalloc(CAL_SIZE);
@@ -20,37 +21,48 @@ fn cal_new(name: Str, ctype, epoch, months, leap: Str) {
     return p;
 }
 
+# The calendar's name (Str).
 #must_use
 fn cal_name(p) { return load64(p + CAL_NAME); }
+# Calendar type, one of the CAL_* values.
 #must_use
 fn cal_type(p) { return load64(p + CAL_TYPE); }
+# Epoch as a signed year: negative is BCE, no year zero.
 #must_use
 fn cal_epoch(p) { return load64(p + CAL_EPOCH); }
+# Months in a common year.
 #must_use
 fn cal_months(p) { return load64(p + CAL_MONTHS); }
+# The leap rule, in words (Str).
+#must_use
+fn cal_leap(p) { return load64(p + CAL_LEAP); }
 
 # Build the calendar-system table (8 rows). Called once by the lazy initializer.
+#must_use
 fn build_calendars() {
     var v = vec_new();
     vec_push(v, cal_new("Gregorian", CAL_SOLAR, 1, 12, "Divisible by 4, except centuries unless divisible by 400"));
     vec_push(v, cal_new("Julian", CAL_SOLAR, 1, 12, "Every 4th year without exception"));
     vec_push(v, cal_new("Islamic (Hijri)", CAL_LUNAR, 622, 12, "11 leap years in a 30-year cycle"));
     vec_push(v, cal_new("Hebrew", CAL_LUNISOLAR, (0-3761), 12, "7 leap years in a 19-year Metonic cycle"));
-    vec_push(v, cal_new("Chinese", CAL_LUNISOLAR, (0-2697), 12, "7 intercalary months in 19-year cycle"));
+    vec_push(v, cal_new("Chinese", CAL_LUNISOLAR, (0-2697), 12, "Leap month when a lunar month holds no principal solar term (~7 in 19 years)"));   #skip-lint
     vec_push(v, cal_new("Hindu (Vikram Samvat)", CAL_LUNISOLAR, (0-57), 12, "Intercalary month when two new moons in same solar month"));   #skip-lint
     vec_push(v, cal_new("Maya (Long Count)", CAL_FIXED, (0-3114), 18, "Positional day count: 18 uinal x 20 kin = 360-day tun; no leap correction"));   #skip-lint
     vec_push(v, cal_new("Egyptian (Civil)", CAL_FIXED, (0-2781), 12, "No leap days; 12x30 + 5 epagomenal = 365"));
     return v;
 }
 
+# All 8 calendar systems in table order; built on first call. Shared: do not modify the vec.
 #must_use
 fn all_calendars() {
     if (calendar_init_done == 0) { calendar_vec = build_calendars(); calendar_init_done = 1; }
     return calendar_vec;
 }
+# Number of calendar systems (8).
 #must_use
 fn calendar_count() { return vec_len(all_calendars()); }
 
+# The calendar whose name matches `name` (case-insensitive), or 0.
 #must_use
 fn calendar_by_name(name: Str) {
     itrace_s("looking up calendar by name", "name", name);

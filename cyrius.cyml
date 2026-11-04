@@ -69,9 +69,9 @@ modules = ["dist/bote.cyr"]
 
 # `mcp` activates the optional bote dep. It is deliberately NOT in `default`:
 # a dep's modules are auto-prepended to every build that resolves it, and
-# measured here, defaulting it on linked 2,122,960 bytes of bote into
+# measured in 2.5.0, defaulting it on linked 2,122,960 bytes of bote into
 # `build/itihas` — a binary that never calls a single bote function (696 KB ->
-# 2.8 MB). Build and test the MCP surface with the feature named explicitly:
+# 2.8 MB at the time). Build and test the MCP surface with the feature named explicitly:
 #
 #     cyrius build --features mcp tests/itihas-mcp.tcyr build/itihas_mcp
 #

@@ -1,136 +1,94 @@
 # Development Roadmap
 
-> **Current**: 2.6.1 | **Compiler**: cyrius 6.7.18 | **Tests**: 309 + 51 MCP | **Coverage**: 94% | **Lint**: clean
+> **Current**: 2.6.2 | **Compiler**: cyrius 6.7.18 | **Tests**: 442 + 65 MCP | **Coverage**: 87% (reference) | **Lint**: clean | **Doc gate**: clean
 
-This file tracks **open work only**. Completed releases are recorded in
-[CHANGELOG.md](../../CHANGELOG.md) — they are not duplicated here.
+This file tracks **open work only**, pinned to the minor line that owns it.
+Completed releases live in [CHANGELOG.md](../../CHANGELOG.md) and are not
+duplicated here.
 
-Every item is sequenced as its own work-loop cycle (cleanliness + benchmark
-gates per CLAUDE.md) unless explicitly marked as batchable.
+Each item is its own work-loop cycle (cleanliness + benchmark gates, per
+CLAUDE.md) unless it is marked batchable. A Large item is cut into the patch
+releases listed under it, one per cycle.
+
+| Line | Theme | Gate to start |
+|------|-------|---------------|
+| [2.7.x](#27x--structural-arc) | Native structs for the nine remaining data modules | — (next) |
+| [2.8.x](#28x--query-engine-and-footprint) | Shared query helpers, static-data footprint | 2.7.x complete |
+| [2.9.x](#29x--data-and-presentation) | New records, `*_to_str` formatters | 2.7.x complete |
+| [2.10.x](#210x--portability) | `hoosh_post` on Windows and agnos | demand |
+| [2.x.x](#2xx--backlog-unpinned) | Unpinned backlog | demand |
 
 ---
 
-## 2.4.x — Hardening arc (complete)
-
-Every finding the P(-1) sweep confirmed has now been resolved — see CHANGELOG
-`[2.4.3]` for `xalloc`, the tracing restoration, and the two project decisions
-below. Nothing from this arc is outstanding.
-
-Decisions taken, recorded here because they govern future work:
-
-- **Civilization-name fields are FREE TEXT, not foreign keys.** 72 of 223
-  references (32%) name something with no `civ_new` record — both real polities
-  outside the curated 53 (`Maurya Empire`, `Carthage`, `Kingdom of England`) and
-  non-polity culture labels (`Pre-Pottery Neolithic`, `Italian city-states`). A
-  test asserting every reference resolves would fail on correct data, so none
-  exists. Documented for consumers in
-  [usage.md](../guides/usage.md#civilization-names-are-free-text) and at each
-  affected constructor. A reference whose *dates* contradict the record pointing
-  at it is still a data bug (two were fixed in 2.4.2).
-- **Data tables are exempt from the line-length rule** via per-line
-  `#skip-lint`. 352 data rows plus 8 single-line offset/type enums and hoosh's
-  two irreducible string constants are exempted; the two genuinely over-long
-  *code* lines were wrapped instead. `cyrius lint` on `src/` went 364 warnings →
-  **0**, so the count is a usable gate again rather than a permanent backlog.
-
-## 2.5.0 — Tool integration (complete)
-
-Shipped: `src/mcp.cyr` exposes the dataset as five read-only MCP tools over
-bote, with the daimon host-registry integration alongside. The `ERR_*` rename
-landed with it. See CHANGELOG `[2.5.0]` and
-[mcp-port-reference.md](mcp-port-reference.md).
-
-Consumer note, because it is easy to get wrong: **MCP is opt-in.**
-`dist/itihas.cyr` carries no bote dependency. A consumer that wants the tools
-includes `src/mcp.cyr` explicitly and declares bote itself.
-
-## 2.6.x — Performance arc
-
-Confirmed by the 2.4.2 audit. Each needs its own before/after CSV; none may be
-batched.
-
-Precomputed year-sorted views are **done** (Unreleased) — the four range queries
-now binary-search a lazily-built sorted view instead of sorting per call, for
-−75.4% / −61.5% / −46.4% / −31.2% and −21.3% on the suite sum.
-
-`*_to_json_into` serializer variants are **done** (Unreleased) — all 11 record
-writers append to a caller-supplied builder, for −24.8% on collection
-serialization with byte-identical output.
-
-`json_escape_into` bulk-run copying is **done** (Unreleased) — a further −26.7%
-on the serialization rows, on top of the `_into` split. All three landed with no
-regressions elsewhere in the suite. See CHANGELOG.
-
-| Item | Effort | Detail |
-|------|--------|--------|
-| **Generic filter/lookup helpers** | Large | ~31 near-identical filter bodies across the 10 data modules. One shape per cycle behind the benchmark gate. Do not start before the 2.4.2 token-membership semantics have settled in use. |
-| **Static-data footprint** | Large | The data modules embed ~300 KB of inline description strings. Restructuring to runtime `alloc()` touches every data module; demand-gated. |
-| **bayan's Unicode tables** | Upstream | Since cyrius 6.7.13, `lib/bayan.cyr` includes `lib/unicode/*` (case-fold, categories, normalization) and `lib/math.cyr` for every consumer. DCE removes unreachable functions, but not data. In 2.6.1, measured on the DCE build, `.rodata` went 66,814 → 408,802 B and the binary 251,800 → 535,392 B, though itihas only calls `bayan_json_parse` and `bayan_json_get_by_cstr` from `src/hoosh.cyr`. The fix belongs in bayan: a JSON-only profile, or tables that only the Unicode-aware functions reach. A hand-rolled JSON reader in itihas would trade an AGNOS dependency for local code, against "own the stack". |
-
 ## 2.7.x — Structural arc
 
+**Native `#derive(accessors)` structs for the nine data modules still on
+hand-maintained offset enums.** `era` moved in 2.5.1. The rest read and write
+fields with `load64(p + OFFSET)` / `store64` against offset enums that nothing
+checks: two fields sharing an offset would alias silently, where a struct makes
+it a compile error. Strictly **one module per patch release**, each with layout
+assertions that pin every field to its offset in both directions, and its own
+interleaved A/B.
+
+| Release | Module | Why this order |
+|---------|--------|----------------|
+| 2.7.0 | `civilization` | Hottest after `era`: `civs_active_at`, `civs_by_region` and the founding-year view |
+| 2.7.1 | `event` | 105 rows, the year-sorted view and three range queries |
+| 2.7.2 | `campaign` | Range query plus the commander/belligerent token matchers |
+| 2.7.3 | `site` | Two range predicates (occupation, discovery) |
+| 2.7.4 | `trade` | Commodity and civilization token matchers |
+| 2.7.5 | `figure` | Domain filter only |
+| 2.7.6 | `interaction` | Read by `influence_score`'s in-place scan |
+| 2.7.7 | `causality` | Read by `causal_chain`'s frontier walk |
+| 2.7.8 | `calendar` | 8 rows, no hot path |
+
+**Rule from the `era` migration, binding on every row above.** Delegating
+`x_field(p)` to the generated `X_field(p)` adds a call, and Cyrius does not
+inline. Routing `era`'s hot queries through the wrappers cost +12.3% on
+`eras_containing_500bce`, and calling the generated accessor directly put it
+back to flat. Keep the `x_*` names as the public API, and have hot paths call
+`X_field` directly.
+
+## 2.8.x — Query engine and footprint
+
+Starts after 2.7.x, so the shared helpers can be written once against the
+generated accessors instead of raw offsets.
+
 | Item | Effort | Detail |
 |------|--------|--------|
-| **Native `#derive(accessors)` struct migration** | Large | 9 data modules left — `era` is **done** (Unreleased). The rest address fields via manual `load64(p+OFFSET)` / `store64` against hand-maintained offset enums. avatara (2.5.3) migrated once the 6.x struct field cap rose 32 → 256, making offset-collision bugs a compile error while keeping compat shims. Strictly **one module per cycle**, each with layout assertions and its own A/B. |
+| **Generic filter/lookup helpers** | Large | About 31 near-identical filter bodies across the ten data modules (by-name, by-region, by-year, by-token). One filter shape per patch, behind the benchmark gate. The 2.4.2 token-membership semantics (`str_list_has`, `str_list_has_name`) are the contract to preserve. |
+| **Static-data footprint** | Large | The data modules embed ~300 KB of inline description strings in `.rodata`. Moving them to runtime-built storage touches every data module. Demand-gated within the line: start when a consumer reports binary size as a problem. |
 
-**Rule learned from the `era` migration:** delegating `x_field(p)` to the
-generated `X_field(p)` adds a call layer, and Cyrius does not inline. Routing
-the hot queries through the wrappers cost +12.3% on `eras_containing_500bce`;
-calling the generated accessor directly in hot paths put it back to flat. The
-`x_*` names stay as the public API. Every remaining module needs the same
-treatment and its own before/after A/B.
-
-## Portability (demand-gated)
+## 2.9.x — Data and presentation
 
 | Item | Effort | Detail |
 |------|--------|--------|
-| **`hoosh_post` on Windows and agnos** | Medium | `src/hoosh.cyr` opens its socket with raw `syscall(SYS_SOCKET, …)` / `syscall(SYS_CONNECT, …)` and moves bytes with `SYS_WRITE` / `SYS_READ`. Those numbers exist on Linux and macOS only. From the 6.6.20 pin on, `cyrius distlib` checks the bundle against every target and warns that both names are undefined on x86_64-windows and x86_64-agnos. On Windows a socket is a Winsock `SOCKET`, so a port means routing the connect, write, read and close through `lib/net.cyr`'s per-OS `sock_*` primitives, not just renaming constants. The HTTP client must stay self-contained, so keep it in itihas. |
+| **Carthage and Khwarezmian civilization records** | Medium | Lets the Punic Wars interaction and the Mongol–Khwarezm references point at real records instead of free text. Moves `civ_count` 53 → 55 and the 338-entity total, which cascades into tests, `src/lib.cyr`, `src/main.cyr`, README and the architecture overview. Each record needs its provenance in `docs/sources/civilizations.md`. |
+| **`*_to_str` display formatters** | Medium | The Rust original had `Display` on every type. One formatter per record type, writing into a caller-supplied `str_builder` (the `_into` pattern from `serial.cyr`), with the ongoing-era sentinel rendered as "present" the way `resolve_era_lookup` already does. |
+| **`null` for "no discovery year" in JSON** | Low | `site_to_json` emits a never-lost site's `SITE_DISC_NONE` as `"discovered": 0`, a year that does not exist. `null` is the honest value, but it changes the JSON a consumer parses, so it ships with the formatters rather than in a patch. Found in the 2.6.2 sweep. |
+| **Data questions left open in 2.6.2** | Low | Rows where the sweep found sources in conflict, so nothing was changed: Leptis Magna's start (-1000 in some references, the late 7th century BCE in others); Ranald MacDonald's civilization ("United States", though he was born in British North America); the Egyptian civil-calendar epoch (-2781, the Sothic reckoning, where the cited Dershowitz and Reingold use Nabonassar, -747); "Roman Empire" and "Assyrian Empire" records that start at their cities' founding rather than the empire's. Each needs a decision and a line in `docs/sources/`. |
 
-## Data work (demand-gated)
+Civilization-name fields stay **free text, not foreign keys**: 72 of 223
+references name a polity or culture with no record of its own, and that is
+correct data (see [usage.md](../guides/usage.md#civilization-names-are-free-text)).
+A reference whose *dates* contradict the record it names is still a bug.
+
+## 2.10.x — Portability
 
 | Item | Effort | Detail |
 |------|--------|--------|
-| **Carthage / Khwarezmian civilization records** | Medium | Adding them moves `civ_count` 53 → 54 and the 338-entity total, cascading into tests, `lib.cyr`, README and overview. It would also let the Punic Wars interaction reference a real record instead of free text. A data cycle, not a hardening one. |
-| Historical map data (geographic boundaries per era) | Large | — |
+| **`hoosh_post` on Windows and agnos** | Medium | `src/hoosh.cyr` opens its socket with raw `syscall(SYS_SOCKET, …)` / `syscall(SYS_CONNECT, …)` and moves bytes with `SYS_WRITE` / `SYS_READ`. Those numbers exist on Linux and macOS only, and from the 6.6.20 pin on `cyrius distlib` warns that both are undefined on x86_64-windows and x86_64-agnos. A Windows socket is a Winsock `SOCKET`, so the port routes connect, write, read and close through `lib/net.cyr`'s per-OS `sock_*` primitives rather than renaming constants. The HTTP client stays self-contained in itihas. |
+
+## 2.x.x — Backlog (unpinned)
+
+Pinned to a line when a consumer needs it.
+
+| Item | Effort | Detail |
+|------|--------|--------|
+| **bayan's Unicode tables** | Upstream | Since cyrius 6.7.13, `lib/bayan.cyr` includes `lib/unicode/*` (case-fold, categories, normalization) and `lib/math.cyr` for every consumer. DCE removes unreachable functions, not data. Measured in 2.6.1 on the DCE build: `.rodata` 66,814 → 408,802 B, and the binary 251,800 → 535,392 B, though itihas calls only `bayan_json_parse` and `bayan_json_get_by_cstr`. The fix belongs in bayan, as a JSON-only profile or tables only the Unicode-aware functions reach. A hand-rolled JSON reader here would trade an AGNOS dependency for local code, against "own the stack". |
+| **The `ITIHAS_ERR_*` codes** | Low | `src/error.cyr` defines the error enum, and nothing in itihas returns one: lookups return 0 and filters an empty vec. Either adopt the codes (an out-parameter on the lookups) or retire the enum with a deprecation cycle. A decision, not a bug; found in the 2.6.2 sweep. |
+| **argonaut consolidation** | Medium | argonaut is ported upstream (424 tests) but not integrated. itihas has its own `src/serial.cyr`, so this is an optional consolidation, not a gap. |
+| Historical map data (boundaries per era) | Large | — |
 | Cultural diffusion tracking | Large | — |
 | Historical population estimates | Medium | — |
-| Historical climate data correlation | Medium | — |
-| Display/formatting functions | Medium | Rust had `Display` impls on all types; the Cyrius equivalent is `*_to_str()`. |
-| `Ord`-equivalent chronological ordering | Low | Rust had `Ord` on Era, Event, Campaign. `vec_sort` plus per-type comparators already cover every query path. |
-
-## External dependencies
-
-| Dependency | Repo | Needed for | Status |
-|-----------|------|-----------|--------|
-| **hoosh** | MacCracken/hoosh | 2.2.0 | ✅ Integrated (`src/hoosh.cyr`) |
-| **bote** | MacCracken/bote | 2.5.0 | ✅ **Ready** — 3.8.9, cyrius 6.7.18, builds clean, full surface exported |
-| **argonaut** | MacCracken/argonaut | shared JSON library | Ported upstream (424 tests) but **not integrated**. itihas ships its own `src/serial.cyr`, so this is an optional consolidation rather than a gap. |
-
-## Port coverage
-
-The Rust v1.5.0 tree (`rust-old/`) was removed once the port completed; it
-remains in git history. The port is **complete** — every Rust module has a
-Cyrius counterpart as of 2.5.0. Counts are the current Cyrius totals, which
-exceed the Rust originals because the port split accessors into separate
-functions.
-
-| Rust module | Cyrius | Fns | Status |
-|------------|--------|-----|--------|
-| `era.rs` | `era.cyr` | 19 | Complete |
-| `civilization.rs` | `civilization.cyr` | 15 | Complete |
-| `event.rs` | `event.cyr` | 16 | Complete |
-| `figure.rs` | `figure.cyr` | 8 | Complete |
-| `causality.rs` | `causality.cyr` | 11 | Complete |
-| `interaction.rs` | `interaction.cyr` | 14 | Complete |
-| `calendar.rs` | `calendar.cyr` | 9 | Complete |
-| `campaign.rs` | `campaign.cyr` | 21 | Complete |
-| `site.rs` | `site.cyr` | 11 | Complete |
-| `trade.rs` | `trade.cyr` | 12 | Complete |
-| `error.rs` | `error.cyr` | 0 (enum only) | Complete |
-| `logging.rs` | `logging.cyr` | 2 | Complete (sakshi) |
-| `hoosh.rs` | `hoosh.cyr` | 26 | Complete (2.2.0) |
-| `lib.rs` | `lib.cyr` | 0 (aggregator) | Complete |
-| `mcp.rs` | `mcp.cyr` | 21 | Complete (2.5.0) |
-| — | `util.cyr` | 16 | Cyrius-only (shared helpers) |
-| — | `serial.cyr` | 27 | Cyrius-only (JSON; replaces serde) |
-| — | `main.cyr` | 0 (smoke test) | Complete |
+| Historical climate correlation | Medium | — |

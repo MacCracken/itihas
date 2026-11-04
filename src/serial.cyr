@@ -71,6 +71,7 @@ fn era_to_json_into(sb, p) {
     return 0;
 }
 
+# The era as a JSON object (Str). era_to_json_into appends to a builder instead.
 #must_use
 fn era_to_json(p) {
     var sb = str_builder_new();
@@ -98,6 +99,7 @@ fn civ_to_json_into(sb, p) {
     return 0;
 }
 
+# The civilization as a JSON object (Str). civ_to_json_into appends to a builder instead.
 #must_use
 fn civ_to_json(p) {
     var sb = str_builder_new();
@@ -124,6 +126,7 @@ fn event_to_json_into(sb, p) {
     return 0;
 }
 
+# The event as a JSON object (Str). event_to_json_into appends to a builder instead.
 #must_use
 fn event_to_json(p) {
     var sb = str_builder_new();
@@ -149,6 +152,7 @@ fn figure_to_json_into(sb, p) {
     return 0;
 }
 
+# The figure as a JSON object (Str). figure_to_json_into appends to a builder instead.
 #must_use
 fn figure_to_json(p) {
     var sb = str_builder_new();
@@ -173,6 +177,7 @@ fn calendar_to_json_into(sb, p) {
     return 0;
 }
 
+# The calendar as a JSON object (Str). calendar_to_json_into appends to a builder instead.
 #must_use
 fn calendar_to_json(p) {
     var sb = str_builder_new();
@@ -196,6 +201,7 @@ fn battle_to_json_into(sb, b) {
     return 0;
 }
 
+# The battle as a JSON object (Str). battle_to_json_into appends to a builder instead.
 #must_use
 fn battle_to_json(b) {
     var sb = str_builder_new();
@@ -231,6 +237,7 @@ fn campaign_to_json_into(sb, p) {
     return 0;
 }
 
+# The campaign, with its battles nested, as a JSON object (Str). campaign_to_json_into appends to a builder instead.
 #must_use
 fn campaign_to_json(p) {
     var sb = str_builder_new();
@@ -259,6 +266,8 @@ fn site_to_json_into(sb, p) {
     return 0;
 }
 
+# The site as a JSON object (Str); a never-lost site's discovery year is 0 (SITE_DISC_NONE).
+# site_to_json_into appends to a builder instead.
 #must_use
 fn site_to_json(p) {
     var sb = str_builder_new();
@@ -286,6 +295,7 @@ fn route_to_json_into(sb, p) {
     return 0;
 }
 
+# The trade route as a JSON object (Str). route_to_json_into appends to a builder instead.
 #must_use
 fn route_to_json(p) {
     var sb = str_builder_new();
@@ -309,6 +319,7 @@ fn causality_to_json_into(sb, p) {
     return 0;
 }
 
+# The causal link as a JSON object (Str). causality_to_json_into appends to a builder instead.
 #must_use
 fn causality_to_json(p) {
     var sb = str_builder_new();
@@ -334,6 +345,7 @@ fn interaction_to_json_into(sb, p) {
     return 0;
 }
 
+# The interaction as a JSON object (Str). interaction_to_json_into appends to a builder instead.
 #must_use
 fn interaction_to_json(p) {
     var sb = str_builder_new();

@@ -8,7 +8,7 @@ References for historical period boundaries, categories, and regional periodizat
   Source for Bronze Age, Iron Age, Classical Antiquity, Middle Ages, Renaissance, Enlightenment, Industrial Age, Information Age boundaries.
 
 - Bickerman (1980), "Eras and Chronological Systems."
-  Astronomical year numbering convention (negative = BCE) used throughout.
+  Historical year numbering with no year zero (negative = BCE, -1 is 1 BCE) used throughout; not astronomical numbering.
 
 ## Chinese Dynasties
 
@@ -24,3 +24,12 @@ References for historical period boundaries, categories, and regional periodizat
 
 - Coe, Michael D. *Mexico: From the Olmecs to the Aztecs*. 7th ed. London: Thames and Hudson, 2013.
   Preclassic, Classic, Postclassic period boundaries for Mesoamerican civilizations.
+
+## 2.6.2 corrections
+
+- **Renaissance** end 1610 -> 1647, so global eras cover every year: nothing
+  global covered 1611-1647 between it and the Age of Enlightenment (1648).
+  `tests/itihas.tcyr` now checks coverage for every year from 3500 BCE to 2025.
+- **Qin Dynasty** description: Qin linked existing walls into the Great Wall
+  rather than beginning it (earlier state walls date from the 7th century BCE).
+  https://www.britannica.com/topic/Great-Wall-of-China

@@ -10,16 +10,16 @@ Used by [sankhya](https://github.com/MacCracken/sankhya) (ancient math), [avatar
 
 | Module | Description |
 |--------|-------------|
-| `era` | Historical periods with date ranges, civilizational phases, era category lookup |
+| `era` | Historical periods with date ranges, global or regional scope, year and region lookups |
 | `civilization` | Major civilizations with geographic extent, peak period, key traits |
 | `event` | Structured historical events with category, era, and civilizations involved |
 | `causality` | Causal links between events with strength classification and chain traversal |
 | `interaction` | Civilization interaction graph: trade, war, alliance, influence scoring |
-| `calendar` | Calendar system metadata: type, epoch, months, leap rules (not computation) |
-| `figure` | Historical figures with era/civilization context and domain classification |
+| `calendar` | Calendar system metadata: type, epoch, months, leap rule in words (not computation) |
+| `figure` | Historical figures with birth and death years, civilization, and domain classification |
 | `campaign` | Military campaigns with battles, commanders, belligerents, and outcomes |
 | `site` | Archaeological sites with location, period, type, and discovery metadata |
-| `trade` | Historical trade routes with endpoints, commodities, and civilization context |
+| `trade` | Historical trade routes with regions, route type, commodities, and civilization context |
 | `error` | Error code enum for unknown entities and invalid lookups |
 
 ## Pre-built Data
@@ -108,7 +108,7 @@ Also feeds:
 ## Development
 
 ```bash
-cyrius test tests/itihas.tcyr   # Full 285-assertion suite
+cyrius test tests/itihas.tcyr   # Full unit suite (442 assertions)
 ./scripts/bench-history.sh      # Benchmarks + history (mandatory per release)
 cyrius lint src/*.cyr           # Lint
 cyrius distlib                  # Regenerate dist/itihas.cyr

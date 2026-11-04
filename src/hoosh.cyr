@@ -30,16 +30,22 @@ fn hoosh_query_new(qtype, a1, a2) {
     return q;
 }
 
+# A query for the events between two years.
 #must_use
 fn query_events_in_range(start, end) { return hoosh_query_new(QT_EVENTS_IN_RANGE, start, end); }
+# A query for the civilizations active in a year.
 #must_use
 fn query_civs_at(year) { return hoosh_query_new(QT_CIVS_AT, year, 0); }
+# A query for the causes of a named event.
 #must_use
 fn query_causes_of(event: Str) { return hoosh_query_new(QT_CAUSES_OF, event, 0); }
+# A query for the interactions between two named civilizations.
 #must_use
 fn query_interactions_between(ca: Str, cb: Str) { return hoosh_query_new(QT_INTERACTIONS_BETWEEN, ca, cb); }
+# A query for a historical figure by name.
 #must_use
 fn query_figure_lookup(name: Str) { return hoosh_query_new(QT_FIGURE_LOOKUP, name, 0); }
+# A free-form question, which only the LLM can answer.
 #must_use
 fn query_free_form(question: Str) { return hoosh_query_new(QT_FREE_FORM, question, 0); }
 
@@ -51,6 +57,7 @@ enum RespSource { SRC_DATA; SRC_LLM; SRC_HYBRID; }
 # QueryResponse: { source, content: Str, data_json: Str } — 24 bytes
 enum RespOff { RESP_SRC=0; RESP_CONTENT=8; RESP_DATA=16; RESP_SIZE=24; }
 
+# Allocate a response: source (SRC_DATA, SRC_LLM or SRC_HYBRID), answer text, and JSON data.
 #must_use
 fn resp_new(src, content: Str, data: Str) {
     var r = xalloc(RESP_SIZE);
@@ -60,10 +67,13 @@ fn resp_new(src, content: Str, data: Str) {
     return r;
 }
 
+# Where the answer came from: SRC_DATA, SRC_LLM or SRC_HYBRID.
 #must_use
 fn resp_source(r) { return load64(r+RESP_SRC); }
+# The answer text (Str).
 #must_use
 fn resp_content(r) { return load64(r+RESP_CONTENT); }
+# The supporting records as JSON (Str); "[]" or empty when there are none.
 #must_use
 fn resp_data(r) { return load64(r+RESP_DATA); }
 
@@ -81,6 +91,7 @@ fn _names_from_vec(v, name_fn) {
     return str_builder_build(sb);
 }
 
+# Answer query `q` from the dataset alone: a SRC_DATA response, or 0 when the query needs the LLM.
 #must_use
 fn answer_from_data(q) {
     var qt = load64(q+Q_TYPE);
@@ -147,16 +158,43 @@ fn answer_from_data(q) {
 }
 
 # ----------------------------------------------------------------
+# Tool-call arguments
+# ----------------------------------------------------------------
+# bayan's flat parser hands back a string value unquoted but still escaped, a
+# number as its raw text, and null as the text "null".
+
+# A string argument, decoded; 0 when absent, JSON null, or empty.
+fn _hoosh_arg_str(args, key) {
+    var v = bayan_json_get_by_cstr(args, key);
+    if (v == 0) { return 0; }
+    if (str_len(v) == 0) { return 0; }
+    if (str_eq_cstr(v, "null") == 1) { return 0; }
+    # "Viking\/Norse" or an escaped accent must match the stored spelling.
+    return json_unescape(v);
+}
+
+# A whole-number argument: store it at `out` and return 1, or return 0 when it
+# is absent, null, or not an integral JSON number ("500 BC", "1.5").
+fn _hoosh_arg_int(args, key, out) {
+    var v = bayan_json_get_by_cstr(args, key);
+    if (v == 0) { return 0; }
+    return itihas_parse_int(v, out);
+}
+
+# ----------------------------------------------------------------
 # resolve_era_lookup — special tool handler (not a HistoryQuery type)
 # args is a parsed JSON pairs vec from bayan_json_parse()
 # ----------------------------------------------------------------
+#
+# A name that matches no era falls through to `year`, and JSON null counts as
+# absent. Through 2.6.1 `{"name": null, "year": 1200}` returned 0: the name
+# "null" was looked up, missed, and the year was never tried.
 #must_use
 fn resolve_era_lookup(args) {
-    var name_val = bayan_json_get_by_cstr(args, "name");
+    var name_val = _hoosh_arg_str(args, "name");
     if (name_val != 0) {
-        if (str_len(name_val) > 0) {
-            var era = era_by_name(name_val);
-            if (era == 0) { return 0; }
+        var era = era_by_name(name_val);
+        if (era != 0) {
             var sb = str_builder_new();
             str_builder_add(sb, era_name(era));
             str_builder_add_cstr(sb, " (");
@@ -173,18 +211,15 @@ fn resolve_era_lookup(args) {
             return resp_new(SRC_DATA, content, data);
         }
     }
-    var year_val = bayan_json_get_by_cstr(args, "year");
-    if (year_val != 0) {
-        if (str_len(year_val) > 0) {
-            var year = str_to_int(year_val);
-            var eras = eras_containing(year);
-            if (vec_len(eras) == 0) {
-                return resp_new(SRC_DATA, str_from("No eras found containing that year."), str_from("[]"));
-            }
-            var names = _names_from_vec(eras, &era_name);
-            var data = _json_array(eras, &era_to_json_into);
-            return resp_new(SRC_DATA, names, data);
+    var year_out[8];
+    if (_hoosh_arg_int(args, "year", &year_out) == 1) {
+        var eras = eras_containing(load64(&year_out));
+        if (vec_len(eras) == 0) {
+            return resp_new(SRC_DATA, str_from("No eras found containing that year."), str_from("[]"));
         }
+        var names = _names_from_vec(eras, &era_name);
+        var edata = _json_array(eras, &era_to_json_into);
+        return resp_new(SRC_DATA, names, edata);
     }
     return 0;
 }
@@ -194,11 +229,13 @@ fn resolve_era_lookup(args) {
 # ----------------------------------------------------------------
 var HOOSH_SYSTEM_PROMPT = "You are a historical data assistant. When the user asks a historical question, use the available tools to look up the answer from structured data. Use events_in_range for date-based queries, civilizations_at for what existed when questions, causes_of for causal questions, interactions_between for relationship queries, figure_lookup for people, and era_lookup for period queries. Only respond directly if no tool fits the question.";   #skip-lint
 
+# The six tool definitions offered to the LLM, as an OpenAI-style JSON array (cstr).
 #must_use
 fn hoosh_tool_defs_json() {
     return "[{\"type\":\"function\",\"function\":{\"name\":\"events_in_range\",\"description\":\"Find historical events in a year range (negative = BCE)\",\"parameters\":{\"type\":\"object\",\"properties\":{\"start\":{\"type\":\"integer\",\"description\":\"Start year\"},\"end\":{\"type\":\"integer\",\"description\":\"End year\"}},\"required\":[\"start\",\"end\"]}}},{\"type\":\"function\",\"function\":{\"name\":\"civilizations_at\",\"description\":\"Find civilizations active at a given year (negative = BCE)\",\"parameters\":{\"type\":\"object\",\"properties\":{\"year\":{\"type\":\"integer\",\"description\":\"Year to query\"}},\"required\":[\"year\"]}}},{\"type\":\"function\",\"function\":{\"name\":\"causes_of\",\"description\":\"Find causal factors of a named historical event\",\"parameters\":{\"type\":\"object\",\"properties\":{\"event\":{\"type\":\"string\",\"description\":\"Event name\"}},\"required\":[\"event\"]}}},{\"type\":\"function\",\"function\":{\"name\":\"interactions_between\",\"description\":\"Find interactions between two civilizations\",\"parameters\":{\"type\":\"object\",\"properties\":{\"civ_a\":{\"type\":\"string\",\"description\":\"First civilization\"},\"civ_b\":{\"type\":\"string\",\"description\":\"Second civilization\"}},\"required\":[\"civ_a\",\"civ_b\"]}}},{\"type\":\"function\",\"function\":{\"name\":\"figure_lookup\",\"description\":\"Look up a historical figure by name\",\"parameters\":{\"type\":\"object\",\"properties\":{\"name\":{\"type\":\"string\",\"description\":\"Figure name\"}},\"required\":[\"name\"]}}},{\"type\":\"function\",\"function\":{\"name\":\"era_lookup\",\"description\":\"Look up a historical era by name or find eras containing a year\",\"parameters\":{\"type\":\"object\",\"properties\":{\"name\":{\"type\":\"string\",\"description\":\"Era name\"},\"year\":{\"type\":\"integer\",\"description\":\"Year to find containing eras\"}}}}}]";   #skip-lint
 }
 
+# Number of tools in hoosh_tool_defs_json (6).
 #must_use
 fn hoosh_tool_count() { return 6; }
 
@@ -236,9 +273,11 @@ fn _build_post_header(buf, path, host, body_len) {
     memcpy(buf + pos, "Connection: close", 17); pos = pos + 17;
     store8(buf + pos, 13); store8(buf + pos + 1, 10); pos = pos + 2;
     memcpy(buf + pos, "Content-Length: ", 16); pos = pos + 16;
-    var cl_buf = xalloc(32);
-    var cl_len = fmt_int_buf(body_len, cl_buf);
-    memcpy(buf + pos, cl_buf, cl_len); pos = pos + cl_len;
+    # A stack buffer: an xalloc here aborted the process on OOM, on the one path
+    # that is meant to degrade (2.6.2).
+    var cl_buf[32];
+    var cl_len = fmt_int_buf(body_len, &cl_buf);
+    memcpy(buf + pos, &cl_buf, cl_len); pos = pos + cl_len;
     store8(buf + pos, 13); store8(buf + pos + 1, 10); pos = pos + 2;
     store8(buf + pos, 13); store8(buf + pos + 1, 10); pos = pos + 2;
     return pos;
@@ -247,10 +286,16 @@ fn _build_post_header(buf, path, host, body_len) {
 # Write exactly `len` bytes from `buf` to `fd`, looping over short writes.
 # Returns 1 on success, 0 if any write fails. A single unchecked SYS_WRITE could
 # send a partial request body, which the server then blocks on forever.
+#
+# Through the stdlib's _fd_write_nosigpipe, not a raw SYS_WRITE: a peer that
+# resets the connection mid-body turned the next write into SIGPIPE, which kills
+# the HOST process (measured: exit 141 with a 16 MiB body). It sends with
+# MSG_NOSIGNAL on Linux and sets SO_NOSIGPIPE on macOS, so the failure comes
+# back as -EPIPE and is reported like any other short write. CYRIUS-2026-0025.
 fn _write_all(fd, buf, len) {
     var off = 0;
     while (off < len) {
-        var w = syscall(SYS_WRITE, fd, buf + off, len - off);
+        var w = _fd_write_nosigpipe(fd, buf + off, len - off);
         if (w <= 0) { return 0; }
         off = off + w;
     }
@@ -319,27 +364,106 @@ fn hoosh_post(port, body: Str) {
     }
     var total = 0;
     var n = 1;
+    # Once the head is in, its Content-Length says when the body is complete.
+    var head_end = 0 - 1;
+    var clen = 0 - 1;
+    var complete = 0;
     # Distinguish the three ways this loop used to end identically: clean EOF,
     # a read error (n < 0, e.g. ECONNRESET or the recv timeout firing), and the
     # buffer filling (count becomes 0, which read reports as EOF).
     while (n > 0 && total < HOOSH_RESP_CAP) {
         n = syscall(SYS_READ, fd, rbuf + total, HOOSH_RESP_CAP - total);
-        if (n > 0) { total = total + n; }
+        if (n > 0) {
+            total = total + n;
+            if (head_end < 0) {
+                head_end = _http_head_end(rbuf, total);
+                if (head_end >= 0) { clen = _http_content_length(rbuf, head_end); }
+            }
+            # Stop as soon as the declared body is in. A server that keeps the
+            # connection open used to hold this read until the 30 s timeout,
+            # and the complete answer was then thrown away as a read error.
+            if (clen >= 0) {
+                if (total - head_end >= clen) { complete = 1; n = 0; }
+            }
+        }
     }
-    if (n < 0) {
-        _hoosh_warn("hoosh_post: read error or timeout", 33);
-        return 0;
+    if (complete == 0) {
+        if (n < 0) {
+            _hoosh_warn("hoosh_post: read error or timeout", 33);
+            return 0;
+        }
+        if (total >= HOOSH_RESP_CAP) {
+            # Parsing a response cut mid-JSON yields silent garbage — refuse it.
+            _hoosh_warn("hoosh_post: response exceeds buffer, truncated", 46);
+            return 0;
+        }
+        if (total == 0) {
+            _hoosh_warn("hoosh_post: empty response", 26);
+            return 0;
+        }
+        if (clen >= 0) {
+            # EOF before the declared length: the body was cut short, and a
+            # truncated answer parses as a plausible but wrong one.
+            _hoosh_warn("hoosh_post: body shorter than Content-Length", 44);
+            return 0;
+        }
     }
-    if (total >= HOOSH_RESP_CAP) {
-        # Parsing a response cut mid-JSON yields silent garbage — refuse it.
-        _hoosh_warn("hoosh_post: response exceeds buffer, truncated", 46);
-        return 0;
-    }
-    if (total == 0) {
-        _hoosh_warn("hoosh_post: empty response", 26);
-        return 0;
-    }
+    # Bytes past the declared body are not part of this response.
+    if (clen >= 0) { total = head_end + clen; }
     return _http_parse_response(rbuf, total);
+}
+
+# Index just past the blank line that ends the response head, or -1 when the
+# head is not complete yet.
+fn _http_head_end(buf, len) {
+    var i = 3;
+    while (i < len) {
+        if (load8(buf + i) == 10) {
+            if (load8(buf + i - 1) == 13) {
+                if (load8(buf + i - 2) == 10) {
+                    if (load8(buf + i - 3) == 13) { return i + 1; }
+                }
+            }
+        }
+        i = i + 1;
+    }
+    return 0 - 1;
+}
+
+# The Content-Length declared in the head buf[0..head_end), matched without
+# regard to case, or -1 when there is none or it is not a plain decimal.
+fn _http_content_length(buf, head_end) {
+    var nlen = 15;
+    var i = 0;
+    while (i + nlen <= head_end) {
+        var at_line = 0;
+        if (i == 0) { at_line = 1; }
+        elif (load8(buf + i - 1) == 10) { at_line = 1; }
+        if (at_line == 1) {
+            if (_ci_eq_bytes(buf + i, "content-length:", nlen) == 1) {
+                var j = i + nlen;
+                while (j < head_end) {
+                    var c = load8(buf + j);
+                    if (c != 32 && c != 9) { break; }
+                    j = j + 1;
+                }
+                var v = 0;
+                var nd = 0;
+                while (j < head_end) {
+                    var c2 = load8(buf + j);
+                    if (c2 < 48 || c2 > 57) { break; }
+                    if (v > 100000000) { return 0 - 1; }
+                    v = v * 10 + (c2 - 48);
+                    nd = nd + 1;
+                    j = j + 1;
+                }
+                if (nd == 0) { return 0 - 1; }
+                return v;
+            }
+        }
+        i = i + 1;
+    }
+    return 0 - 1;
 }
 
 # ----------------------------------------------------------------
@@ -378,85 +502,182 @@ fn _bs_parity_even(data, start, at) {
 }
 
 # ----------------------------------------------------------------
-# Parse tool call from response JSON
-# Looks for "tool_calls" array, extracts first call's name and arguments
-# Returns {name: Str, args_json: Str} or 0 if no tool call
+# A minimal JSON walker for the response envelope
 # ----------------------------------------------------------------
-fn _extract_tool_call(body, body_len) {
-    var body_str = str_from_buf(body, body_len);
-    # Find "tool_calls"
-    if (str_contains_cstr(body_str, "tool_calls") == 0) { return 0; }
-    # Find "name": "..." after tool_calls
-    var name_idx = str_index_of_cstr(body_str, "\"name\"");
-    if (name_idx < 0) { return 0; }
-    # Find the value after "name": "
-    var data = str_data(body_str);
-    var slen = str_len(body_str);
-    var i = name_idx + 7;
-    # Skip whitespace and colon
-    while (i < slen) {
-        var c = load8(data + i);
-        if (c == 34) { break; }
-        i = i + 1;
-    }
-    # An unterminated name leaves i == slen; i+1 would then put name_start past
-    # i and hand str_new a negative length.
-    if (i >= slen) { return 0; }
-    i = i + 1; # skip opening quote
-    var name_start = i;
-    while (i < slen) {
-        if (load8(data + i) == 34) { break; }
-        i = i + 1;
-    }
-    if (i <= name_start) { return 0; }
-    var tool_name = str_new(data + name_start, i - name_start);
+# Enough structure to find a member of a given object without being fooled by
+# the same key nested inside another value, or by braces inside strings.
 
-    # Find "arguments" — could be string or object
-    var args_idx = str_index_of_cstr(body_str, "\"arguments\"");
-    if (args_idx < 0) { return 0; }
-    i = args_idx + 12;
-    if (i > slen) { i = slen; }
-    while (i < slen) {
-        var c = load8(data + i);
-        if (c == 123) { break; }  # {
-        if (c == 34) { break; }   # " (stringified JSON)
+# Index of `needle` (a cstr) in data[from..slen), or -1.
+fn _find_bytes(data, slen, from, needle) {
+    var nl = strlen(needle);
+    var i = from;
+    while (i + nl <= slen) {
+        if (memeq(data + i, needle, nl) == 1) { return i; }
         i = i + 1;
     }
-    # A body with neither { nor " after "arguments" leaves i == slen; the two
-    # reads below would then be one byte past the buffer.
-    if (i >= slen) { return 0; }
-    # Extract args JSON object or string
-    var args_str = str_from("");
-    if (load8(data + i) == 123) {
-        # Object — find matching }
-        var depth = 1;
-        var start = i;
+    return 0 - 1;
+}
+
+# First index at or after `i` that is not JSON whitespace.
+fn _skip_ws(data, slen, i) {
+    while (i < slen) {
+        var c = load8(data + i);
+        if (c != 32 && c != 9 && c != 10 && c != 13) { break; }
         i = i + 1;
-        while (i < slen && depth > 0) {
-            if (load8(data + i) == 123) { depth = depth + 1; }
-            if (load8(data + i) == 125) { depth = depth - 1; }
+    }
+    return i;
+}
+
+# Index just past the string whose opening quote is data[q], or -1 when it is
+# unterminated. Escaped quotes do not end it.
+fn _json_str_end(data, slen, q) {
+    var i = q + 1;
+    while (i < slen) {
+        if (load8(data + i) == 34) {
+            if (_bs_parity_even(data, q + 1, i) == 1) { return i + 1; }
+        }
+        i = i + 1;
+    }
+    return 0 - 1;
+}
+
+# Index just past the object or array that opens at data[o], or -1 when it is
+# unbalanced. Strings are skipped whole, so a brace inside one does not count:
+# through 2.6.1 `{"event":"Siege }of{ X"}` was cut at the first `}`.
+fn _json_span_end(data, slen, o) {
+    var depth = 0;
+    var i = o;
+    while (i < slen) {
+        var c = load8(data + i);
+        if (c == 34) {
+            var j = _json_str_end(data, slen, i);
+            if (j < 0) { return 0 - 1; }
+            i = j;
+        }
+        else {
+            if (c == 123 || c == 91) { depth = depth + 1; }
+            elif (c == 125 || c == 93) {
+                depth = depth - 1;
+                if (depth == 0) { return i + 1; }
+            }
             i = i + 1;
         }
-        args_str = str_new(data + start, i - start);
     }
-    else { if (load8(data + i) == 34) {
-            # Stringified JSON — the OpenAI /v1/chat/completions shape, and what
-            # hoosh's own emitter always produces. The span is JSON-*encoded*, so
-            # it must be decoded before bayan_json_parse sees it; returning the raw
-            # escaped bytes made every tool call parse to zero pairs and silently
-            # drop the structured-data answer.
-            # `else if`, not a second `if`: the object branch above already advanced
-            # i past its closing brace, and a quote there would overwrite args_str.
-            i = i + 1;
-            var start = i;
+    return 0 - 1;
+}
+
+# Index of the value of member `key` of the object opening at data[o], or -1.
+# Only the object's own members are considered, never those of nested values.
+fn _json_member(data, slen, o, key) {
+    var klen = strlen(key);
+    var i = o + 1;
+    while (i < slen) {
+        i = _skip_ws(data, slen, i);
+        if (i >= slen) { return 0 - 1; }
+        var c = load8(data + i);
+        if (c == 125) { return 0 - 1; }
+        if (c != 34) { return 0 - 1; }
+        var kend = _json_str_end(data, slen, i);
+        if (kend < 0) { return 0 - 1; }
+        var hit = 0;
+        if (kend - i - 2 == klen) {
+            if (memeq(data + i + 1, key, klen) == 1) { hit = 1; }
+        }
+        i = _skip_ws(data, slen, kend);
+        if (i >= slen) { return 0 - 1; }
+        if (load8(data + i) != 58) { return 0 - 1; }
+        i = _skip_ws(data, slen, i + 1);
+        if (i >= slen) { return 0 - 1; }
+        if (hit == 1) { return i; }
+        var v = load8(data + i);
+        if (v == 34) { i = _json_str_end(data, slen, i); }
+        elif (v == 123 || v == 91) { i = _json_span_end(data, slen, i); }
+        else {
             while (i < slen) {
-                if (load8(data + i) == 34 && _bs_parity_even(data, start, i) == 1) { break; }
+                var c2 = load8(data + i);
+                if (c2 == 44 || c2 == 125) { break; }
                 i = i + 1;
             }
-            args_str = json_unescape(str_new(data + start, i - start));
-        } }
+        }
+        if (i < 0) { return 0 - 1; }
+        i = _skip_ws(data, slen, i);
+        if (i < slen) {
+            if (load8(data + i) == 44) { i = i + 1; }
+        }
+    }
+    return 0 - 1;
+}
 
-    # Return {name, args_str} packed in 16 bytes
+# ----------------------------------------------------------------
+# Parse tool call from response JSON
+# ----------------------------------------------------------------
+# Finds the first call in a `"tool_calls": [...]` array and returns
+# {name: Str, args_json: Str} packed in 16 bytes, or 0 if there is none.
+#
+# The call's `function` object is walked member by member (a call with no
+# `function` wrapper is read directly). Through 2.6.1 "name" and "arguments"
+# were searched for anywhere in the body, so `{"arguments":{"name":"Bronze
+# Age"},"name":"era_lookup"}` produced the tool name "Bronze Age", and
+# `"arguments": null` took the next quoted token as the arguments.
+fn _extract_tool_call(body, body_len) {
+    var data = body;
+    var slen = body_len;
+    # The first "tool_calls" KEY: an occurrence followed by `:` and `[`. The
+    # same text inside some string value is skipped.
+    var call = 0 - 1;
+    var at = _find_bytes(data, slen, 0, "\"tool_calls\"");
+    while (at >= 0) {
+        var i = _skip_ws(data, slen, at + 12);
+        if (i < slen) {
+            if (load8(data + i) == 58) {
+                i = _skip_ws(data, slen, i + 1);
+                if (i < slen) {
+                    if (load8(data + i) == 91) {
+                        i = _skip_ws(data, slen, i + 1);
+                        if (i < slen) {
+                            if (load8(data + i) == 123) { call = i; }
+                        }
+                        at = 0 - 1;
+                    }
+                }
+            }
+        }
+        if (at >= 0) { at = _find_bytes(data, slen, at + 12, "\"tool_calls\""); }
+    }
+    if (call < 0) { return 0; }
+    var fobj = _json_member(data, slen, call, "function");
+    if (fobj < 0) { fobj = call; }
+    elif (load8(data + fobj) != 123) { return 0; }
+
+    var name_at = _json_member(data, slen, fobj, "name");
+    if (name_at < 0) { return 0; }
+    if (load8(data + name_at) != 34) { return 0; }
+    var name_end = _json_str_end(data, slen, name_at);
+    if (name_end < 0) { return 0; }
+    if (name_end - name_at - 2 <= 0) { return 0; }
+    var tool_name = json_unescape(str_new(data + name_at + 1, name_end - name_at - 2));
+
+    var args_at = _json_member(data, slen, fobj, "arguments");
+    if (args_at < 0) { return 0; }
+    var args_str = 0;
+    var ac = load8(data + args_at);
+    if (ac == 123) {
+        # Object form: the span itself is the arguments JSON.
+        var aend = _json_span_end(data, slen, args_at);
+        if (aend < 0) { return 0; }
+        args_str = str_new(data + args_at, aend - args_at);
+    }
+    elif (ac == 34) {
+        # Stringified JSON — the OpenAI /v1/chat/completions shape, and what
+        # hoosh's own emitter always produces. The span is JSON-*encoded*, so
+        # it must be decoded before bayan_json_parse sees it; returning the raw
+        # escaped bytes made every tool call parse to zero pairs.
+        var send = _json_str_end(data, slen, args_at);
+        if (send < 0) { return 0; }
+        args_str = json_unescape(str_new(data + args_at + 1, send - args_at - 2));
+    }
+    else { return 0; }
+
     var result = xalloc(16);
     store64(result, tool_name);
     store64(result + 8, args_str);
@@ -470,32 +691,34 @@ fn _extract_tool_call(body, body_len) {
 fn parse_tool_call(name: Str, args_json: Str) {
     var args = bayan_json_parse(args_json);
 
+    # Years go through itihas_parse_int: str_to_int skipped every non-digit, so
+    # "-500.0" read as -5000, "1.5e3" as 153 and "500 BC" as 500 (2.6.1).
     if (str_eq_cstr(name, "events_in_range") == 1) {
-        var sv = bayan_json_get_by_cstr(args, "start");
-        var ev = bayan_json_get_by_cstr(args, "end");
-        if (sv == 0) { return 0; }
-        if (ev == 0) { return 0; }
-        return query_events_in_range(str_to_int(sv), str_to_int(ev));
+        var s_out[8];
+        var e_out[8];
+        if (_hoosh_arg_int(args, "start", &s_out) == 0) { return 0; }
+        if (_hoosh_arg_int(args, "end", &e_out) == 0) { return 0; }
+        return query_events_in_range(load64(&s_out), load64(&e_out));
     }
     if (str_eq_cstr(name, "civilizations_at") == 1) {
-        var yv = bayan_json_get_by_cstr(args, "year");
-        if (yv == 0) { return 0; }
-        return query_civs_at(str_to_int(yv));
+        var y_out[8];
+        if (_hoosh_arg_int(args, "year", &y_out) == 0) { return 0; }
+        return query_civs_at(load64(&y_out));
     }
     if (str_eq_cstr(name, "causes_of") == 1) {
-        var ev = bayan_json_get_by_cstr(args, "event");
-        if (ev == 0) { return 0; }
-        return query_causes_of(ev);
+        var evn = _hoosh_arg_str(args, "event");
+        if (evn == 0) { return 0; }
+        return query_causes_of(evn);
     }
     if (str_eq_cstr(name, "interactions_between") == 1) {
-        var av = bayan_json_get_by_cstr(args, "civ_a");
-        var bv = bayan_json_get_by_cstr(args, "civ_b");
+        var av = _hoosh_arg_str(args, "civ_a");
+        var bv = _hoosh_arg_str(args, "civ_b");
         if (av == 0) { return 0; }
         if (bv == 0) { return 0; }
         return query_interactions_between(av, bv);
     }
     if (str_eq_cstr(name, "figure_lookup") == 1) {
-        var nv = bayan_json_get_by_cstr(args, "name");
+        var nv = _hoosh_arg_str(args, "name");
         if (nv == 0) { return 0; }
         return query_figure_lookup(nv);
     }
@@ -506,32 +729,29 @@ fn parse_tool_call(name: Str, args_json: Str) {
 # ----------------------------------------------------------------
 # Extract LLM text content from response (when no tool call)
 # ----------------------------------------------------------------
+#
+# Only a string or null counts. Through 2.6.1 any other value (an array of
+# content parts, a number) made the scan take the next quoted token, so
+# `[{"type":"text",...}]` came back as the answer "type".
 fn _extract_content(body, body_len) {
-    var body_str = str_from_buf(body, body_len);
-    var idx = str_index_of_cstr(body_str, "\"content\"");
-    if (idx < 0) { return str_from(""); }
-    var data = str_data(body_str);
-    var slen = str_len(body_str);
-    var i = idx + 10;
-    while (i < slen) {
-        if (load8(data + i) == 34) { break; }
-        if (load8(data + i) == 110 && load8(data + i - 1) != 92) {
-            # "null"
-            if (memeq(data + i, "null", 4) == 1) { return str_from(""); }
+    var at = _find_bytes(body, body_len, 0, "\"content\"");
+    while (at >= 0) {
+        var i = _skip_ws(body, body_len, at + 9);
+        if (i < body_len) {
+            if (load8(body + i) == 58) {
+                i = _skip_ws(body, body_len, i + 1);
+                if (i >= body_len) { return str_from(""); }
+                if (load8(body + i) != 34) { return str_from(""); }
+                var e = _json_str_end(body, body_len, i);
+                if (e < 0) { return str_from(""); }
+                # A JSON string body: decode it, or \n and \" reach the caller
+                # as literal backslash-n and backslash-quote.
+                return json_unescape(str_new(body + i + 1, e - i - 2));
+            }
         }
-        i = i + 1;
+        at = _find_bytes(body, body_len, at + 9, "\"content\"");
     }
-    # No opening quote found — i == slen, and i+1 would yield a negative length.
-    if (i >= slen) { return str_from(""); }
-    i = i + 1;
-    var start = i;
-    while (i < slen) {
-        if (load8(data + i) == 34 && _bs_parity_even(data, start, i) == 1) { break; }
-        i = i + 1;
-    }
-    # The content is a JSON string body: decode it, or \n and \" reach the
-    # caller as literal backslash-n and backslash-quote.
-    return json_unescape(str_new(data + start, i - start));
+    return str_from("");
 }
 
 # ----------------------------------------------------------------
@@ -553,7 +773,14 @@ fn llm_answer(port, question: Str, model: Str) {
     if (resp == 0) { return 0; }
 
     var status = load64(resp);
-    if (status != 200) { return 0; }
+    if (status != 200) {
+        # Every other hoosh_post failure is logged; this one returned 0
+        # silently through 2.6.1. Status 0 means the reply was not HTTP.
+        var sbuf[24];
+        var slen = fmt_int_buf(status, &sbuf);
+        sakshi_log_kv(SK_WARN, "llm_answer: hoosh replied with a non-200 status", 47, "status", 6, &sbuf, slen);
+        return 0;
+    }
 
     var body = load64(resp + 8);
     var body_len = load64(resp + 16);
@@ -588,5 +815,11 @@ fn llm_answer(port, question: Str, model: Str) {
 
     # No tool call or data insufficient — return LLM text
     var content = _extract_content(body, body_len);
+    if (str_len(content) == 0) {
+        # No data answer and no text: through 2.6.1 this was a "successful"
+        # SRC_LLM response with empty content, indistinguishable from an answer.
+        _hoosh_warn("llm_answer: no data answer and no text in the reply", 51);
+        return 0;
+    }
     return resp_new(SRC_LLM, content, str_from(""));
 }
