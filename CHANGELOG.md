@@ -7,6 +7,133 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.5.2] - 2026-11-04
+
+Toolchain and dependency cut: cyrius 6.6.2 → 6.6.20, and bote 3.3.8 → 3.3.17,
+the bote tag that pins 6.6.20. No `src/` change was needed. The release
+benchmark gate surfaced a compiler bug that had made ten of the 32 benchmark rows
+time calls that did no work. Those rows are now correct, guarded against
+recurrence, and flagged in `benchmarks.md`. Suite **309** tests + **39** MCP.
+
+### Changed — toolchain and dependencies
+
+- **Toolchain `6.6.2` → `6.6.20`, bote `3.3.8` → `3.3.17`.** 3.3.17 is the
+  newest bote tag on the 6.6 line (3.4.0 onward pins 6.7.x). Its graph resolves
+  to libro 2.10.8, majra 2.9.3, patra 1.15.2 and sigil 3.13.10. Smoke, the 309
+  unit tests, the 39 MCP tests (`--features mcp`), the CI lint gate and
+  `cyrius fmt --check` are all clean with no source change.
+
+- **`cyrius.lock` regenerated from an empty `lib/`.** The committed lock was
+  stale: it recorded bote 3.3.7, although the manifest had pinned 3.3.8 since
+  2.5.1. An incremental relock also kept the superseded commit pins alongside
+  the new ones. The new lock has 75 file hashes, one commit pin each for bote,
+  libro, majra, patra and sigil, and a `cyrius 6.6.20` trailer. Running CI's
+  steps on a fresh copy of the tree leaves it byte-identical. As before,
+  `cyrius deps --verify` needs `--features mcp`, because the lock covers the
+  optional bote graph.
+
+- **`dist/itihas.deps` names 11 stdlib leaves, down from 16.** Since cyrius
+  6.6.18, `distlib` derives the sidecar from a compile-verify of the bundle
+  instead of copying the producer's whole `[deps].stdlib`. `assert`, `tagged`,
+  `result`, `io` and `bench` are gone: the bundle compiles without naming them.
+  **Consumer note:** a consumer that called any of those from its own code, and
+  relied on itihas's sidecar to vendor them, must now declare them in its own
+  `[deps].stdlib`. The 6.6.18+ CLI prints a `hint:` line naming the leaf.
+
+- **`dist/itihas.cyr` opens with a compile-verified `# Requires` block**, one
+  `include "lib/<leaf>.cyr"` per sidecar leaf, so `include "dist/itihas.cyr"`
+  compiles on its own. For a `cyrius deps` consumer nothing changes: include-once
+  is keyed on the literal path, and these are the same lines `deps` prepends.
+  Apart from the block and the version line, the bundle body is unchanged.
+
+- **Docs:** README, CONTRIBUTING, CLAUDE.md and the roadmap header named
+  toolchains from 6.4.69 to 6.5.36. All now say 6.6.20. The README's consumer
+  note describes the sidecar and `# Requires` block instead of telling consumers
+  to add `sakshi` by hand. The 2.5.1 entry below had a duplicated clause, now
+  removed.
+
+### Fixed — ten benchmark rows timed calls that did no work
+
+- **Every string-argument wrapper in `tests/itihas.bcyr` was miscompiled.** Each
+  is a tail call of the form `return routes_by_region("East Asia");`. Through
+  cyrius 6.6.4, `return f("literal")` into a `: Str` parameter passed the raw
+  cstr without wrapping it (cyrius fixed this in 6.6.5). The callee then read a
+  malformed `Str`, and every query came back empty. Measured: through the wrapper
+  `routes_by_region` returned 0 rows on 6.6.4 and 3 on 6.6.5. Called directly,
+  it returned 3 on both. A no-op is fast, so the rows looked healthy for as long
+  as the bug lasted.
+
+  The library itself was never affected. The unit tests assign results instead
+  of tail-calling. No `src/` call has the shape: `resp_new` receives
+  `str_from(...)` arguments, and `_mcp_err` and `schema_new` take untyped
+  parameters.
+
+  Found because the release A/B showed those rows 2–7× slower. A bisect over
+  every 6.6.x toolchain put the entire shift between 6.6.4 and 6.6.5, with
+  nothing moving before or after.
+
+  Affected rows: `civs_by_region_mediterranean`, `calendar_by_name_gregorian`,
+  `causes_of_french_revolution`, `chain_writing_depth3`, `interactions_for_rome`,
+  `influence_score_egypt_hittite`, `sites_by_region_near_east`,
+  `routes_by_region_east_asia`, `routes_by_commodity_silk`,
+  `campaigns_by_commander_napoleon`. The wrapper shape dates back to at least
+  2.3.5. The no-op behaviour is verified on 6.6.2–6.6.4. Older toolchains are
+  no longer installed to check, so earlier entries' figures for these rows (the
+  2.4.2 token-membership costs, the 2.4.3 trace table, the 2.4.0 and 2.3.5
+  codegen notes) are unverified.
+
+- **Two guards against a silent recurrence:**
+  - `tests/itihas.bcyr` checks that each of the ten wrappers returns a
+    non-empty result before anything is timed. Otherwise it exits 1 and names
+    the row, which fails CI's benchmark step. Checked both ways: it passes on
+    6.6.20, and on 6.6.4 it stops at `civs_by_region_mediterranean`.
+  - `scripts/bench-history.sh` marks the ten rows with † in `benchmarks.md`
+    and computes no delta against runs recorded before this release.
+
+### Benchmarks — release gate
+
+Interleaved A/B of the 2.5.1 bench binary (6.6.2) against this one (6.6.20):
+3 rounds each, same machine and session, with each row's median compared
+against its own run-to-run spread. The run is recorded in `bench-history.csv`.
+
+- **The 22 comparable rows are flat.** Every delta is inside its row's spread.
+  For example, `civs_active_at_500bce` 286 → 292 ns (spread 8.9%),
+  `events_by_category_war` 996 → 1006 ns (1.7%), `campaigns_between_500bce_500ce`
+  140 → 143 ns (1.4%), and the four JSON rows −0.7% to +2.0% (9–11%). The `all_*`
+  accessors read 5 → 4 ns, which is the timer floor, not a change.
+- **The 10 † rows have their first valid numbers.** The old column timed an
+  empty scan, so these are not regressions:
+
+  | Row | 2.5.1 (no-op) | 2.5.2 |
+  |-----|---------------|-------|
+  | `civs_by_region_mediterranean` | 880 ns | 1875 ns |
+  | `calendar_by_name_gregorian` | 135 ns | 93 ns |
+  | `causes_of_french_revolution` | 255 ns | 402 ns |
+  | `chain_writing_depth3` | 401 ns | 2627 ns |
+  | `interactions_for_rome` | 619 ns | 757 ns |
+  | `influence_score_egypt_hittite` | 583 ns | 943 ns |
+  | `sites_by_region_near_east` | 550 ns | 1396 ns |
+  | `routes_by_region_east_asia` | 247 ns | 1795 ns |
+  | `routes_by_commodity_silk` | 330 ns | 1218 ns |
+  | `campaigns_by_commander_napoleon` | 311 ns | 1381 ns |
+
+  `calendar_by_name` got faster because the correct call finds Gregorian and
+  returns early, where the broken one scanned every calendar and failed.
+- **Binary size:** the DCE `build/itihas` grew 245,696 → 251,848 B (+6,152,
+  +2.5%), all from the larger stdlib snapshot. The `--features mcp` test binary
+  grew 2,884,392 → 2,985,416 B.
+
+### Known
+
+- **`cyrius distlib` warns that `SYS_SOCKET` and `SYS_CONNECT` are undefined on
+  x86_64-windows and x86_64-agnos.** `hoosh_post` uses raw Linux/macOS socket
+  syscalls. This is not new: the 6.6.20 toolchain is simply the first to check
+  the bundle against those targets. The build still succeeds and CI is not
+  affected. Tracked under *Portability* in the roadmap.
+- **The `--features mcp` build warns about a 262,144-byte static array in
+  `lib/sigil.cyr`.** That is the vendored sigil fold, which arrives through
+  bote → libro. It is not itihas code.
+
 ## [2.5.1] - 2026-09-11
 
 Patch cut of everything that had accumulated on `main` past tag 2.5.0: the
@@ -16,7 +143,7 @@ arc. Suite **309** tests.
 
 ### Changed — toolchain and dependencies
 
-- **Toolchain `6.5.36` → `6.6.2`, and bote `3.3.7` → `3.3.8`, and bote `3.3.7` → `3.3.8`.** 6.6.0 made
+- **Toolchain `6.5.36` → `6.6.2`, and bote `3.3.7` → `3.3.8`.** 6.6.0 made
   `Result` / `Option` / `Either` a two-register `(tag, payload)` value and deleted
   the `payload()` accessor. itihas needed **no source change**: its own tree calls
   neither retired accessor, carries no `Result` propagation chains and uses no
