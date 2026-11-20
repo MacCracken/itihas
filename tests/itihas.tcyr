@@ -1,7 +1,8 @@
 # itihas.tcyr — integration test suite for itihas (run via `cyrius test`)
 #
 # Covers module counts, lookups, filters, cross-module integration,
-# case-insensitive lookups, chronological sort, JSON serialization, the hoosh
+# case-insensitive lookups, chronological sort, JSON serialization and the
+# *_from_json decoders (round trips and every error message), the hoosh
 # data-answer and wire-parsing paths, the 2.4.2 and 2.6.2 hardening
 # regressions, the cross-table date rule, and one assertion per public
 # accessor and constructor.
@@ -158,6 +159,230 @@ fn _tc_args(body) {
     var tc = _extract_tool_call(body, strlen(body));
     if (tc == 0) { return 0; }
     return load64(tc + 8);
+}
+
+# ---------------------------------------------------------------
+# Decoder helpers (*_from_json)
+# ---------------------------------------------------------------
+# The message of decoding JSON text `js` (a C string) with `decode`, one of the
+# *_from_json_text functions; "Ok" when it decodes.
+fn _de_msg(decode, js) {
+    var t, x = fncall1(decode, str_from(js));
+    if (is_ok(t) == 1) { return str_from("Ok"); }
+    return itihas_err_msg(x);
+}
+
+# Assert that decoding `js` gives exactly the message `want`; print what it gave if not.
+fn _de_is(decode, js, want, name) {
+    var got = _de_msg(decode, js);
+    var same = str_eq(got, str_from(want));
+    if (same != 1) { str_println(got); }
+    return check(same, 1, name);
+}
+
+# Decode `js` and re-encode it with `enc` (an X_to_json); 0 when the decode fails.
+fn _de_reencode(decode, enc, js) {
+    var t, x = fncall1(decode, str_from(js));
+    if (is_ok(t) != 1) { return 0; }
+    return fncall1(enc, x);
+}
+
+# How many records of `table` survive encode -> decode -> encode byte-identical,
+# each decoded on its own from a fresh parse.
+fn _de_round_trips(table, enc, dec) {
+    var good = 0;
+    var n = vec_len(table);
+    for (var i = 0; i < n; i = i + 1) {
+        var s1 = fncall1(enc, vec_get(table, i));
+        var t, r = fncall1(dec, bayan_json_v_parse(s1));
+        if (is_ok(t) == 1) {
+            if (str_eq(fncall1(enc, r), s1) == 1) { good = good + 1; } else { str_println(s1); }
+        } else { str_println(itihas_err_msg(r)); }
+    }
+    return good;
+}
+
+# 1 when the whole table, written as one JSON array, decodes element by element
+# from a single parsed document and re-encodes byte-identical: the way a
+# consumer reads records embedded in its own JSON.
+fn _de_array_round_trip(table, into_fn, dec) {
+    var s1 = _json_array(table, into_fn);
+    var arr = bayan_json_v_parse(s1);
+    var n = bayan_json_v_arr_len(arr);
+    if (n != vec_len(table)) { return 0; }
+    var out = vec_new();
+    for (var i = 0; i < n; i = i + 1) {
+        var t, r = fncall1(dec, bayan_json_v_arr_get(arr, i));
+        if (is_ok(t) != 1) { return 0; }
+        vec_push(out, r);
+    }
+    return str_eq(_json_array(out, into_fn), s1);
+}
+
+# Assert that decoding a tree built in code, an object holding `key` twice with
+# value `val`, gives exactly the message `want`.
+fn _de_tree_is(decode, key, val, want, name) {
+    var obj = bayan_json_v_obj_new();
+    bayan_json_v_obj_set(obj, str_from(key), val);
+    bayan_json_v_obj_set(obj, str_from(key), val);
+    var t, x = fncall1(decode, obj);
+    var got = str_from("Ok");
+    if (is_ok(t) != 1) { got = itihas_err_msg(x); }
+    var same = str_eq(got, str_from(want));
+    if (same != 1) { str_println(got); }
+    return check(same, 1, name);
+}
+
+# One valid era, the base the key-order and unknown-key cases vary.
+var DE_ERA = "{\"name\": \"X\", \"start_year\": 1, \"end_year\": 2, \"region\": \"R\", \"description\": \"D\", \"category\": 0, \"scope\": 0}";   #skip-lint
+
+# The decoder suite: round trips over the tables, then one case per error message.
+fn test_decode() {
+    println("--- decode: round trips ---");
+    check(_de_round_trips(all_eras(), &era_to_json, &era_from_json), era_count(), "every era round-trips byte-identical");   #skip-lint
+    check(_de_round_trips(all_civilizations(), &civ_to_json, &civ_from_json), civ_count(), "every civilization round-trips byte-identical");   #skip-lint
+    check(_de_round_trips(all_events(), &event_to_json, &event_from_json), event_count(), "every event round-trips byte-identical");   #skip-lint
+    check(_de_array_round_trip(all_eras(), &era_to_json_into, &era_from_json), 1, "the era array round-trips from one document");   #skip-lint
+    check(_de_array_round_trip(all_civilizations(), &civ_to_json_into, &civ_from_json), 1, "the civilization array round-trips from one document");   #skip-lint
+    check(_de_array_round_trip(all_events(), &event_to_json_into, &event_from_json), 1, "the event array round-trips from one document");   #skip-lint
+
+    # A decoded record is a new record with the same fields, the sentinel included.
+    var info = era_by_name("Information Age");
+    var it, ir = era_from_json_text(era_to_json(info));
+    check(is_ok(it), 1, "Information Age decodes");
+    ok(ir != info, "the decoded era is a new record");
+    check(era_end(ir), ERA_ONGOING, "ERA_ONGOING survives the round trip");
+    check(era_cat(ir), CONTEMPORARY, "the category code survives");
+    ok(str_eq(era_name(ir), era_name(info)), "the name survives");
+    var et, er = event_from_json_text(event_to_json(event_by_name("Fall of the Western Roman Empire")));
+    check(is_ok(et), 1, "an event decodes from text");
+    check(evt_year(er), 476, "the event year survives");
+    check(evt_sig(er), evt_sig(event_by_name("Fall of the Western Roman Empire")), "the significance code survives");   #skip-lint
+    var ct, cr = civ_from_json_text(civ_to_json(civ_by_name("Indus Valley")));
+    check(is_ok(ct), 1, "a civilization decodes from text");
+    zero(str_len(civ_lang(cr)), "an empty language survives");
+    check(civ_found(cr), 0 - 3300, "a BCE founding year survives");
+
+    # Strings the tables never hold: every escape class, U+0000, 2- and 4-byte
+    # UTF-8, and both i32 bounds.
+    var nul = alloc(3);
+    store8(nul, 97); store8(nul + 1, 0); store8(nul + 2, 98);
+    var hostile = era_new(str_from("Tab\tAnd \"Quote\" \\ /"), 0 - 2147483648, 2147483647,
+      str_from("Tenochtitlán, 𒀭"), str_new(nul, 3), CONTEMPORARY, SCOPE_REGIONAL);
+    var hs = era_to_json(hostile);
+    var hst, hsr = era_from_json(bayan_json_v_parse(hs));
+    check(is_ok(hst), 1, "a hostile era decodes");
+    ok(str_eq(era_to_json(hsr), hs), "a hostile era re-encodes byte-identical");
+    check(str_len(era_desc(hsr)), 3, "U+0000 is kept inside the description");
+    check(era_start(hsr), 0 - 2147483648, "i32 min is a year");
+    var hc = civ_new(str_from("a\r\nb"), str_from(""), str_from("\x01"), 0 - 1, 1, str_from("x;y"), str_from("ꦏ"), str_from("akk;sux"));   #skip-lint
+    var hcs = civ_to_json(hc);
+    ok(str_eq(_de_reencode(&civ_from_json_text, &civ_to_json, str_cstr(hcs)), hcs), "a hostile civilization re-encodes byte-identical");   #skip-lint
+    var he = evt_new(str_from("\x08\x0c"), 0 - 1, str_from("e"), CAT_COLLAPSE, str_from("\\\""), str_from(""), SIG_LOCAL);   #skip-lint
+    var hes = event_to_json(he);
+    ok(str_eq(_de_reencode(&event_from_json_text, &event_to_json, str_cstr(hes)), hes), "a hostile event re-encodes byte-identical");   #skip-lint
+
+    # Unknown keys are ignored, and key order does not matter.
+    var canon = era_to_json(era_new(str_from("X"), 1, 2, str_from("R"), str_from("D"), ANCIENT, SCOPE_GLOBAL));   #skip-lint
+    ok(str_eq(_de_reencode(&era_from_json_text, &era_to_json, DE_ERA), canon), "the base era decodes to its canonical form");   #skip-lint
+    ok(str_eq(_de_reencode(&era_from_json_text, &era_to_json,
+          "{\"extra\": [1, {\"a\": null}], \"name\": \"X\", \"start_year\": 1, \"end_year\": 2, \"region\": \"R\", \"description\": \"D\", \"category\": 0, \"scope\": 0, \"z\": 5}"),   #skip-lint
+        canon), "unknown keys are ignored");
+    ok(str_eq(_de_reencode(&era_from_json_text, &era_to_json,
+          "{\"scope\": 0, \"category\": 0, \"description\": \"D\", \"region\": \"R\", \"end_year\": 2, \"start_year\": 1, \"name\": \"X\"}"),   #skip-lint
+        canon), "keys decode in any order");
+
+    println("--- decode: errors ---");
+    var de = &era_from_json_text;
+    var dc = &civ_from_json_text;
+    var dv = &event_from_json_text;
+    # The payload: an ItihasErr with the decode code.
+    var xt, xe = era_from_json_text(str_from("[]"));
+    check(is_err_result(xt), 1, "a decode failure is an Err");
+    check(itihas_err_code(xe), ITIHAS_ERR_DESERIALIZE, "its code is ITIHAS_ERR_DESERIALIZE");
+    var nt, ne = era_from_json(0);
+    check(is_err_result(nt), 1, "a null node is an Err");
+    ok(str_eq(itihas_err_msg(ne), str_from("invalid type: null, expected struct Era")), "a null node reads as null");   #skip-lint
+    var fe = itihas_err_new(ITIHAS_ERR_UNKNOWN_ERA, str_from("m"));
+    check(itihas_err_code(fe), ITIHAS_ERR_UNKNOWN_ERA, "itihas_err_new stores the code");
+    ok(str_eq(itihas_err_msg(fe), str_from("m")), "itihas_err_new stores the message");
+    var ft, fv = itihas_fail(ITIHAS_ERR_INVALID_YEAR, str_from("y"));
+    check(is_err_result(ft), 1, "itihas_fail is an Err");
+    check(itihas_err_code(fv), ITIHAS_ERR_INVALID_YEAR, "itihas_fail carries its code");
+
+    # Not an object.
+    _de_is(de, "[1]", "invalid type: sequence, expected struct Era", "an array is not an Era");
+    _de_is(de, "\"x\"", "invalid type: string \"x\", expected struct Era", "a string is not an Era");   #skip-lint
+    _de_is(de, "null", "invalid type: null, expected struct Era", "null is not an Era");
+    _de_is(dc, "5", "invalid type: integer `5`, expected struct Civilization", "an integer is not a Civilization");   #skip-lint
+    _de_is(dv, "true", "invalid type: boolean `true`, expected struct Event", "a boolean is not an Event");   #skip-lint
+    _de_is(dv, "2.5", "invalid type: floating point `2.5`, expected struct Event", "a float is not an Event");   #skip-lint
+
+    # Missing fields, first in declaration order.
+    _de_is(de, "{}", "missing field `name`", "an empty object misses name");
+    _de_is(de, "{\"name\": \"X\", \"start_year\": 1, \"end_year\": 2, \"region\": \"R\", \"description\": \"D\", \"category\": 0}",   #skip-lint
+      "missing field `scope`", "era without scope");
+    _de_is(dc, "{\"name\": \"X\", \"region\": \"R\", \"peak_era\": \"P\", \"founded\": 1, \"ended\": 2, \"traits\": \"t\", \"script\": \"s\"}",   #skip-lint
+      "missing field `language`", "civilization without language");
+    _de_is(dc, "{\"name\": \"X\", \"founding_year\": 1}", "missing field `region`", "the Rust key founding_year is not founded");   #skip-lint
+    _de_is(dv, "{\"name\": \"X\", \"year\": 1, \"era\": \"E\", \"category\": 0, \"description\": \"D\", \"significance\": 0}",   #skip-lint
+      "missing field `civilizations`", "event without civilizations");
+
+    # Years: JSON integers that fit i32.
+    _de_is(de, "{\"start_year\": \"x\"}", "invalid type: string \"x\", expected i32", "a string year");   #skip-lint
+    _de_is(de, "{\"start_year\": \"a\\\"b\"}", "invalid type: string \"a\\\"b\", expected i32", "a string year is quoted with escapes");   #skip-lint
+    _de_is(de, "{\"start_year\": 5.0}", "invalid type: floating point `5.0`, expected i32", "a whole float is not an integer");   #skip-lint
+    _de_is(de, "{\"end_year\": 1e3}", "invalid type: floating point `1000.0`, expected i32", "an exponent makes a float");   #skip-lint
+    _de_is(de, "{\"end_year\": null}", "invalid type: null, expected i32", "a null year");
+    _de_is(de, "{\"end_year\": 2147483648}", "invalid value: integer `2147483648`, expected i32", "i32 max + 1");   #skip-lint
+    _de_is(de, "{\"start_year\": -2147483649}", "invalid value: integer `-2147483649`, expected i32", "i32 min - 1");   #skip-lint
+    _de_is(dc, "{\"founded\": [1]}", "invalid type: sequence, expected i32", "an array year");
+    _de_is(dc, "{\"name\": \"X\", \"region\": \"R\", \"peak_era\": \"P\", \"founded\": 1, \"ended\": 1.5}",   #skip-lint
+      "invalid type: floating point `1.5`, expected i32", "a fractional civilization year");
+    _de_is(dv, "{\"year\": 9223372036854775807}", "invalid value: integer `9223372036854775807`, expected i32", "i64 max is not a year");   #skip-lint
+    _de_is(de, "{\"name\": \"X\", \"start_year\": -2147483648, \"end_year\": 2147483647, \"region\": \"R\", \"description\": \"D\", \"category\": 0, \"scope\": 0}",   #skip-lint
+      "Ok", "both i32 bounds are years");
+
+    # Enum codes: integers inside their enum.
+    _de_is(de, "{\"category\": 9}", "invalid value: integer `9`, expected variant index 0 <= i < 6", "era category 9");   #skip-lint
+    _de_is(de, "{\"category\": 6}", "invalid value: integer `6`, expected variant index 0 <= i < 6", "era category one past CONTEMPORARY");   #skip-lint
+    _de_is(de, "{\"name\": \"X\", \"start_year\": 1, \"end_year\": 2, \"region\": \"R\", \"description\": \"D\", \"category\": 5, \"scope\": 1}",   #skip-lint
+      "Ok", "CONTEMPORARY and SCOPE_REGIONAL are codes");
+    _de_is(de, "{\"scope\": 2}", "invalid value: integer `2`, expected variant index 0 <= i < 2", "era scope 2");   #skip-lint
+    _de_is(de, "{\"scope\": -1}", "invalid value: integer `-1`, expected variant index 0 <= i < 2", "a negative scope");   #skip-lint
+    _de_is(de, "{\"category\": \"Ancient\"}", "invalid type: string \"Ancient\", expected variant index 0 <= i < 6", "the Rust variant name is not a code");   #skip-lint
+    _de_is(de, "{\"category\": 0.0}", "invalid type: floating point `0.0`, expected variant index 0 <= i < 6", "a float code");   #skip-lint
+    _de_is(dv, "{\"category\": 8}", "invalid value: integer `8`, expected variant index 0 <= i < 8", "event category 8");   #skip-lint
+    _de_is(dv, "{\"significance\": 4}", "invalid value: integer `4`, expected variant index 0 <= i < 4", "event significance 4");   #skip-lint
+    _de_is(dv, "{\"significance\": false}", "invalid type: boolean `false`, expected variant index 0 <= i < 4", "a boolean significance");   #skip-lint
+
+    # Strings.
+    _de_is(de, "{\"name\": 5}", "invalid type: integer `5`, expected a string", "an integer name");
+    _de_is(de, "{\"name\": null}", "invalid type: null, expected a string", "a null name");
+    _de_is(de, "{\"region\": true}", "invalid type: boolean `true`, expected a string", "a boolean region");   #skip-lint
+    _de_is(de, "{\"description\": {}}", "invalid type: map, expected a string", "an object description");   #skip-lint
+    _de_is(dc, "{\"traits\": [\"a\", \"b\"]}", "invalid type: sequence, expected a string", "the Rust Vec form of traits is refused");   #skip-lint
+    _de_is(dv, "{\"civilizations\": null}", "invalid type: null, expected a string", "a null civilizations list");   #skip-lint
+
+    # Duplicates. bayan's parser refuses a repeated key in text, so only a tree
+    # built in code can carry one to a decoder, which refuses it as serde does.
+    _de_is(de, "{\"name\": \"a\", \"name\": \"b\"}", "malformed JSON: duplicate key at byte 14", "a repeated key in text never parses");   #skip-lint
+    _de_tree_is(&era_from_json, "name", bayan_json_v_str_new(str_from("a")), "duplicate field `name`", "a repeated era name in a built tree");   #skip-lint
+    _de_tree_is(&civ_from_json, "founded", bayan_json_v_int_new(1), "duplicate field `founded`", "a repeated founding year in a built tree");   #skip-lint
+    _de_tree_is(&event_from_json, "significance", bayan_json_v_int_new(0), "duplicate field `significance`", "a repeated significance in a built tree");   #skip-lint
+
+    # Document order: the first bad field in the document wins.
+    _de_is(de, "{\"scope\": 9, \"start_year\": \"x\"}", "invalid value: integer `9`, expected variant index 0 <= i < 2", "scope first: scope reported");   #skip-lint
+    _de_is(de, "{\"start_year\": \"x\", \"scope\": 9}", "invalid type: string \"x\", expected i32", "start_year first: start_year reported");   #skip-lint
+    _de_is(de, "{\"category\": 9}", "invalid value: integer `9`, expected variant index 0 <= i < 6", "a bad field beats a missing one");   #skip-lint
+
+    # JSON text that does not parse.
+    _de_is(de, "{} x", "malformed JSON: trailing content after JSON value at byte 3", "trailing content is refused");   #skip-lint
+    ok(str_starts_with(_de_msg(de, "{\"name\": "), str_from("malformed JSON: ")), "truncated text is malformed");   #skip-lint
+    ok(str_starts_with(_de_msg(dv, ""), str_from("malformed JSON: ")), "empty text is malformed");
+    var zt, zv = era_from_json_text(0);
+    check(is_err_result(zt), 1, "a null Str is an Err, not a fault");
+    return 0;
 }
 
 # The suite, one section per module and per regression set; returns the failure count.
@@ -1131,6 +1356,8 @@ fn main() {
 
     itihas_log_init_level(SK_WARN);
     ok(1, "log level set");
+
+    test_decode();
 
     return assert_summary();
 }

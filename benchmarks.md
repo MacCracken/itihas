@@ -1,43 +1,47 @@
 # Benchmarks
 
-Latest: **2026-11-04T19:47:46Z** -- commit `035cf2d`
+Latest: **2026-11-19T21:37:48Z** -- commit `3da31aa`
 
-Tracking: `0ec104c` (baseline) -> `fcbeb4a` (mid) -> `035cf2d` (current)
+Tracking: `0ec104c` (baseline) -> `fcbeb4a` (mid) -> `3da31aa` (current)
 
-| Benchmark | Baseline (`0ec104c`) | Mid (`fcbeb4a`) | Current (`035cf2d`) |
+| Benchmark | Baseline (`0ec104c`) | Mid (`fcbeb4a`) | Current (`3da31aa`) |
 |-----------|------|------|------|
-| `all_eras` | 6.00 ns | 5.00 ns **-17%** | 4.00 ns **-33%** |
-| `eras_containing_500bce` | 441.0 ns | 358.0 ns **-19%** | 175.0 ns **-60%** |
-| `all_civilizations` | 5.00 ns | 4.00 ns **-20%** | 4.00 ns **-20%** |
-| `civs_active_at_500bce` | 944.0 ns | 702.0 ns **-26%** | 296.0 ns **-69%** |
-| `civs_by_region_mediterranean` † | 1000.0 ns | 831.0 ns | 1578.0 ns |
+| `all_eras` | 6.00 ns | 4.00 ns **-33%** | 5.00 ns **-17%** |
+| `eras_containing_500bce` | 441.0 ns | 352.0 ns **-20%** | 201.0 ns **-54%** |
+| `all_civilizations` | 5.00 ns | 5.00 ns | 5.00 ns |
+| `civs_active_at_500bce` | 944.0 ns | 706.0 ns **-25%** | 329.0 ns **-65%** |
+| `civs_by_region_mediterranean` † | 1000.0 ns | 829.0 ns | 2485.0 ns |
 | `all_events` | 5.00 ns | 5.00 ns | 4.00 ns **-20%** |
-| `events_by_category_war` | 930.0 ns | 938.0 ns | 1021.0 ns +10% |
-| `events_at_year_476` | 840.0 ns | 788.0 ns **-6%** | 845.0 ns |
-| `events_between_500bce_500ce` | 2000.0 ns | 1899.0 ns **-5%** | 502.0 ns **-75%** |
-| `all_calendars` | 6.00 ns | 4.00 ns **-33%** | 4.00 ns **-33%** |
-| `calendar_by_name_gregorian` † | 85.00 ns | 125.0 ns | 109.0 ns |
+| `events_by_category_war` | 930.0 ns | 960.0 ns +3% | 1082.0 ns +16% |
+| `events_at_year_476` | 840.0 ns | 793.0 ns **-6%** | 943.0 ns +12% |
+| `events_between_500bce_500ce` | 2000.0 ns | 1898.0 ns **-5%** | 534.0 ns **-73%** |
+| `all_calendars` | 6.00 ns | 5.00 ns **-17%** | 5.00 ns **-17%** |
+| `calendar_by_name_gregorian` † | 85.00 ns | 129.0 ns | 95.00 ns |
 | `all_figures` | 6.00 ns | 5.00 ns **-17%** | 4.00 ns **-33%** |
-| `figures_by_domain_scientist` | 494.0 ns | 497.0 ns | 536.0 ns +9% |
+| `figures_by_domain_scientist` | 494.0 ns | 510.0 ns +3% | 576.0 ns +17% |
 | `all_causalities` | 5.00 ns | 5.00 ns | 4.00 ns **-20%** |
-| `causes_of_french_revolution` † | 316.0 ns | 241.0 ns | 404.0 ns |
-| `chain_writing_depth3` † | 2000.0 ns | 393.0 ns | 2218.0 ns |
-| `all_interactions` | 6.00 ns | 5.00 ns **-17%** | 4.00 ns **-33%** |
-| `interactions_for_rome` † | 543.0 ns | 590.0 ns | 767.0 ns |
-| `influence_score_egypt_hittite` † | 728.0 ns | 565.0 ns | 948.0 ns |
-| `all_sites` | 6.00 ns | 5.00 ns **-17%** | 4.00 ns **-33%** |
-| `sites_by_region_near_east` † | 1000.0 ns | 547.0 ns | 1216.0 ns |
-| `sites_active_at_500bce` | 296.0 ns | 314.0 ns +6% | 319.0 ns +8% |
+| `causes_of_french_revolution` † | 316.0 ns | 246.0 ns | 440.0 ns |
+| `chain_writing_depth3` † | 2000.0 ns | 400.0 ns | 2257.0 ns |
+| `all_interactions` | 6.00 ns | 5.00 ns **-17%** | 5.00 ns **-17%** |
+| `interactions_for_rome` † | 543.0 ns | 591.0 ns | 827.0 ns |
+| `influence_score_egypt_hittite` † | 728.0 ns | 552.0 ns | 990.0 ns |
+| `all_sites` | 6.00 ns | 5.00 ns **-17%** | 5.00 ns **-17%** |
+| `sites_by_region_near_east` † | 1000.0 ns | 536.0 ns | 1308.0 ns |
+| `sites_active_at_500bce` | 296.0 ns | 310.0 ns +5% | 340.0 ns +15% |
 | `all_routes` | 6.00 ns | 5.00 ns **-17%** | 4.00 ns **-33%** |
-| `routes_by_region_east_asia` † | 1000.0 ns | 239.0 ns | 1155.0 ns |
-| `routes_by_commodity_silk` † | 2000.0 ns | 319.0 ns | 1258.0 ns |
+| `routes_by_region_east_asia` † | 1000.0 ns | 240.0 ns | 1157.0 ns |
+| `routes_by_commodity_silk` † | 2000.0 ns | 319.0 ns | 1281.0 ns |
 | `all_campaigns` | 5.00 ns | 5.00 ns | 4.00 ns **-20%** |
-| `campaigns_by_commander_napoleon` † | 2000.0 ns | 299.0 ns | 1424.0 ns |
-| `campaigns_between_500bce_500ce` | 243.0 ns | 208.0 ns **-14%** | 144.0 ns **-41%** |
-| `era_to_json` | -- | -- | 2769.0 ns |
-| `json_array_eras` | -- | -- | 68583.0 ns |
-| `json_array_events` | -- | -- | 307028.0 ns |
-| `json_array_campaigns` | -- | -- | 138525.0 ns |
+| `campaigns_by_commander_napoleon` † | 2000.0 ns | 301.0 ns | 1521.0 ns |
+| `campaigns_between_500bce_500ce` | 243.0 ns | 206.0 ns **-15%** | 145.0 ns **-40%** |
+| `era_to_json` | -- | -- | 2801.0 ns |
+| `json_array_eras` | -- | -- | 67669.0 ns |
+| `json_array_events` | -- | -- | 311680.0 ns |
+| `json_array_campaigns` | -- | -- | 143397.0 ns |
+| `era_from_json` | -- | -- | 538.0 ns |
+| `json_decode_eras` | -- | -- | 14434.0 ns |
+| `json_decode_civilizations` | -- | -- | 32363.0 ns |
+| `json_decode_events` | -- | -- | 59641.0 ns |
 
 † Through cyrius 6.6.4 this row's wrapper passed its string argument to a
 `: Str` parameter as a raw cstr, so the query matched nothing and the row

@@ -7,6 +7,89 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.7.0] - 2026-11-20
+
+### Added
+
+- **serial — JSON decoders for eras, civilizations and events.** sankhya
+  embeds these three records in its `MultiCalendarDate` JSON through
+  `era_to_json` / `civ_to_json` / `event_to_json`. Until now it could only count
+  them when reading a document back, because nothing in itihas could rebuild a
+  record. New:
+
+  ```
+  era_from_json(v)           civ_from_json(v)           event_from_json(v)
+  era_from_json_text(js)     civ_from_json_text(js)     event_from_json_text(js)
+  ```
+
+  `v` is a node of bayan's value tree, so a consumer decodes records inside a
+  document it has already parsed. `js` is JSON text (a Str), parsed first. Each
+  returns a cyrius 6.6 value-form Result: `Ok(record)`, built with `era_new` /
+  `civ_new` / `evt_new`, or `Err(ItihasErr)`.
+
+  A decoder reads exactly what the writer writes: the same keys (`founded`,
+  `ended`, `language`, `civilizations`), enum fields as integer codes, list
+  fields as `;`-joined strings. So encode → decode → encode is byte-identical,
+  which the tests check for all 25 eras, 53 civilizations and 105 events. No
+  `*_to_json` output changed.
+
+  The checks and messages are serde's derive on the Rust 1.x types. The
+  serde_json position suffix is dropped, since bayan's tree has no positions:
+  - not an object: `invalid type: sequence, expected struct Era`;
+  - every field is required: ``missing field `name` ``;
+  - unknown keys are ignored;
+  - a year must be a JSON integer that fits i32: `invalid type: string "x",
+    expected i32`, ``invalid type: floating point `5.0`, expected i32``,
+    ``invalid value: integer `2147483648`, expected i32``;
+  - an enum code must be inside its enum: ``invalid value: integer `9`,
+    expected variant index 0 <= i < 6`` (serde_derive's wording for a variant
+    index);
+  - a repeated field is refused: ``duplicate field `name` ``. Only a tree
+    built in code can carry one, since bayan's parser already refuses a
+    repeated key in text.
+
+  Fields are visited in document order, as serde does, so the first bad field
+  is the one reported. The decoded record borrows the tree's strings rather
+  than copying them.
+- **error — `ItihasErr`, the Err payload, and `ITIHAS_ERR_DESERIALIZE = 10`.**
+  A 16-byte `{ code, msg }` record: `itihas_err_new(code, msg)`,
+  `itihas_err_code(e)`, `itihas_err_msg(e)` (a `: Str`), and
+  `itihas_fail(code, msg)`, which returns `Err(record)`. A consumer tests the
+  code and forwards the message into its own error type. It should not
+  propagate the payload with `?`, because the payload is not the consumer's
+  record. This is the first `ITIHAS_ERR_*` code anything in itihas returns.
+- **tests** — 83 assertions (442 → 525). They cover every table record round
+  tripped on its own and as one embedded array; hostile strings (every escape
+  class, U+0000, 2- and 4-byte UTF-8) and both i32 bounds; and one exact-message
+  case per error class, for each of the three decoders.
+- **bench** — four decode rows, measured over a tree parsed before timing, so
+  they time the decoder alone. Recorded run (2026-11-19T21:37:48Z):
+
+  | Row | ns | Same run, encode side |
+  |---|---|---|
+  | `era_from_json` | 538 | `era_to_json` 2,801 |
+  | `json_decode_eras` (25) | 14,434 | `json_array_eras` 67,669 |
+  | `json_decode_civilizations` (53) | 32,363 | — |
+  | `json_decode_events` (105) | 59,641 | `json_array_events` 311,680 |
+
+  Decoding costs about a fifth of encoding. Key lookup tries field `i` first for
+  pair `i`, because that is the order the writers emit, so a round-tripped
+  record matches each key on its first compare.
+
+### Changed
+
+- **dist** — `dist/itihas.deps` and the bundle's `# Requires` block gain
+  `result` (the decoders return `Ok` / `Err`). Consumers already vendor it,
+  because bayan includes `lib/result.cyr` itself.
+
+### Performance
+
+- No regression. Every pre-existing row is within noise of the 2.6.2 gate; the
+  recorded run's median row was +6%, and it ran warm. One outlier:
+  `civs_by_region_mediterranean` recorded 2,485 ns against 1,578 at 2.6.2.
+  Re-run twice, unrecorded, it measured 1,528 and 1,546 ns. `civs_by_region`
+  and its helpers are unchanged.
+
 ## [2.6.2] - 2026-11-04
 
 P(-1) scaffold-hardening release on the cyrius 6.7.18 pin. Four independent
@@ -1364,7 +1447,8 @@ stdlib data-format carve it requires. Source behavior unchanged; 153 tests pass.
 - `no_std` support via `alloc`/`core`; `std` feature adds `LazyLock` caching
 - All public types: `Display` impls, `Cow<'static, str>` for zero-alloc statics, full serde roundtrip, `#[non_exhaustive]` on all enums and structs, `#[must_use]` on all pure functions
 
-[Unreleased]: https://github.com/MacCracken/itihas/compare/v2.4.0...HEAD
+[Unreleased]: https://github.com/MacCracken/itihas/compare/2.7.0...HEAD
+[2.7.0]: https://github.com/MacCracken/itihas/compare/2.6.2...2.7.0
 [2.4.0]: https://github.com/MacCracken/itihas/compare/v2.3.5...v2.4.0
 [2.3.5]: https://github.com/MacCracken/itihas/compare/v2.3.4...v2.3.5
 [2.3.4]: https://github.com/MacCracken/itihas/compare/v2.3.3...v2.3.4

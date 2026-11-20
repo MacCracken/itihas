@@ -1,5 +1,6 @@
-# itihas.bcyr — itihas benchmarks (32 benchmarks; 28 ported from Rust criterion,
-# plus four JSON serialization rows added with the _to_json_into split)
+# itihas.bcyr — itihas benchmarks (36 benchmarks; 28 ported from Rust criterion,
+# four JSON serialization rows added with the _to_json_into split, and four
+# decode rows added with the *_from_json decoders)
 # Run: cyrius build tests/itihas.bcyr build/itihas_bench && ./build/itihas_bench
 # (or via scripts/bench-history.sh to record the CSV/markdown history)
 
@@ -66,6 +67,31 @@ fn _b_json_eras() { return _json_array(all_eras(), &era_to_json_into); }
 fn _b_json_events() { return _json_array(all_events(), &event_to_json_into); }
 fn _b_json_campaigns() { return _json_array(all_campaigns(), &campaign_to_json_into); }
 
+# Decode rows. The JSON is parsed once, before timing, so each row measures the
+# decoder alone over bayan's value tree, which is what a consumer pays when it
+# decodes records inside a document it has already parsed.
+var _bd_era_node = 0;
+var _bd_eras_arr = 0;
+var _bd_civs_arr = 0;
+var _bd_events_arr = 0;
+fn _b_era_from_json() {
+    var t, r = era_from_json(_bd_era_node);
+    return r;
+}
+# How many elements of array node `arr` decode with `dec`.
+fn _b_decode_all(arr, dec) {
+    var good = 0;
+    var n = bayan_json_v_arr_len(arr);
+    for (var i = 0; i < n; i = i + 1) {
+        var t, r = fncall1(dec, bayan_json_v_arr_get(arr, i));
+        if (is_ok(t) == 1) { good = good + 1; }
+    }
+    return good;
+}
+fn _b_decode_eras() { return _b_decode_all(_bd_eras_arr, &era_from_json); }
+fn _b_decode_civs() { return _b_decode_all(_bd_civs_arr, &civ_from_json); }
+fn _b_decode_events() { return _b_decode_all(_bd_events_arr, &event_from_json); }
+
 # Refuse to time a wrapper that does no work. The ten string-argument wrappers
 # above are all `return f("literal")` tail calls into a `: Str` parameter.
 # Through cyrius 6.6.4 that one call shape handed the callee the raw cstr instead
@@ -101,6 +127,18 @@ _bench_guard(vec_len(_b_sites_by_region()) > 0, "sites_by_region_near_east");
 _bench_guard(vec_len(_b_routes_by_region()) > 0, "routes_by_region_east_asia");
 _bench_guard(vec_len(_b_routes_by_comm()) > 0, "routes_by_commodity_silk");
 _bench_guard(vec_len(_b_camps_by_cmd()) > 0, "campaigns_by_commander_napoleon");
+
+# Parse the decode rows' input once. A decoder that refused it would time the
+# error path, so every element must decode before anything is timed.
+_bd_era_node = bayan_json_v_parse(era_to_json(vec_get(all_eras(), 0)));
+_bd_eras_arr = bayan_json_v_parse(_json_array(all_eras(), &era_to_json_into));
+_bd_civs_arr = bayan_json_v_parse(_json_array(all_civilizations(), &civ_to_json_into));
+_bd_events_arr = bayan_json_v_parse(_json_array(all_events(), &event_to_json_into));
+var _bd_t, _bd_r = era_from_json(_bd_era_node);
+_bench_guard(is_ok(_bd_t), "era_from_json");
+_bench_guard(_b_decode_eras() == era_count(), "json_decode_eras");
+_bench_guard(_b_decode_civs() == civ_count(), "json_decode_civilizations");
+_bench_guard(_b_decode_events() == event_count(), "json_decode_events");
 
 var benches = vec_new();
 var b = 0;
@@ -243,6 +281,24 @@ vec_push(benches, b);
 
 b = bench_new("json_array_campaigns");
 bench_run_batch(b, &_b_json_campaigns, SER_BATCH, SER_ROUNDS);
+vec_push(benches, b);
+
+# Decoding — the *_from_json path over a pre-parsed tree. One era, then each
+# embedded table as a whole array.
+b = bench_new("era_from_json");
+bench_run_batch(b, &_b_era_from_json, BATCH, ROUNDS);
+vec_push(benches, b);
+
+b = bench_new("json_decode_eras");
+bench_run_batch(b, &_b_decode_eras, SER_BATCH, SER_ROUNDS);
+vec_push(benches, b);
+
+b = bench_new("json_decode_civilizations");
+bench_run_batch(b, &_b_decode_civs, SER_BATCH, SER_ROUNDS);
+vec_push(benches, b);
+
+b = bench_new("json_decode_events");
+bench_run_batch(b, &_b_decode_events, SER_BATCH, SER_ROUNDS);
 vec_push(benches, b);
 
 bench_report_all(benches);

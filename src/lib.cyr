@@ -9,7 +9,7 @@
 #
 # Modules:
 #   util         - xalloc, case folding, sort, tracing, JSON escaping, strict integers
-#   error        - ItihasError codes
+#   error        - ItihasError codes, ItihasErr record (the Err payload)
 #   era          - 25 historical eras (scope/region queries, containment)
 #   calendar     - 8 calendar systems
 #   civilization - 53 civilizations (region/active-at queries, proximity)
@@ -21,7 +21,8 @@
 #   site         - 32 historical sites
 #   trade        - 15 trade routes (commodity/region/type queries)
 #   logging      - sakshi logging init (itihas_log_init)
-#   serial       - JSON serialization for all types (*_to_json)
+#   serial       - JSON serialization for all types (*_to_json), and
+#                  Result-returning decoders for era/civ/event (*_from_json)
 #   hoosh        - LLM-powered historical queries + data-answer path
 
 # Stdlib auto-included via cyrius.cyml

@@ -20,7 +20,8 @@ Used by [sankhya](https://github.com/MacCracken/sankhya) (ancient math), [avatar
 | `campaign` | Military campaigns with battles, commanders, belligerents, and outcomes |
 | `site` | Archaeological sites with location, period, type, and discovery metadata |
 | `trade` | Historical trade routes with regions, route type, commodities, and civilization context |
-| `error` | Error code enum for unknown entities and invalid lookups |
+| `serial` | JSON writers for every record type (`*_to_json`), and Result-returning decoders for eras, civilizations and events (`*_from_json`) |
+| `error` | Error code enum, and the `ItihasErr` record (code + message) a decoder's Err carries |
 
 ## Pre-built Data
 
@@ -108,7 +109,7 @@ Also feeds:
 ## Development
 
 ```bash
-cyrius test tests/itihas.tcyr   # Full unit suite (442 assertions)
+cyrius test tests/itihas.tcyr   # Full unit suite (525 assertions)
 ./scripts/bench-history.sh      # Benchmarks + history (mandatory per release)
 cyrius lint src/*.cyr           # Lint
 cyrius distlib                  # Regenerate dist/itihas.cyr

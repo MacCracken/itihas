@@ -1,4 +1,4 @@
-# itihas — error codes
+# itihas — error codes, and the error record a Result-returning function's Err carries
 #
 # 2.5.0: renamed ERR_* -> ITIHAS_ERR_*. Cyrius has one FLAT enum-constant
 # namespace, and `cyrius lint` flags bare `ERR_*` in a leaf library for exactly
@@ -18,4 +18,44 @@ enum ItihasError {
     ITIHAS_ERR_SITE_NOT_FOUND = 7;
     ITIHAS_ERR_ROUTE_NOT_FOUND = 8;
     ITIHAS_ERR_CAMPAIGN_NOT_FOUND = 9;
+    # A *_from_json decoder refused its input (serial.cyr). The codes above are
+    # defined but returned by nothing; this one is the code inside every
+    # decoder's Err payload.
+    ITIHAS_ERR_DESERIALIZE = 10;
 }
+
+# ----------------------------------------------------------------
+# Error record — the Err payload of itihas's Result-returning functions
+# ----------------------------------------------------------------
+# { code: an ITIHAS_ERR_* value, msg: Str } — 16 bytes. The Rust ItihasError
+# carried a message on every variant, and a decode error is only useful with its
+# text, so the payload keeps both: test the code, forward the message.
+#
+#     var t, x = era_from_json(node);
+#     if (is_err_result(t) == 1) { println(itihas_err_msg(x)); }
+#
+# A consumer with its own error record maps this one rather than propagating it
+# with `?`: the payload is an ItihasErr, not the consumer's type, and a reader
+# expecting another layout would misread it.
+enum ItihasErrOff { IERR_CODE = 0; IERR_MSG = 8; IERR_SIZE = 16; }
+
+# A new error record holding `code` (an ITIHAS_ERR_* value) and `msg` (a Str).
+#must_use
+fn itihas_err_new(code, msg: Str) {
+    var e = xalloc(IERR_SIZE);
+    store64(e + IERR_CODE, code);
+    store64(e + IERR_MSG, msg);
+    return e;
+}
+
+# The record's ITIHAS_ERR_* code.
+#must_use
+fn itihas_err_code(e) { return load64(e + IERR_CODE); }
+
+# The record's message (Str), in serde's wording for a decode error.
+#must_use
+fn itihas_err_msg(e): Str { return load64(e + IERR_MSG); }
+
+# Err(ItihasErr{code, msg}): return itihas_fail(ITIHAS_ERR_DESERIALIZE, "...").
+#must_use
+fn itihas_fail(code, msg: Str) { return Err(itihas_err_new(code, msg)); }

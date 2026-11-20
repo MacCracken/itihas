@@ -10,7 +10,7 @@ itihas/
 │   ├── main.cyr          — binary entry point / smoke test
 │   ├── lib.cyr           — library aggregator (public API; drives distlib bundle)
 │   ├── util.cyr          — xalloc, case folding, sort, tracing, JSON escaping, strict integers
-│   ├── error.cyr         — ItihasError enum (integer error codes)
+│   ├── error.cyr         — ItihasError codes + ItihasErr {code, msg} Err payload
 │   ├── era.cyr           — historical periods, date ranges, era categories
 │   │                       25 eras (8 global + 17 regional), temporal/scope lookups
 │   ├── civilization.cyr  — major civilizations, geographic extent, traits
@@ -32,12 +32,13 @@ itihas/
 │   ├── trade.cyr         — historical trade routes, endpoints, commodities
 │   │                       15 trade routes with civilization context
 │   ├── logging.cyr       — sakshi logging init (itihas_log_init)
-│   ├── serial.cyr        — JSON serialization for all types (*_to_json)
+│   ├── serial.cyr        — JSON serialization for all types (*_to_json);
+│   │                       Result-returning decoders for era/civ/event (*_from_json)
 │   ├── hoosh.cyr         — LLM-powered historical queries + data-answer path
 │   └── mcp.cyr           — five MCP tools over bote (opt-in, not in the bundle)
 ├── tests/
-│   ├── itihas.tcyr       — full unit suite, 442 assertions (cyrius test)
-│   └── itihas.bcyr       — 32-benchmark suite (cyrius bench)
+│   ├── itihas.tcyr       — full unit suite, 525 assertions (cyrius test)
+│   └── itihas.bcyr       — 36-benchmark suite (cyrius bench)
 ├── tests-mcp/
 │   └── itihas-mcp.tcyr   — MCP suite, 65 assertions (--features mcp)
 ├── dist/

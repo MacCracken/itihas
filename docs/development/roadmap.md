@@ -1,6 +1,6 @@
 # Development Roadmap
 
-> **Current**: 2.6.2 | **Compiler**: cyrius 6.7.18 | **Tests**: 442 + 65 MCP | **Coverage**: 87% (reference) | **Lint**: clean | **Doc gate**: clean
+> **Current**: 2.7.0 | **Compiler**: cyrius 6.7.18 | **Tests**: 525 + 65 MCP | **Coverage**: 87% (reference) | **Lint**: clean | **Doc gate**: clean
 
 This file tracks **open work only**, pinned to the minor line that owns it.
 Completed releases live in [CHANGELOG.md](../../CHANGELOG.md) and are not
@@ -28,19 +28,20 @@ fields with `load64(p + OFFSET)` / `store64` against offset enums that nothing
 checks: two fields sharing an offset would alias silently, where a struct makes
 it a compile error. Strictly **one module per patch release**, each with layout
 assertions that pin every field to its offset in both directions, and its own
-interleaved A/B.
+interleaved A/B. 2.7.0 shipped the `era` / `civ` / `event` JSON decoders, so
+the arc starts at 2.7.1.
 
 | Release | Module | Why this order |
 |---------|--------|----------------|
-| 2.7.0 | `civilization` | Hottest after `era`: `civs_active_at`, `civs_by_region` and the founding-year view |
-| 2.7.1 | `event` | 105 rows, the year-sorted view and three range queries |
-| 2.7.2 | `campaign` | Range query plus the commander/belligerent token matchers |
-| 2.7.3 | `site` | Two range predicates (occupation, discovery) |
-| 2.7.4 | `trade` | Commodity and civilization token matchers |
-| 2.7.5 | `figure` | Domain filter only |
-| 2.7.6 | `interaction` | Read by `influence_score`'s in-place scan |
-| 2.7.7 | `causality` | Read by `causal_chain`'s frontier walk |
-| 2.7.8 | `calendar` | 8 rows, no hot path |
+| 2.7.1 | `civilization` | Hottest after `era`: `civs_active_at`, `civs_by_region` and the founding-year view |
+| 2.7.2 | `event` | 105 rows, the year-sorted view and three range queries |
+| 2.7.3 | `campaign` | Range query plus the commander/belligerent token matchers |
+| 2.7.4 | `site` | Two range predicates (occupation, discovery) |
+| 2.7.5 | `trade` | Commodity and civilization token matchers |
+| 2.7.6 | `figure` | Domain filter only |
+| 2.7.7 | `interaction` | Read by `influence_score`'s in-place scan |
+| 2.7.8 | `causality` | Read by `causal_chain`'s frontier walk |
+| 2.7.9 | `calendar` | 8 rows, no hot path |
 
 **Rule from the `era` migration, binding on every row above.** Delegating
 `x_field(p)` to the generated `X_field(p)` adds a call, and Cyrius does not
@@ -85,8 +86,9 @@ Pinned to a line when a consumer needs it.
 
 | Item | Effort | Detail |
 |------|--------|--------|
-| **bayan's Unicode tables** | Upstream | Since cyrius 6.7.13, `lib/bayan.cyr` includes `lib/unicode/*` (case-fold, categories, normalization) and `lib/math.cyr` for every consumer. DCE removes unreachable functions, not data. Measured in 2.6.1 on the DCE build: `.rodata` 66,814 → 408,802 B, and the binary 251,800 → 535,392 B, though itihas calls only `bayan_json_parse` and `bayan_json_get_by_cstr`. The fix belongs in bayan, as a JSON-only profile or tables only the Unicode-aware functions reach. A hand-rolled JSON reader here would trade an AGNOS dependency for local code, against "own the stack". |
-| **The `ITIHAS_ERR_*` codes** | Low | `src/error.cyr` defines the error enum, and nothing in itihas returns one: lookups return 0 and filters an empty vec. Either adopt the codes (an out-parameter on the lookups) or retire the enum with a deprecation cycle. A decision, not a bug; found in the 2.6.2 sweep. |
+| **bayan's Unicode tables** | Upstream | Since cyrius 6.7.13, `lib/bayan.cyr` includes `lib/unicode/*` (case-fold, categories, normalization) and `lib/math.cyr` for every consumer. DCE removes unreachable functions, not data. Measured in 2.6.1 on the DCE build: `.rodata` 66,814 → 408,802 B, and the binary 251,800 → 535,392 B, though at the time itihas called only `bayan_json_parse` and `bayan_json_get_by_cstr` (the decoders since added read bayan's value tree too). The fix belongs in bayan, as a JSON-only profile or tables only the Unicode-aware functions reach. A hand-rolled JSON reader here would trade an AGNOS dependency for local code, against "own the stack". |
+| **The `ITIHAS_ERR_*` codes** | Low | `src/error.cyr` defines the error enum. Since the decoders, one code is returned: `ITIHAS_ERR_DESERIALIZE`, inside the `ItihasErr {code, msg}` record a `*_from_json` Err carries. Codes 1–9 are still returned by nothing: lookups return 0 and filters an empty vec. Either adopt them through the same record (a Result-returning lookup) or retire codes 1–9 with a deprecation cycle. A decision, not a bug; found in the 2.6.2 sweep. |
+| **Decoders for the other seven record types** | Medium | `era`, `civ` and `event` have `*_from_json` because sankhya embeds them. `figure`, `calendar`, `campaign` (with nested battles), `site`, `route`, `causality` and `interaction` have writers only. The serial.cyr `_json_de_*` helpers make each one mechanical, but each needs its Rust 1.x field types checked for the integer ranges first. Pinned when a consumer embeds one. |
 | **argonaut consolidation** | Medium | argonaut is ported upstream (424 tests) but not integrated. itihas has its own `src/serial.cyr`, so this is an optional consolidation, not a gap. |
 | Historical map data (boundaries per era) | Large | — |
 | Cultural diffusion tracking | Large | — |

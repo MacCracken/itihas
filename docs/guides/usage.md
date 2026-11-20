@@ -236,7 +236,81 @@ the range queries search are built from it once, so a record pushed onto it
 later is visible to `era_count()` and `era_by_name()` but not to
 `eras_containing()`.
 
+## JSON
+
+Every record type has a writer: `x_to_json(p)` returns a Str, and
+`x_to_json_into(sb, p)` appends to a `str_builder`. Eras, civilizations and
+events also have decoders, for consumers that embed them in their own JSON.
+A decoder reads exactly what the writer writes, so encode → decode → encode is
+byte-identical.
+
+```cyrius
+var js = era_to_json(era_by_name("Bronze Age"));
+# {"name": "Bronze Age", "start_year": -3500, "end_year": -1100, "region": ..., "category": 0, "scope": 0}
+
+# A decoder returns a value-form Result: bind both halves.
+var t, era = era_from_json_text(js);
+if (is_ok(t) == 1) { var start = era_start(era); }   # -3500
+
+# Records inside a document you have already parsed: decode the node.
+var doc = bayan_json_v_parse(body);
+var arr = bayan_json_v_obj_get_by_cstr(doc, "eras");
+for (var i = 0; i < bayan_json_v_arr_len(arr); i = i + 1) {
+    var et, e = era_from_json(bayan_json_v_arr_get(arr, i));
+    if (is_err_result(et) == 1) {
+        # e is an ItihasErr: itihas_err_code(e) is ITIHAS_ERR_DESERIALIZE.
+        println(itihas_err_msg(e));   # invalid type: string "x", expected i32
+    }
+}
+```
+
+| Decoder | Reads |
+|---------|-------|
+| `era_from_json(node)` / `era_from_json_text(js)` | `era_to_json` output, `struct Era` in messages |
+| `civ_from_json(node)` / `civ_from_json_text(js)` | `civ_to_json` output, `struct Civilization` |
+| `event_from_json(node)` / `event_from_json_text(js)` | `event_to_json` output, `struct Event` |
+
+The format is the writers' own, not the Rust 1.x serde one. Enum fields are
+integer codes (`"category": 0`), not variant names, and list fields (`traits`,
+`language`, `civilizations`) are one `;`-joined string, not an array. A v1.x
+document therefore does not decode: `"category": "Ancient"` is refused.
+
+The checks are serde's derive on the Rust types, and so are the messages
+(serde_json's " at line L column C" suffix is dropped, since bayan's tree keeps
+no positions):
+
+| Input | Message |
+|-------|---------|
+| Not an object: `[1]` | `invalid type: sequence, expected struct Era` |
+| A field left out: `{}` | ``missing field `name` `` |
+| A string year: `"start_year": "x"` | `invalid type: string "x", expected i32` |
+| A float year: `"start_year": 5.0` | ``invalid type: floating point `5.0`, expected i32`` |
+| A year outside i32: `"end_year": 2147483648` | ``invalid value: integer `2147483648`, expected i32`` |
+| A code outside its enum: `"category": 9` | ``invalid value: integer `9`, expected variant index 0 <= i < 6`` |
+| A non-string text field: `"name": null` | `invalid type: null, expected a string` |
+| A field twice (only in a tree built in code) | ``duplicate field `name` `` |
+| Text that does not parse (`*_text` only) | `malformed JSON: <bayan's reason> at byte N` |
+
+Unknown keys are ignored. Fields are read in document order, so the first bad
+field in the document is the one reported, and a missing field is reported only
+when every present one is valid. bayan's parser refuses a repeated key in text
+("duplicate key"), so `duplicate field` comes only from a tree built with
+`bayan_json_v_obj_set`. Nothing beyond the types is checked: an era that ends
+before it starts decodes, as it did in Rust.
+
+Two things to keep in mind:
+
+- **The record borrows the tree's strings.** Its Str fields point into the
+  decoded tree, so keep the tree as long as the record. The default allocator
+  never frees it; an arena you reset does.
+- **Map the Err; do not `?` it into your own type.** The payload is an
+  `ItihasErr`, not your library's error record. Read `itihas_err_msg(e)` and
+  wrap it in your own error.
+
 ## Error Handling
 
 All `by_name()` lookups return a pointer (nonzero on success, 0 on not found).
 Filter functions return vecs (empty if no matches, check with `vec_len()`).
+The `*_from_json` decoders return a Result: `Ok(record)`, or `Err(ItihasErr)`
+with an `ITIHAS_ERR_*` code (`itihas_err_code`) and a message
+(`itihas_err_msg`). See [JSON](#json).
